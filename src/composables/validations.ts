@@ -1,0 +1,8 @@
+
+export function useValidations () {
+    
+
+    return {
+
+    }
+}
