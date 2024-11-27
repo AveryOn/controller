@@ -119,7 +119,10 @@
 <script setup lang="ts">
 import { type Ref, ref } from 'vue';
 import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIcon,  } from '../../@types/entities/materials.types';
+import useNotices from '../../composables/notices';
 
+
+const notices = useNotices();
 
 
 const isLoadingForm = ref(false);
@@ -151,9 +154,9 @@ const form: Ref<CreateChapterForm> = ref<CreateChapterForm>({
     label: '',
     pathName: '',
     symbol: '',
-    iconType: null,
+    iconType: 'pi',
     iconImg: null,
-    type: null,
+    type: 'file',
 });
 
 // Установка префикса pi
@@ -166,8 +169,20 @@ function correctSymbol() {
     }
 }
 
+function validateForm() {
+    let isValid = true;
+    if(!form.value.type) return false;
+    if(!form.value.symbol) return false;
+    if(!form.value.pathName) return false;
+    if(!form.value.label) return false;
+    if(!form.value.iconType) return false;
+    if(form.value.iconType === 'img' && !form.value.iconImg) return false;
+    return isValid;
+}
+
 async function send() {
     try {
+        if(!validateForm()) return notices.show({ detail: 'Filled form', severity: 'error' });
         isLoadingForm.value = true;
         const newChapter: ChapterCreate = {
             label: form.value.label,
@@ -180,6 +195,8 @@ async function send() {
         const res = await window.electron.createChapter(newChapter);
         console.log(res);
     } catch (err) {
+        console.log(err);
+        notices.show({ detail: '', severity: 'error' });
         throw err;    
     } finally { 
         isLoadingForm.value = false;

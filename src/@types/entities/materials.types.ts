@@ -64,6 +64,27 @@ export interface Chapter {
     updatedAt: string;
 }
 
+export interface SubChapterForMenu {
+    id: number;
+    queryName: string;
+    pathName: string;
+    icon: string;
+    iconType: IconType;
+    label: string;
+    route: string;
+    items?: SubChapter[] | null;
+}
+
+export interface ChapterForMenu {
+    id: number;
+    pathName: string;
+    icon: string;
+    iconType: IconType;
+    label: string;
+    route: string;
+    items?: SubChapterForMenu[] | null;
+}
+
 // addChapter.vue
 export interface ModesIcon {
     name: string;
@@ -82,7 +103,12 @@ export interface CreateChapterForm {
     label: string;
     pathName: string;
     symbol: string;
-    iconType: IconType | null;
+    iconType: IconType;
     iconImg: any;
-    type: ChapterType | null;
+    type: ChapterType;
+}
+
+export interface GetChaptersParams {
+    page?: number;
+    perPage?: number;
 }

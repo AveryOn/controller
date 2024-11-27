@@ -1,3 +1,4 @@
+import { PaginatorParams } from "./index.types";
 
 // Объект раздела при его создании на клиенте
 export interface ChapterCreate {
@@ -18,6 +19,9 @@ export interface SubChapterCreate {
     chapterType: ChapterType;
     route: string,
 }
+
+export interface GetChaptersConfig extends PaginatorParams {}
+
 
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
@@ -40,6 +44,7 @@ export interface SubChapter {
     icon: string;
     iconType: IconType;
     chapterType: ChapterType;
+    label: string;
     route: string;
     content: ChapterContent;
     items?: SubChapter[] | null;
@@ -53,9 +58,31 @@ export interface Chapter {
     icon: string;
     iconType: IconType;
     chapterType: ChapterType;
+    label: string;
     route: string;
     content: ChapterContent;
     items?: SubChapter[] | null;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface SubChapterForMenu {
+    id: number;
+    queryName: string;
+    pathName: string;
+    icon: string;
+    iconType: IconType;
+    label: string;
+    route: string;
+    items?: SubChapter[] | null;
+}
+
+export interface ChapterForMenu {
+    id: number;
+    pathName: string;
+    icon: string;
+    iconType: IconType;
+    label: string;
+    route: string;
+    items?: SubChapterForMenu[] | null;
 }

@@ -219,6 +219,7 @@ async function createChapter(params) {
         blocks: [],
         title: null
       },
+      label: params.label,
       icon: params.icon,
       iconType: params.iconType,
       pathName: params.pathName,
@@ -230,6 +231,34 @@ async function createChapter(params) {
     materials.push(newChapter);
     await writeFile(materials, FSCONFIG);
     return newChapter;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function getChapters(params) {
+  try {
+    const formattedChapters = (items) => {
+      return items.map((chapter) => {
+        return {
+          id: chapter.id,
+          icon: chapter.icon,
+          iconType: chapter.iconType,
+          label: chapter.label,
+          pathName: chapter.pathName,
+          route: chapter.route,
+          items: chapter.items
+        };
+      });
+    };
+    const chapters = await readFile(FSCONFIG);
+    if (params && params.page && params.perPage) {
+      const right = params.perPage * params.page;
+      const left = right - params.perPage;
+      let chaptersChunk = chapters.slice(left, right);
+      return formattedChapters(chaptersChunk);
+    }
+    return formattedChapters(chapters);
   } catch (err) {
     console.error(err);
     throw err;
@@ -290,6 +319,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("create-chapter", async (event, params) => {
     return await createChapter(params);
+  });
+  ipcMain.handle("get-menu-chapters", async (event, params) => {
+    return await getChapters(params);
   });
 });
 export {

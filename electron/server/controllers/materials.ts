@@ -1,7 +1,7 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
 import { app } from 'electron';
-import { Chapter, ChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, GetChaptersConfig } from "../types/controllers/materials.types";
 
 const MATERIALS_FILENAME = 'materials.json';
 const FSCONFIG: FsOperationConfig = {
@@ -29,6 +29,16 @@ export async function prepareMaterialsStore(): Promise<boolean> {
         });
 }
 
+// Сбросить все данные materials 
+export async function resetMaterialDB() {
+    try {
+        await writeFile([], FSCONFIG);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
 // Создание нового раздела в материалах
 export async function createChapter(params: ChapterCreate) {
     try {
@@ -50,6 +60,7 @@ export async function createChapter(params: ChapterCreate) {
                 blocks: [],
                 title: null,
             },
+            label: params.label,
             icon: params.icon,
             iconType: params.iconType,
             pathName: params.pathName,
@@ -61,6 +72,36 @@ export async function createChapter(params: ChapterCreate) {
         materials.push(newChapter);
         await writeFile(materials, FSCONFIG);
         return newChapter;
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+export async function getChapters(params?: GetChaptersConfig): Promise<ChapterForMenu[]> {
+    try {
+        const formattedChapters = (items: Chapter[]) => {
+            return items.map((chapter) => {
+                return {
+                    id: chapter.id,
+                    icon: chapter.icon,
+                    iconType: chapter.iconType,
+                    label: chapter.label,
+                    pathName: chapter.pathName,
+                    route: chapter.route,
+                    items: chapter.items,
+                } as ChapterForMenu
+            })
+        }
+        const chapters: Chapter[] = await readFile(FSCONFIG);
+        // Получение с пагинацией
+        if (params && params.page && params.perPage) {
+            const right = params.perPage * params.page;
+            const left = right - params.perPage;
+            let chaptersChunk = chapters.slice(left, right); 
+            return formattedChapters(chaptersChunk);
+        }
+        return formattedChapters(chapters);
     } catch (err) {
         console.error(err);
         throw err;

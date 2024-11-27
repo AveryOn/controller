@@ -7,6 +7,7 @@ import Toast from 'primevue/toast';
 import PanelMenu from 'primevue/panelmenu';
 import Select from 'primevue/select';
 import FileUpload from 'primevue/fileupload';
+import ProgressSpinner from 'primevue/progressspinner';
 
 buttonComp.name = 'cButton';
 
@@ -20,4 +21,5 @@ export default [
     PanelMenu,
     Select,
     FileUpload,
+    ProgressSpinner,
 ] as any[];

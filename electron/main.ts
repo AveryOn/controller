@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, prepareMaterialsStore } from './server/controllers/materials'
+import type { ChapterCreate, GetChaptersConfig } from './server/types/controllers/materials.types'
+import { createChapter, getChapters, prepareMaterialsStore, resetMaterialDB } from './server/controllers/materials'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -30,6 +30,7 @@ function createWindow() {
 
     // Test active push message to Renderer-process.
     win.webContents.on('did-finish-load', async () => {
+        // await resetMaterialDB()
         let isReliableStores: boolean = true;
         // Проверка баз данных
         isReliableStores = await prepareUsersStore(); // Users
@@ -94,4 +95,8 @@ app.whenReady().then(() => {
         return await createChapter(params);
     });
 
+    // Получение разделов для меню
+    ipcMain.handle("get-menu-chapters", async (event, params: GetChaptersConfig) => {
+        return await getChapters(params);
+    });
 })

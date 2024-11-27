@@ -3,14 +3,25 @@
         <PanelMenu class="w-full h-full" :model="items">
             <template #item="{ item }">
                 <router-link v-slot="{ href, navigate }" :to="{ name: item.route, params: { chapter: item.pathName} }" custom>
-                    <a 
+                    <a
                     class="inner-item flex items-center cursor-pointer px-2 py-1"
                     :href="href" 
                     @click="navigate"
                     >
                         <cIcon v-if="item.iconType === 'mdi'" class="mdi-icon-type" :icon="item.icon" :size="20"/>
-                        <span v-else="item.iconType === 'pi'" class="item-icon" :class="item.icon" />
-                        <span class="item-label ml-2">{{ item.label }}</span>
+                        <span v-else="item.iconType === 'pi'" v-show="item.type !== 'loading'" class="item-icon" :class="item.icon" />
+                        <span class="item-label ml-2">
+                            {{ item.label }}
+                            <ProgressSpinner
+                            class="ml-auto"
+                            v-if="item.type === 'loading'"
+                            style="width: 16px; height: 16px" 
+                            strokeWidth="4" 
+                            fill="transparent"
+                            animationDuration=".5s" 
+                            aria-label="Custom ProgressSpinner" 
+                            />
+                        </span>
                         <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
                     </a>
                 </router-link>
@@ -20,9 +31,13 @@
 </template>
 
 <script setup lang="ts">
-import { mdiVuejs } from '@mdi/js';
 import { ref } from 'vue';
 import cIcon from '../base/cIcon.vue';
+import { getChapters } from '../../api/materials.api';
+import { useMainStore } from '../../stores/main.store';
+
+const mainStore = useMainStore();
+const isLoadingMaterials = ref(false);
 
 const items = ref([
     {
@@ -45,29 +60,11 @@ const items = ref([
         label: 'Materials',
         icon: 'pi pi-book',
         route: 'materials',
-        command: () => {
-        },
+        command: () => getMaterials(),
         items: [
-            // {
-            //     label: 'Frontend',
-            //     icon: 'pi pi-trash',
-            //     command: (e: any) => {
-            //         console.log('Hello', e);
-            //     },
-            //     items: [
-            //         {
-            //             label: 'Vue',
-            //             icon: mdiVuejs,
-            //             iconType: 'mdi',
-            //         }
-            //     ]
-            // },
-            // {
-            //     label: 'Backend',
-            //     icon: 'pi pi-code',
-            //     route: 'materials',
-            //     pathName: 'backend',
-            // },
+            {
+                type: 'loading',
+            },
             {
                 label: 'Add Chapter',
                 icon: 'pi pi-plus',
@@ -91,6 +88,27 @@ const items = ref([
         ]
     }
 ]);
+
+async function getMaterials() {
+    try {
+        isLoadingMaterials.value = true;
+        if(!mainStore.materialChaptersMenu.length) {
+            mainStore.materialChaptersMenu = await getChapters();
+        }
+        let materials: any = items.value[1];
+        if(materials.items && materials.items.slice(0, -2).length <= 0) {
+            const addedItem = materials.items.pop();
+            materials.items.length = 0;
+            materials.items.push(...mainStore.materialChaptersMenu, addedItem);
+            console.log(materials.items);
+        }
+    } catch (err) {
+        throw err;
+    }
+    finally {
+        isLoadingMaterials.value = false;
+    }
+}
 </script>
 
 <style scoped>
@@ -118,6 +136,7 @@ const items = ref([
     color: var(--cf-primary-2);
 }
 .item-label {
+    width: 100%;
     display: inline-flex;
     align-items: center;
 }
