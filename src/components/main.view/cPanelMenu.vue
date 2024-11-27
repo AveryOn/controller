@@ -2,7 +2,7 @@
     <aside class="panel-menu">
         <PanelMenu class="w-full h-full" :model="items">
             <template #item="{ item }">
-                <router-link v-slot="{ href, navigate }" :to="{ name: item.route, params: item.params }" custom>
+                <router-link v-slot="{ href, navigate }" :to="{ name: item.route, params: { chapter: item.pathName} }" custom>
                     <a 
                     class="inner-item flex items-center cursor-pointer px-2 py-1"
                     :href="href" 
@@ -65,12 +65,14 @@ const items = ref([
             // {
             //     label: 'Backend',
             //     icon: 'pi pi-code',
+            //     route: 'materials',
+            //     pathName: 'backend',
             // },
             {
                 label: 'Add Chapter',
                 icon: 'pi pi-plus',
                 route: 'materials',
-                params: { chapter: 'add-chapter' },
+                pathName: 'add-chapter',
             },
         ]
     },
@@ -93,7 +95,7 @@ const items = ref([
 
 <style scoped>
 .panel-menu {
-    width: 300px !important;
+    width: 20% !important;
     gap: 0.3rem !important;
     padding: 0.3rem !important;
     border-right: var(--panel-border);

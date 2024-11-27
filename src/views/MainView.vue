@@ -2,8 +2,9 @@
     <div class="main-view">
         <cPanelMenu />
         <main class="main-panel">
-            <h1>Main View</h1>
-            <router-view></router-view>
+            <router-view v-slot="{ Component }">
+                <component class="route-comp" :is="Component"></component>
+            </router-view>
         </main>
     </div>
 </template>
@@ -25,5 +26,15 @@ async function getUsers() {
     background-color: var(--bg-color);
     color: var(--fg-color);
 }
-
+.main-panel {
+    width: 80%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.route-comp {
+    height: 100% !important;
+    margin-bottom: auto;
+}
 </style>

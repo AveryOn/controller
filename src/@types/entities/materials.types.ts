@@ -1,0 +1,88 @@
+
+// Объект раздела при его создании на клиенте
+export interface ChapterCreate {
+    label: string;
+    pathName: string;
+    icon: string;
+    iconType: IconType;
+    chapterType: ChapterType;
+    route: string,
+}
+
+export interface SubChapterCreate {
+    label: string;
+    pathName: string;
+    queryName: string;
+    icon: string;
+    iconType: IconType;
+    chapterType: ChapterType;
+    route: string,
+}
+
+// Контент для каждого раздела и подраздела
+export interface ChapterContent {
+    title: string;
+    blocks: Array<{
+        id: number;
+        title: string;
+        content: string;
+        createdAt: string;
+        updatedAt: string;
+    }>;
+}
+
+export type IconMode = 'img' | 'sym' | 'svg' | string;
+export type IconType = 'pi' | 'mdi' | 'img';
+export type ChapterType = 'file' | 'dir' | string;
+
+export interface SubChapter {
+    id: number;
+    pathName: string;
+    queryName: string;
+    label: string;
+    icon: string;
+    iconType: IconType;
+    chapterType: ChapterType;
+    route: string;
+    content: ChapterContent;
+    items?: SubChapter[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Chapter {
+    id: number;
+    pathName: string;
+    label: string;
+    icon: string;
+    iconType: IconType;
+    chapterType: ChapterType;
+    route: string;
+    content: ChapterContent;
+    items?: SubChapter[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+// addChapter.vue
+export interface ModesIcon {
+    name: string;
+    value: IconMode;
+}
+export interface ChapterTypes {
+    name: string;
+    value: ChapterType;
+}
+export interface IconTypes {
+    name: string;
+    value: IconType;
+}
+
+export interface CreateChapterForm {
+    label: string;
+    pathName: string;
+    symbol: string;
+    iconType: IconType | null;
+    iconImg: any;
+    type: ChapterType | null;
+}

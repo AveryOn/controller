@@ -3,4 +3,5 @@
     --font: monospace;
     --bg-color: white;
     --fg-color: rgb(39, 39, 39);
+    --rounded: 4px;
 }

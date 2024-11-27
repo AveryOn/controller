@@ -3,7 +3,9 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
-import { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
+import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
+import type { ChapterCreate } from './server/types/controllers/materials.types'
+import { createChapter, prepareMaterialsStore } from './server/controllers/materials'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -30,9 +32,10 @@ function createWindow() {
     win.webContents.on('did-finish-load', async () => {
         let isReliableStores: boolean = true;
         // Проверка баз данных
-        // Users
-        isReliableStores = await prepareUsersStore();
-        win?.webContents.send('main-process-message', isReliableStores)
+        isReliableStores = await prepareUsersStore(); // Users
+        isReliableStores = await prepareMaterialsStore(); // Materials
+        win?.webContents.send('main-process-message', isReliableStores);
+        console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
     })
 
     if (VITE_DEV_SERVER_URL) {
@@ -84,4 +87,11 @@ app.whenReady().then(() => {
     ipcMain.handle("update-password", async (event, params: UpdatePasswordParams) => {
         return await updatePassword(params);
     });
+
+    // ===== MATERIALS ========
+    // Созданое нового раздела материалов
+    ipcMain.handle("create-chapter", async (event, params: ChapterCreate) => {
+        return await createChapter(params);
+    });
+
 })

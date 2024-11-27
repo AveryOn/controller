@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs/promises';
 import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
-import { error } from 'console';
 
 const USER_FILENAME = 'users.json';
 

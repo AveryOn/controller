@@ -1,17 +1,230 @@
 <template>
     <form class="add-chapter-form" @submit.prevent>
-        
+        <h2 class="mb-2">Add New Chapter</h2>
+        <div class="w-9 mt-3 flex flex-column gap-2">
+            <!-- Label -->
+            <InputText 
+            class="w-full" 
+            type="text" 
+            v-model="form.label" 
+            placeholder="Label" 
+            size="small"
+            />
+            <span class="flex gap-1 font-bold mt-2">Example: 
+                <span class="example-item">foobar</span> 
+                <span class="example-item">foo-bar</span> 
+                <span class="example-item">foo_bar</span> 
+            </span>
+            <!-- Query Name -->
+            <InputText 
+            class="w-full" 
+            type="text" 
+            v-model="form.pathName" 
+            placeholder="Path name" 
+            size="small"
+            />
+            <!-- ICON TYPE -->
+            <span class="mt-2 font-bold">Icon Type</span>
+            <Select 
+            size="small"
+            v-model="selectIconType" 
+            :options="iconsTypes" 
+            @change="(e) => chooseIconType(e.value)"
+            optionLabel="name" 
+            option-value="value" 
+            placeholder="Icon Type" 
+            class="w-full" 
+            />
+            <!-- Symbol / Icon -->
+            <div class="w-full flex gap-2 align-items-start">
+                <Select 
+                v-model="modeIcon" 
+                :options="modesIcon" 
+                size="small"
+                optionLabel="name" 
+                option-value="value" 
+                placeholder="Mode" 
+                class="w-4" 
+                />
+                <!-- SVG PATH -->
+                <InputText
+                v-if="!modeIcon ? true : modeIcon === 'svg'"
+                class="w-8" 
+                type="text" 
+                v-model="form.symbol" 
+                placeholder="Svg path" 
+                size="small"
+                />
+                <!-- Symbol -->
+                <InputText
+                v-if="modeIcon === 'sym'"
+                class="w-8" 
+                type="text" 
+                v-model="form.symbol" 
+                placeholder="Symbol: any" 
+                size="small"
+                />
+                <!-- File Icon -->
+                <div 
+                v-if="modeIcon === 'img'"
+                class="w-8 flex align-items-start gap-2"
+                >
+                    <FileUpload 
+                    mode="basic" 
+                    @select="onFileSelect" 
+                    customUpload 
+                    auto 
+                    severity="secondary" 
+                    class="p-button-outlined" 
+                    >
+                        <template #content="{  }">
+                        </template>
+                        <template #header="{ clearCallback }">
+                            <Button @click="clearCallback" label="HELLLO" rounded outlined severity="danger"></Button>
+                        </template>
+                    </FileUpload>
+                </div>
+            </div>
+            <img 
+            v-if="src && modeIcon === 'img'" 
+            :src="src" 
+            alt="Image" 
+            class="img w-8 mx-auto" 
+            />
+            <!-- CHAPTER TYPE -->
+            <span class="mt-2 font-bold">Chapter Type</span>
+            <Select 
+            class="w-full -mt-1" 
+            v-model="selectChapType"
+            @change="(e) => form.type = e.value"
+            size="small"
+            :options="chapterTypes" 
+            optionLabel="name" 
+            option-value="value" 
+            placeholder="Chapter Type" 
+            />
+            <Button 
+            class="mt-2 text-xs font-bold w-max ml-auto" 
+            size="small" 
+            severity="info"
+            :loading="isLoadingForm"
+            @click="send"
+            >
+                Create
+            </Button>
+        </div>
     </form>
 </template>
 
 <script setup lang="ts">
+import { type Ref, ref } from 'vue';
+import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIcon,  } from '../../@types/entities/materials.types';
+
+
+
+const isLoadingForm = ref(false);
+const src = ref<any>(null);
+const modeIcon = ref('svg');
+const modesIcon: Ref<ModesIcon[]> = ref([
+    { name: 'Image', value: 'img' },
+    { name: 'Symbol', value: 'sym' },
+    { name: 'Svg path', value: 'svg' },
+]);
+const selectChapType = ref('file');
+const chapterTypes: Ref<ChapterTypes[]> = ref([
+    { name: 'Directory', value: 'dir' },
+    { name: 'File', value: 'file' },
+]);
+const selectIconType = ref('pi');
+const iconsTypes: Ref<IconTypes[]> = ref([
+    { name: 'PI', value: 'pi' },
+    { name: 'MDI', value: 'mdi' },
+    { name: 'IMG', value: 'img' },
+]);
+const mapIconTypesModes = {
+    'pi': 'sym',
+    'mdi': 'svg',
+    'img': 'img',
+}
+
+const form: Ref<CreateChapterForm> = ref<CreateChapterForm>({
+    label: '',
+    pathName: '',
+    symbol: '',
+    iconType: null,
+    iconImg: null,
+    type: null,
+});
+
+// Установка префикса pi
+function correctSymbol() {
+    if(form.value.iconType === 'pi') {
+        return `pi ${form.value.symbol}`;
+    } 
+    else {
+        return form.value.symbol;
+    }
+}
+
+async function send() {
+    try {
+        isLoadingForm.value = true;
+        const newChapter: ChapterCreate = {
+            label: form.value.label,
+            pathName: form.value.pathName,
+            icon: correctSymbol(),
+            iconType: form.value.iconType!,
+            chapterType: form.value.type!,
+            route: 'materials',
+        }
+        const res = await window.electron.createChapter(newChapter);
+        console.log(res);
+    } catch (err) {
+        throw err;    
+    } finally { 
+        isLoadingForm.value = false;
+    }
+
+}
+
+function chooseIconType(value: keyof typeof mapIconTypesModes) {
+    modeIcon.value = mapIconTypesModes[value];
+    form.value.iconType = value;
+}
+
+function onFileSelect(event: any) {
+    const file = event.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+        src.value = e.target!.result;
+    };
+    reader.readAsDataURL(file);
+}
 
 </script>
 
 <style scoped>
 .add-chapter-form {
-    width: 600px;
-    height: 400px;
-    background-color: gray;
+    width: 500px;
+    min-height: 200px;
+    height: max-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgb(225, 225, 225);
+    font-family: var(--font);
+    border-radius: var(--rounded);
+    padding: 1rem;
+    padding-bottom: 2rem;
+}
+.example-item {
+    background-color: rgba(128, 128, 128, 0.435);
+    padding: 0 0.3rem;
+    border-radius: var(--rounded);
+}
+.img {
+    object-fit: cover;
+    border-radius: var(--rounded);
 }
 </style>

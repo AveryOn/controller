@@ -1,5 +1,6 @@
 import { ipcRenderer, contextBridge } from 'electron'
-import { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types';
+import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types';
+import type { ChapterCreate } from './server/types/controllers/materials.types';
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
@@ -7,6 +8,9 @@ contextBridge.exposeInMainWorld('electron', {
     createUser: (params: CreateUserParams) => ipcRenderer.invoke('create-user', params),
     loginUser: (params: LoginParams) => ipcRenderer.invoke('login-user', params),
     updatePassword: (params: UpdatePasswordParams) => ipcRenderer.invoke('update-password', params),
+
+    // ===== MATERIALS ========
+    createChapter: (params: ChapterCreate) => ipcRenderer.invoke('create-chapter', params),
 });
 
 

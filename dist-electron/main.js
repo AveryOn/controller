@@ -1,150 +1,299 @@
-import { app as c, BrowserWindow as _, ipcMain as l } from "electron";
-import { createRequire as S } from "node:module";
-import { fileURLToPath as N } from "node:url";
-import i from "node:path";
-import f from "path";
-import u from "fs/promises";
-import w from "crypto";
-const y = 64, P = 16384, R = 8, E = 1;
-async function I(r) {
-  return new Promise((e, t) => {
+import { app, BrowserWindow, ipcMain } from "electron";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import path$1 from "node:path";
+import path from "path";
+import fs from "fs/promises";
+import crypto from "crypto";
+const keylen = 64;
+const N = 16384;
+const r = 8;
+const p = 1;
+async function encrypt(input) {
+  return new Promise((resolve, reject) => {
     try {
-      const n = w.randomBytes(16).toString("hex");
-      w.scrypt(r, n, y, { N: P, r: R, p: E }, (s, o) => {
-        if (s)
-          throw s;
-        e({ hash: o.toString("hex"), salt: n });
+      const salt = crypto.randomBytes(16).toString("hex");
+      crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+        if (err) {
+          throw err;
+        }
+        resolve({ hash: derivedKey.toString("hex"), salt });
       });
-    } catch (n) {
-      t(n);
+    } catch (err) {
+      reject(err);
     }
   });
 }
-async function m(r, e, t) {
-  return new Promise((n, s) => {
+async function verify(input, salt, hash) {
+  return new Promise((resolve, reject) => {
     try {
-      w.scrypt(r, e, y, { N: P, r: R, p: E }, (o, A) => {
-        if (o) throw o;
-        A.toString("hex") === t ? n(!0) : n(!1);
+      crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+        if (err) throw err;
+        if (derivedKey.toString("hex") === hash) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
       });
-    } catch (o) {
-      s(o);
+    } catch (err) {
+      reject(err);
     }
   });
 }
-const p = "users.json";
-async function D(r) {
+const USER_FILENAME = "users.json";
+async function writeUsersDataFs(data) {
   try {
-    const e = c.getPath("userData"), t = f.join(e, p);
-    return void await u.writeFile(t, JSON.stringify(r), { encoding: "utf-8" });
-  } catch (e) {
-    throw console.error(e), e;
+    const userDataDir = app.getPath("userData");
+    const filePath = path.join(userDataDir, USER_FILENAME);
+    return void await fs.writeFile(filePath, JSON.stringify(data), { encoding: "utf-8" });
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
 }
-async function O() {
-  const r = c.getPath("userData"), e = f.join(r, p);
-  return u.readFile(e, { encoding: "utf-8" }).then((t) => !0).catch(async () => {
+async function prepareUsersStore() {
+  const userDataDir = app.getPath("userData");
+  const filePath = path.join(userDataDir, USER_FILENAME);
+  return fs.readFile(filePath, { encoding: "utf-8" }).then((data) => {
+    return true;
+  }).catch(async () => {
     try {
-      return await u.writeFile(e, JSON.stringify([]), { encoding: "utf-8" }), !0;
-    } catch (t) {
-      return console.error("WRITE FILE", t), !1;
+      await fs.writeFile(filePath, JSON.stringify([]), { encoding: "utf-8" });
+      return true;
+    } catch (err) {
+      console.error("WRITE FILE", err);
+      return false;
     }
   });
 }
-async function d(r) {
+async function getUsers(config) {
   try {
-    const e = c.getPath("userData"), t = f.join(e, p), n = JSON.parse(await u.readFile(t, { encoding: "utf-8" }));
-    if (r && r.page && r.perPage) {
-      const s = r.perPage * r.page, o = s - r.perPage;
-      return n.slice(o, s);
-    } else return n;
-  } catch (e) {
-    throw console.error(e), e;
+    const userDataDir = app.getPath("userData");
+    const filePath = path.join(userDataDir, USER_FILENAME);
+    const users = JSON.parse(await fs.readFile(filePath, { encoding: "utf-8" }));
+    if (config && config.page && config.perPage) {
+      const right = config.perPage * config.page;
+      const left = right - config.perPage;
+      return users.slice(left, right);
+    } else return users;
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
 }
-async function v(r) {
+async function createUser(params) {
   try {
-    if (!r.password || !r.username) throw "[createUser]>> INVALID_USER_DATA";
-    const e = await d();
-    e.forEach((o) => {
-      if (o.username === r.username)
+    if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
+    const users = await getUsers();
+    users.forEach((user) => {
+      if (user.username === params.username) {
         throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
+      }
     });
-    const { hash: t, salt: n } = await I(r.password), s = {
-      id: e.length + 1,
-      username: r.username,
-      password: t,
-      hash_salt: n,
+    const { hash, salt } = await encrypt(params.password);
+    const newUser = {
+      id: users.length + 1,
+      username: params.username,
+      password: hash,
+      hash_salt: salt,
       avatar: null
     };
-    return e.push(s), await D(e), s;
-  } catch (e) {
-    throw console.error(e), e;
+    users.push(newUser);
+    await writeUsersDataFs(users);
+    return newUser;
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
 }
-async function L(r) {
+async function loginUser(params) {
   try {
-    if (!r.password || !r.username) throw "[loginUser]>> INVALID_USER_DATA";
-    const t = (await d()).find((s) => s.username === r.username);
-    if (!t)
+    if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
+    const users = await getUsers();
+    const findedUser = users.find((user) => user.username === params.username);
+    if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
-    if (await m(r.password, t.hash_salt, t.password).catch((s) => {
-      console.log("ERROR", s);
-    }) === !0) {
-      const s = { ...t };
-      return Reflect.deleteProperty(s, "password"), Reflect.deleteProperty(s, "hash_salt"), {
-        token: "tested_hash_token_type_jwt",
-        user: s
-      };
-    } else
-      throw "[loginUser]>> INVALID_CREDENTIALS";
-  } catch (e) {
-    throw console.error(e), e;
-  }
-}
-async function V(r) {
-  try {
-    if (r.newPassword === r.oldPassword) throw "[updatePassword]>> INVALID_DATA";
-    let e = await d();
-    const t = e.find((o) => o.username === r.username);
-    if (!t)
-      throw "[updatePassword]>> NOT_EXISTS_RECORD";
-    if (!await m(r.oldPassword, t.hash_salt, t.password))
-      throw "[updatePassword]>> INVALID_CREDENTIALS";
-    const { hash: n, salt: s } = await I(r.newPassword);
-    return t.hash_salt = s, t.password = n, e = e.map((o) => o.id === t.id ? t : o), await D(e), !0;
-  } catch (e) {
-    throw console.error(e), e;
-  }
-}
-S(import.meta.url);
-const g = i.dirname(N(import.meta.url));
-process.env.APP_ROOT = i.join(g, "..");
-const h = process.env.VITE_DEV_SERVER_URL, k = i.join(process.env.APP_ROOT, "dist-electron"), U = i.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = h ? i.join(process.env.APP_ROOT, "public") : U;
-let a;
-function T() {
-  a = new _({
-    icon: i.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-    webPreferences: {
-      preload: i.join(g, "preload.mjs")
     }
-  }), a.webContents.on("did-finish-load", async () => {
-    let r = !0;
-    r = await O(), a == null || a.webContents.send("main-process-message", r);
-  }), h ? a.loadURL(h) : a.loadFile(i.join(U, "index.html"));
+    const isVerifyPassword = await verify(params.password, findedUser.hash_salt, findedUser.password).catch((err) => {
+      console.log("ERROR", err);
+    });
+    if (isVerifyPassword === true) {
+      const readyUser = { ...findedUser };
+      Reflect.deleteProperty(readyUser, "password");
+      Reflect.deleteProperty(readyUser, "hash_salt");
+      return {
+        token: "tested_hash_token_type_jwt",
+        user: readyUser
+      };
+    } else {
+      throw "[loginUser]>> INVALID_CREDENTIALS";
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
-c.on("window-all-closed", () => {
-  process.platform !== "darwin" && (c.quit(), a = null);
+async function updatePassword(params) {
+  try {
+    if (params.newPassword === params.oldPassword) throw "[updatePassword]>> INVALID_DATA";
+    let users = await getUsers();
+    const findedUser = users.find((user) => user.username === params.username);
+    if (!findedUser) {
+      throw "[updatePassword]>> NOT_EXISTS_RECORD";
+    }
+    if (!await verify(params.oldPassword, findedUser.hash_salt, findedUser.password)) {
+      throw "[updatePassword]>> INVALID_CREDENTIALS";
+    }
+    const { hash, salt } = await encrypt(params.newPassword);
+    findedUser.hash_salt = salt;
+    findedUser.password = hash;
+    users = users.map((user) => {
+      if (user.id === findedUser.id) {
+        return findedUser;
+      }
+      return user;
+    });
+    await writeUsersDataFs(users);
+    return true;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function writeFile(data, config) {
+  try {
+    const userDataDir = app.getPath(config.directory);
+    const filePath = path.join(userDataDir, config.filename);
+    const correctData = config.format === "json" ? JSON.stringify(data) : data;
+    return void await fs.writeFile(filePath, correctData, { encoding: config.encoding || "utf-8" });
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function readFile(config) {
+  try {
+    const userDataDir = app.getPath(config.directory);
+    const filePath = path.join(userDataDir, config.filename);
+    const data = await fs.readFile(filePath, { encoding: config.encoding || "utf-8" });
+    return config.format === "json" ? JSON.parse(data) : data;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+const MATERIALS_FILENAME = "materials.json";
+const FSCONFIG = {
+  directory: "appData",
+  encoding: "utf-8",
+  filename: MATERIALS_FILENAME,
+  format: "json"
+};
+async function prepareMaterialsStore() {
+  return readFile(FSCONFIG).then((data) => {
+    console.log(data);
+    return true;
+  }).catch(async () => {
+    try {
+      await writeFile([], FSCONFIG);
+      return true;
+    } catch (err) {
+      console.error("WRITE FILE", err);
+      return false;
+    }
+  });
+}
+async function createChapter(params) {
+  try {
+    const materials = await readFile(FSCONFIG);
+    materials.forEach((chapter) => {
+      if (chapter.pathName === params.pathName) {
+        throw "[createChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
+      }
+    });
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const newChapter = {
+      id: (materials.length || 0) + 1,
+      chapterType: params.chapterType,
+      content: {
+        blocks: [],
+        title: null
+      },
+      icon: params.icon,
+      iconType: params.iconType,
+      pathName: params.pathName,
+      route: params.route,
+      items: params.chapterType === "dir" ? [] : null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    materials.push(newChapter);
+    await writeFile(materials, FSCONFIG);
+    return newChapter;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+createRequire(import.meta.url);
+const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path$1.join(__dirname, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path$1.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path$1.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$1.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path$1.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    webPreferences: {
+      preload: path$1.join(__dirname, "preload.mjs")
+    }
+  });
+  win.webContents.on("did-finish-load", async () => {
+    let isReliableStores = true;
+    isReliableStores = await prepareUsersStore();
+    isReliableStores = await prepareMaterialsStore();
+    win == null ? void 0 : win.webContents.send("main-process-message", isReliableStores);
+    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path$1.join(RENDERER_DIST, "index.html"));
+  }
+}
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-c.on("activate", () => {
-  _.getAllWindows().length === 0 && T();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-c.whenReady().then(() => {
-  T(), l.handle("get-users", async (r, e) => await d(e)), l.handle("create-user", async (r, e) => await v(e)), l.handle("login-user", async (r, e) => await L(e)), l.handle("update-password", async (r, e) => await V(e));
+app.whenReady().then(() => {
+  createWindow();
+  ipcMain.handle("get-users", async (event, config) => {
+    return await getUsers(config);
+  });
+  ipcMain.handle("create-user", async (event, params) => {
+    return await createUser(params);
+  });
+  ipcMain.handle("login-user", async (event, params) => {
+    return await loginUser(params);
+  });
+  ipcMain.handle("update-password", async (event, params) => {
+    return await updatePassword(params);
+  });
+  ipcMain.handle("create-chapter", async (event, params) => {
+    return await createChapter(params);
+  });
 });
 export {
-  k as MAIN_DIST,
-  U as RENDERER_DIST,
-  h as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
