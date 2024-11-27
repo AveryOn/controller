@@ -100,7 +100,6 @@ async function getMaterials() {
             const addedItem = materials.items.pop();
             materials.items.length = 0;
             materials.items.push(...mainStore.materialChaptersMenu, addedItem);
-            console.log(materials.items);
         }
     } catch (err) {
         throw err;
@@ -123,20 +122,23 @@ async function getMaterials() {
     text-decoration: none;
     color: var(--light-text-4);
     background-color: rgba(0,0,0,0);
+    display: flex;
+    align-items: center;
 }
 .item-icon {
-    border-right: var(--panel-border);
-    border-width: 2px;
-    padding-right: 0.5rem;
-    border-right-style: solid;
     color: var(--cf-primary-2);
-    font-size: 1rem !important;
+    font-size: .9rem !important;
+    height: max-content !important;
 }
 .mdi-icon-type {
     color: var(--cf-primary-2);
 }
 .item-label {
     width: 100%;
+    border-left: var(--panel-border);
+    padding-left: 0.5rem;
+    border-left-style: solid;
+    border-width: 2px;
     display: inline-flex;
     align-items: center;
 }
