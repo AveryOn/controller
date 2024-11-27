@@ -4,18 +4,14 @@
         <Fluid class="w-10">
             <div class="flex flex-column gap-1">
                 <InputText size="small" type="text" v-model="form.username" placeholder="Username" />
-                <Password size="small" v-model="form.oldPasword" placeholder="Old Password" :feedback="false" toggleMask/>
-                <Password size="small" v-model="form.newPassword" placeholder="New Password" :feedback="false" toggleMask/>
-                <Password size="small" v-model="form.confirmPassword" placeholder="Confirm Password" :feedback="false" toggleMask/>
+                <Password size="small" v-model="form.oldPassword" placeholder="Old Password" :feedback="false"
+                    toggleMask />
+                <Password size="small" v-model="form.newPassword" placeholder="New Password" :feedback="false"
+                    toggleMask />
+                <Password size="small" v-model="form.confirmPassword" placeholder="Confirm Password" :feedback="false"
+                    toggleMask />
             </div>
-            <Button 
-            class="mt-3 mb-2" 
-            fluid 
-            label="Confirm" 
-            size="small"
-            :loading="isLoading"
-            @click="submit"
-            />
+            <Button class="mt-3 mb-2" fluid label="Confirm" size="small" :loading="isLoading" @click="submit" />
         </Fluid>
 
     </form>
@@ -34,19 +30,34 @@ const emit = defineEmits({
 const isLoading = ref(false);
 const form = ref({
     username: '',
-    oldPasword: '',
+    oldPassword: '',
     newPassword: '',
     confirmPassword: '',
 });
 
 
 async function submit() {
-    notices.show({ life: 3000 });
-    emit('confirm:update', form.value.newPassword);
-    if(window.electron) {
-        console.log(await window.electron.readFile("фыыв"));
+    try {
+        const isSuccess: boolean = await window.electron.updatePassword({
+            username: form.value.username,
+            oldPassword: form.value.oldPassword,
+            newPassword: form.value.newPassword,
+        })
+        emit('confirm:update', isSuccess);
+        form.value = {
+            username: '',
+            oldPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+        };
+    } catch (err) {
+        emit('confirm:update', false);
+        notices.show({ detail: 'Error', severity: 'error' });
+        throw err;
+    } finally {
+        isLoading.value = false;
     }
-    
+
 }
 
 </script>

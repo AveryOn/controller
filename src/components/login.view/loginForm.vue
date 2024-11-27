@@ -21,10 +21,16 @@
 <script setup lang="ts">
 import Fluid from 'primevue/fluid';
 import { ref, defineEmits } from 'vue';
+import useNotices from '../../composables/notices';
+import { useLoginStore } from '../../stores/login.store';
+import { LoginResponse } from '../../@types/entities/user.types';
+
+const notices = useNotices();
+const loginStore = useLoginStore();
 
 const emit = defineEmits({
-    'confirm:login': (data) => true,
-})
+    'confirm:login': (data: boolean, token: string | null) => true,
+});
 
 const isLoading = ref(false);
 const form = ref({
@@ -33,8 +39,26 @@ const form = ref({
 });
 
 
-function submit() {
-    emit('confirm:login', form.value.password);
+async function submit() {
+    if(!form.value.username || !form.value.password) {
+        return void notices.show({ detail: 'Error', severity: 'error' });
+    }
+    try {
+        isLoading.value = true;
+        const { token, user }: LoginResponse = await window.electron.loginUser({...form.value});
+        loginStore.setCredentials(token, user);
+        emit('confirm:login', true, token);
+        form.value = {
+            password: '',
+            username: '',
+        }
+    } catch (err) {
+        emit('confirm:login', false, null);
+        notices.show({ detail: 'Error', severity: 'error' });
+        throw err;
+    } finally {
+        isLoading.value = false;
+    }
 }
 </script>
 

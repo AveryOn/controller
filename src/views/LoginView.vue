@@ -1,10 +1,28 @@
 <template>
     <div class="login-view flex flex-column align-items-center justify-content-center gap-2">
-        <SelectButton @update:model-value="updateSelect" :default-value="'Login'" :options="['Update', 'Login', 'Sign Up']" size="small" />
+        <SelectButton 
+        @update:model-value="updateSelect" 
+        :model-value="selectMode" 
+        :default-value="'Login'" 
+        :options="['Update', 'Login', 'Sign Up']" 
+        size="small" 
+        />
         <div class="forms-wrapper">
-            <UpdateForm class="form" v-show="selectMode === 'Update'" />
-            <RegisterForm class="form" v-show="selectMode === 'Sign Up'" />
-            <LoginForm class="form" v-show="selectMode === 'Login'" />
+            <UpdateForm 
+            class="form" 
+            v-show="selectMode === 'Update'" 
+            @confirm:update="handlerUpdate"
+            />
+            <RegisterForm 
+            class="form" 
+            v-show="selectMode === 'Sign Up'" 
+            @confirm:login="handlerSignUp"
+            />
+            <LoginForm 
+            class="form" 
+            v-show="selectMode === 'Login'" 
+            @confirm:login="handlerLogin"
+            />
         </div>
     </div>
 </template>
@@ -14,12 +32,33 @@ import RegisterForm from '../components/login.view/registerForm.vue';
 import LoginForm from '../components/login.view/loginForm.vue';
 import UpdateForm from '../components/login.view/updateForm.vue';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const selectMode = ref('Login');
+const router = useRouter();
 
-function updateSelect(value) {
+function updateSelect(value: string | undefined): void {
     if(!value) return void (selectMode.value = 'Login');
     selectMode.value = value;
+}
+
+function handlerSignUp(state: boolean): void {
+    if(state === true) {
+        selectMode.value = 'Login';
+    }
+}
+
+function handlerLogin(state: boolean, token: string | null): void {
+    if(state === true) {
+        console.log(token);
+        router.push({ name: 'main' });
+    }
+}
+
+function handlerUpdate(state: boolean) {
+    if(state === true) {
+        selectMode.value = 'Login';
+    }
 }
 
 </script>
