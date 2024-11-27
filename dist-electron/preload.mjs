@@ -1,11 +1,1 @@
-"use strict";
-const electron = require("electron");
-electron.contextBridge.exposeInMainWorld("electron", {
-  getUsers: (config) => electron.ipcRenderer.invoke("get-users", config),
-  createUser: (params) => electron.ipcRenderer.invoke("create-user", params),
-  loginUser: (params) => electron.ipcRenderer.invoke("login-user", params),
-  updatePassword: (params) => electron.ipcRenderer.invoke("update-password", params)
-});
-electron.ipcRenderer.on("main-process-message", (event, message) => {
-  console.log("Сообщение от основного процесса:", message);
-});
+"use strict";const r=require("electron");r.contextBridge.exposeInMainWorld("electron",{getUsers:e=>r.ipcRenderer.invoke("get-users",e),createUser:e=>r.ipcRenderer.invoke("create-user",e),loginUser:e=>r.ipcRenderer.invoke("login-user",e),updatePassword:e=>r.ipcRenderer.invoke("update-password",e)});r.ipcRenderer.on("main-process-message",(e,n)=>{console.log("Сообщение от основного процесса:",n)});

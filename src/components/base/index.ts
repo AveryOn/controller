@@ -4,7 +4,7 @@ import Password from 'primevue/password';
 import Button from "primevue/button";
 import InputText from 'primevue/inputtext';
 import Toast from 'primevue/toast';
-
+import PanelMenu from 'primevue/panelmenu';
 
 buttonComp.name = 'cButton';
 
@@ -15,4 +15,5 @@ export default [
     Button,
     InputText,
     Toast,
+    PanelMenu,
 ] as any[];

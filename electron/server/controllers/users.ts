@@ -25,7 +25,6 @@ export async function prepareUsersStore(): Promise<boolean> {
     const filePath = path.join(userDataDir, USER_FILENAME);
     return fs.readFile(filePath, { encoding: 'utf-8' })
         .then((data) => {
-            console.log(data);
             return true;
         })
         .catch(async () => {

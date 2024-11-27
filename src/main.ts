@@ -8,6 +8,8 @@ import Aura from '@primevue/themes/aura';
 import baseComponents from './components/base';
 import { createPinia } from 'pinia';
 import ToastService from 'primevue/toastservice';
+import 'primeicons/primeicons.css'
+
 
 const app = createApp(init);
 

@@ -1,4 +1,6 @@
+@import url(./themes/index.css);
 @import url(./variables/index.css);
+@import url(./components/index.css);
 
 * {
   margin: 0;

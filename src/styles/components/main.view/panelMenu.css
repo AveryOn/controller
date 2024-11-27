@@ -1,0 +1,28 @@
+
+:root {
+    --panel-bg: rgb(230, 230, 230);
+    --panel-bg-hover: rgb(197, 197, 197);
+    --panel-border: 1px dotted rgba(156, 156, 156, 0.609);
+    --panel-item-border: 1px solid rgba(189, 189, 189, 0.609);
+    --panel-item-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+    --p-panelmenu-item-focus-color: rgb(255, 255, 255) !important;
+    --p-panelmenu-item-focus-background: rgb(182, 143, 202) !important;
+
+    --p-panelmenu-item-padding: 0rem !important;
+    --p-panelmenu-panel-padding: 0.3rem !important;
+}
+
+.p-panelmenu-panel {
+    background-color: var(--panel-bg) !important;
+    font-family: var(--font) !important;
+    border: var(--panel-item-border) !important;
+    box-shadow: var(--panel-item-shadow) !important;
+}
+
+.p-panelmenu-header-content:hover {
+    background-color: var(--panel-bg-hover) !important;
+}
+
+.p-panelmenu-item-content:hover  {
+    background-color: var(--panel-bg-hover) !important;
+}
