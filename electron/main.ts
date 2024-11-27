@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, GetChaptersConfig } from './server/types/controllers/materials.types'
-import { createChapter, getChapters, prepareMaterialsStore, resetMaterialDB } from './server/controllers/materials'
+import type { ChapterCreate, GetChapterOneParams, GetChaptersConfig } from './server/types/controllers/materials.types'
+import { createChapter, getChapters, getOneChapter, prepareMaterialsStore, resetMaterialDB } from './server/controllers/materials'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -98,5 +98,10 @@ app.whenReady().then(() => {
     // Получение разделов для меню
     ipcMain.handle("get-menu-chapters", async (event, params: GetChaptersConfig) => {
         return await getChapters(params);
+    });
+
+    // Получение раздела
+    ipcMain.handle("get-one-chapter", async (event, params: GetChapterOneParams) => {
+        return await getOneChapter(params);
     });
 })

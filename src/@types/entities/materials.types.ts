@@ -112,3 +112,8 @@ export interface GetChaptersParams {
     page?: number;
     perPage?: number;
 }
+
+export interface GetOneChapterParams {
+    chapterId?: number;
+    pathName?: string;
+}

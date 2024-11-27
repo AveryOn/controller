@@ -22,6 +22,10 @@ export interface SubChapterCreate {
 
 export interface GetChaptersConfig extends PaginatorParams {}
 
+export interface GetChapterOneParams {
+    chapterId?: number;
+    pathName?: string;
+}
 
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {

@@ -5,22 +5,24 @@
         </header>
         <div class="materials-main">
             <addChapter v-if="$route.params['chapter'] === 'add-chapter'"/>
-            <wrapperChapter v-else/>
+            <wrapperChapter v-else v-show="$route.params['chapter']" @open-chapter="(label) => labelChapter = label"/>
         </div>
     </div>
 </template>
 
 <script setup lang=ts>
-import { computed } from 'vue';
+import { computed, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
+const labelChapter: Ref<string | null> = ref(null);
+
 const openChapterName = computed(() => {
-    return (route.params['chapter'] !== 'add-chapter') ? route.params['chapter'] : 'New Chapter';
-})
+    return (labelChapter.value !== 'add-chapter') ? labelChapter.value : 'New Chapter';
+});
 </script>
 
 <style scoped>

@@ -1,7 +1,7 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
 import { app } from 'electron';
-import { Chapter, ChapterCreate, ChapterForMenu, GetChaptersConfig } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChaptersConfig } from "../types/controllers/materials.types";
 
 const MATERIALS_FILENAME = 'materials.json';
 const FSCONFIG: FsOperationConfig = {
@@ -102,6 +102,32 @@ export async function getChapters(params?: GetChaptersConfig): Promise<ChapterFo
             return formattedChapters(chaptersChunk);
         }
         return formattedChapters(chapters);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Получение конкретного раздела
+export async function getOneChapter(params: GetChapterOneParams): Promise<Chapter> {
+    try {
+        // Получение materials
+        const materials: Chapter[] = await readFile(FSCONFIG);
+        // Получение по ID
+        if(params.chapterId) {
+            const findedChapter = materials.find((chapter) => chapter.id === params.chapterId);
+            if(!findedChapter) throw '[getOneChapter]>> NOT_EXISTS_RECORD';
+            return findedChapter;
+        } 
+        // Получение по имени пути
+        else if(params.pathName) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            if(!findedChapter) throw '[getOneChapter]>> NOT_EXISTS_RECORD';
+            return findedChapter;
+        } 
+        else {
+            throw '[getOneChapter]>> NOT_EXISTS_RECORD';
+        }
     } catch (err) {
         console.error(err);
         throw err;

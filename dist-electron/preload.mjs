@@ -7,7 +7,8 @@ electron.contextBridge.exposeInMainWorld("electron", {
   updatePassword: (params) => electron.ipcRenderer.invoke("update-password", params),
   // ===== MATERIALS ========
   createChapter: (params) => electron.ipcRenderer.invoke("create-chapter", params),
-  getChapters: (params) => electron.ipcRenderer.invoke("get-menu-chapters", params)
+  getChapters: (params) => electron.ipcRenderer.invoke("get-menu-chapters", params),
+  getChapter: (params) => electron.ipcRenderer.invoke("get-one-chapter", params)
 });
 electron.ipcRenderer.on("main-process-message", (event, message) => {
   console.log("Сообщение от основного процесса:", message);

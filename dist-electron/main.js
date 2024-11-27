@@ -264,6 +264,25 @@ async function getChapters(params) {
     throw err;
   }
 }
+async function getOneChapter(params) {
+  try {
+    const materials = await readFile(FSCONFIG);
+    if (params.chapterId) {
+      const findedChapter = materials.find((chapter) => chapter.id === params.chapterId);
+      if (!findedChapter) throw "[getOneChapter]>> NOT_EXISTS_RECORD";
+      return findedChapter;
+    } else if (params.pathName) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      if (!findedChapter) throw "[getOneChapter]>> NOT_EXISTS_RECORD";
+      return findedChapter;
+    } else {
+      throw "[getOneChapter]>> NOT_EXISTS_RECORD";
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -322,6 +341,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("get-menu-chapters", async (event, params) => {
     return await getChapters(params);
+  });
+  ipcMain.handle("get-one-chapter", async (event, params) => {
+    return await getOneChapter(params);
   });
 });
 export {

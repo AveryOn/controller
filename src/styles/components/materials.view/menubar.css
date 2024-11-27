@@ -1,0 +1,30 @@
+
+:root {
+    --p-menubar-padding: 0.2rem !important;
+    --p-menubar-base-item-padding: 0.2rem 0.6rem !important;
+    --p-menubar-background: var(--bg-color) !important;
+    --p-menubar-submenu-background: var(--bg-color) !important;
+    --p-menubar-color: var(--fg-color) !important;
+    --p-menubar-item-color: var(--fg-color) !important;
+    --p-menubar-mobile-button-hover-background: var(--light-text-1) !important;
+    --p-menubar-border-color: var(--light-text-1) !important;
+    --p-menubar-submenu-border-color: var(--light-text-1) !important;
+
+}
+
+.p-menubar-item {
+    font-family: var(--font);
+    font-size: 14px !important;
+}
+
+.p-menubar-item-content:hover {
+    background: var(--light-text-1) !important;
+}
+
+.p-menubar-submenu {
+    margin-top: 0.3rem !important;
+}
+
+.p-menubar-item-icon {
+    font-size: 14px !important;
+}

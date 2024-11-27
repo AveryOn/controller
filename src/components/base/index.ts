@@ -8,6 +8,7 @@ import PanelMenu from 'primevue/panelmenu';
 import Select from 'primevue/select';
 import FileUpload from 'primevue/fileupload';
 import ProgressSpinner from 'primevue/progressspinner';
+import Menubar from 'primevue/menubar';
 
 buttonComp.name = 'cButton';
 
@@ -22,4 +23,5 @@ export default [
     Select,
     FileUpload,
     ProgressSpinner,
+    Menubar,
 ] as any[];
