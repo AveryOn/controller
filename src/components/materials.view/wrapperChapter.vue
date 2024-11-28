@@ -39,23 +39,13 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, getOneChapter } from '../../api/materials.api';
+import { createSubChapter, getOneChapter, syncMaterials } from '../../api/materials.api';
 import { computed, ref, type Ref } from 'vue';
-import { Chapter, ChapterCreate, SubChapter, SubChapterCreate } from '../../@types/entities/materials.types';
+import { Chapter, ChapterCreate, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiTabPlus } from '@mdi/js';
 import dialogComp from '../base/dialogComp.vue';
 import addChapter from './addChapter.vue';
-
-interface Example1 {
-    name: string,
-    age: string,
-}
-interface Example2 {
-    name: string,
-    age: string,
-    email: string;
-}
 
 const isShowCreateSubChapter = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
@@ -111,6 +101,8 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
             route: newSubChapter.route,
         }
         const result = await createSubChapter(correctSubChapter);
+        // Синхронизация подразделов с меню
+        await syncMaterials();
         console.log(result);
     } catch (err) {
         console.error(err);

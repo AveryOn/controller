@@ -17,9 +17,6 @@
 import { computed, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
-import { useRoute } from 'vue-router';
-
-const route = useRoute();
 
 const labelChapter: Ref<string | null> = ref(null);
 

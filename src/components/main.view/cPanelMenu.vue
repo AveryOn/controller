@@ -2,11 +2,10 @@
     <aside class="panel-menu">
         <PanelMenu class="w-full h-full" :model="items">
             <template #item="{ item }">
-                <router-link v-slot="{ href, navigate }" :to="{ name: item.route, params: { chapter: item.pathName} }" custom>
+                <div>
                     <a
                     class="inner-item flex items-center cursor-pointer px-2 py-1"
-                    :href="href" 
-                    @click="navigate"
+                    @click="() => console.log(item)"
                     >
                         <cIcon v-if="item.iconType === 'mdi'" class="mdi-icon-type" :icon="item.icon" :size="20"/>
                         <span v-else="item.iconType === 'pi'" v-show="item.type !== 'loading'" class="item-icon" :class="item.icon" />
@@ -24,7 +23,8 @@
                         </span>
                         <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
                     </a>
-                </router-link>
+                </div>
+
             </template>
         </PanelMenu>
     </aside>
@@ -60,7 +60,7 @@ const items = ref([
         label: 'Materials',
         icon: 'pi pi-book',
         route: 'materials',
-        command: () => getMaterials(),
+        command: getMaterials,
         items: [
             {
                 type: 'loading',
@@ -94,8 +94,8 @@ const items = ref([
 async function getMaterials() {
     try {
         isLoadingMaterials.value = true;
-        if(!mainStore.materialChaptersMenu.length) {
-            mainStore.materialChaptersMenu = await getChapters();
+        if(mainStore.materialChaptersMenu.length <= 0) {
+            mainStore.materialChaptersMenu = await getChapters({ forMenu: true });
         }
         let materials: any = items.value[1];
         if(materials.items && materials.items.slice(0, -2).length <= 0) {

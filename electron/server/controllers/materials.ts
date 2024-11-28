@@ -5,14 +5,21 @@ import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChapter
 import { excludesWords, trimPath } from "../services/string.service";
 
 const MATERIALS_FILENAME = 'materials.json';
+const MATERIALS_MENU_FILENAME = 'materials-menu.json';
 const FSCONFIG: FsOperationConfig = {
     directory: 'appData',
     encoding: 'utf-8',
     filename: MATERIALS_FILENAME,
     format: 'json',
 }
+const FSCONFIG_MENU: FsOperationConfig = {
+    directory: 'appData',
+    encoding: 'utf-8',
+    filename: MATERIALS_MENU_FILENAME,
+    format: 'json',
+}
 
-// Подгтововить базу данных материалов
+// Подготовить базу данных материалов
 export async function prepareMaterialsStore(): Promise<boolean> {
     return readFile(FSCONFIG)
         .then((data) => {
@@ -21,6 +28,23 @@ export async function prepareMaterialsStore(): Promise<boolean> {
         .catch(async () => {
             try {
                 await writeFile([], FSCONFIG);
+                return true;
+            } catch (err) {
+                console.error('WRITE FILE', err);
+                return false;
+            }
+        });
+}
+
+// Подготовить базу данных для меню материалов
+export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
+    return readFile(FSCONFIG_MENU)
+        .then((data) => {
+            return true;
+        })
+        .catch(async () => {
+            try {
+                await writeFile([], FSCONFIG_MENU);
                 return true;
             } catch (err) {
                 console.error('WRITE FILE', err);
@@ -78,30 +102,26 @@ export async function createChapter(params: ChapterCreate) {
     }
 }
 
-export async function getChapters(params?: GetChaptersConfig): Promise<ChapterForMenu[]> {
+// Получение данных сущности Материалы (Либо для панели меню, либо оригинальные данные)
+export async function getChapters(params?: GetChaptersConfig): Promise<ChapterForMenu[] | Chapter[]> {
     try {
-        const formattedChapters = (items: Chapter[]) => {
-            return items.map((chapter) => {
-                return {
-                    id: chapter.id,
-                    icon: chapter.icon,
-                    iconType: chapter.iconType,
-                    label: chapter.label,
-                    pathName: chapter.pathName,
-                    route: chapter.route,
-                    items: chapter.items,
-                } as ChapterForMenu
-            })
-        }
-        const chapters: Chapter[] = await readFile(FSCONFIG);
-        // Получение с пагинацией
+        // Если запрос шел от панели меню
+        let chapters: ChapterForMenu[] | Chapter[];
+        if(params?.forMenu === true) {
+            chapters = await readFile(FSCONFIG_MENU);
+        } 
+        // Классическое получение данных
+        else chapters = await readFile(FSCONFIG);
+        // Если на текущий момент массива chapters нет то выкидываем ошибку
+        if(!chapters!) throw '[getChapters]>> INTERNAL_ERROR';
+        // Постраничный выбор данных
         if (params && params.page && params.perPage) {
             const right = params.perPage * params.page;
             const left = right - params.perPage;
             let chaptersChunk = chapters.slice(left, right); 
-            return formattedChapters(chaptersChunk);
+            return chaptersChunk;
         }
-        return formattedChapters(chapters);
+        return chapters;
     } catch (err) {
         console.error(err);
         throw err;
@@ -215,6 +235,53 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
         } else {
             throw '[createSubChapter]>> INVALID_CHAPTER_TYPE';
         }
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
+export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
+    console.log('syncMaterialsStores');
+    function correctChapter(chapter: Chapter & SubChapter, initPathName?: string): ChapterForMenu {
+        const { icon, iconType, id, label, pathName, fullpath, route, items } = chapter;
+        return { icon, iconType, id, label, pathName: initPathName? initPathName : pathName, fullpath, route, items }
+    };
+    let pathName: string;
+    function sync(chapters: Array<Chapter & SubChapter>): Array<ChapterForMenu> {
+        return chapters.map((chapter) => {
+            if(chapter.pathName && chapter.pathName !== pathName!) {
+                pathName = chapter.pathName;
+            }
+            // Если подраздел является конечным файлом а не директорией
+            if(chapter.chapterType === 'file' && !chapter.items) {
+                return correctChapter(chapter, pathName);
+            }
+            // Если подраздел является директорией
+            else if (chapter.chapterType === 'dir' && chapter.items) {
+                // Если подраздел имеет свои подразделы
+                if(chapter.items.length > 0) {
+                    const syncCh = correctChapter(chapter, pathName);
+                    syncCh.items = sync(chapter.items as Array<Chapter & SubChapter>);
+                    return syncCh;
+                }
+                // Если подраздел не имеет подразделы
+                else {
+                    return correctChapter(chapter, pathName);
+                }
+            }
+            else throw '[syncMaterialsStores]>> INVALID_CHAPTER_TYPE';
+        });
+    }
+    try {
+        // Получение исходных Данных Материалов
+        const materials: Array<Chapter & SubChapter> = await readFile(FSCONFIG);
+        // Синхронизация
+        const syncMaterials:  Array<ChapterForMenu> = sync(materials);
+        // Запись синхроинзованных данных в БД materials-menu
+        await writeFile(syncMaterials, FSCONFIG_MENU);
+        return syncMaterials;
     } catch (err) {
         console.error(err);
         throw err;

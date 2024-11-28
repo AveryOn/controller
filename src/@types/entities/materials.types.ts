@@ -78,6 +78,7 @@ export interface SubChapterForMenu {
 export interface ChapterForMenu {
     id: number;
     pathName: string;
+    fullpath?: string;
     icon: string;
     iconType: IconType;
     label: string;
@@ -121,6 +122,7 @@ export interface CreateSubChapterForm {
 export interface GetChaptersParams {
     page?: number;
     perPage?: number;
+    forMenu?: boolean;
 }
 
 export interface GetOneChapterParams {

@@ -26,3 +26,12 @@ export async function createSubChapter(params: SubChapterCreate) {
         throw err; 
     }
 }
+
+// Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
+export async function syncMaterials(): Promise<ChapterForMenu[]> {
+    try {
+        return await window.electron.syncMaterials();
+    } catch (err) {
+        throw err; 
+    }
+}

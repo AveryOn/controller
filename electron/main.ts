@@ -5,7 +5,7 @@ import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
 import type { ChapterCreate, GetChapterOneParams, GetChaptersConfig, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createSubChapter, getChapters, getOneChapter, prepareMaterialsStore, resetMaterialDB } from './server/controllers/materials'
+import { createChapter, createSubChapter, getChapters, getOneChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
 
 const require = createRequire(import.meta.url)
@@ -36,6 +36,7 @@ function createWindow() {
         // Проверка баз данных
         isReliableStores = await prepareUsersStore(); // Users
         isReliableStores = await prepareMaterialsStore(); // Materials
+        isReliableStores = await prepareMaterialsStoreForMenu() // Materials For Menu
         win?.webContents.send('main-process-message', isReliableStores);
         console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
     })
@@ -111,5 +112,10 @@ app.whenReady().then(() => {
     // Создание подраздела
     ipcMain.handle("create-sub-chapter", async (event, params: SubChapterCreate) => {
         return await createSubChapter(params);
+    });
+
+    // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
+    ipcMain.handle("sync-materials", async (event) => {
+        return await syncMaterialsStores();
     });
 })

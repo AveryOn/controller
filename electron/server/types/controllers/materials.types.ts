@@ -20,7 +20,9 @@ export interface SubChapterCreate {
     route: string,
 }
 
-export interface GetChaptersConfig extends PaginatorParams {}
+export interface GetChaptersConfig extends PaginatorParams {
+    forMenu?: boolean;
+}
 
 export interface GetChapterOneParams {
     chapterId?: number;
@@ -81,10 +83,11 @@ export interface SubChapterForMenu {
 
 export interface ChapterForMenu {
     id: number;
-    pathName: string;
+    pathName?: string;
+    fullpath?: string;
     icon: string;
     iconType: IconType;
     label: string;
     route: string;
-    items?: SubChapterForMenu[] | null;
+    items?: ChapterForMenu[] | null;
 }

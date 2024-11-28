@@ -199,10 +199,17 @@ function trimPath(fullpath, config) {
   return correctFullPath;
 }
 const MATERIALS_FILENAME = "materials.json";
+const MATERIALS_MENU_FILENAME = "materials-menu.json";
 const FSCONFIG = {
   directory: "appData",
   encoding: "utf-8",
   filename: MATERIALS_FILENAME,
+  format: "json"
+};
+const FSCONFIG_MENU = {
+  directory: "appData",
+  encoding: "utf-8",
+  filename: MATERIALS_MENU_FILENAME,
   format: "json"
 };
 async function prepareMaterialsStore() {
@@ -211,6 +218,19 @@ async function prepareMaterialsStore() {
   }).catch(async () => {
     try {
       await writeFile([], FSCONFIG);
+      return true;
+    } catch (err) {
+      console.error("WRITE FILE", err);
+      return false;
+    }
+  });
+}
+async function prepareMaterialsStoreForMenu() {
+  return readFile(FSCONFIG_MENU).then((data) => {
+    return true;
+  }).catch(async () => {
+    try {
+      await writeFile([], FSCONFIG_MENU);
       return true;
     } catch (err) {
       console.error("WRITE FILE", err);
@@ -253,27 +273,18 @@ async function createChapter(params) {
 }
 async function getChapters(params) {
   try {
-    const formattedChapters = (items) => {
-      return items.map((chapter) => {
-        return {
-          id: chapter.id,
-          icon: chapter.icon,
-          iconType: chapter.iconType,
-          label: chapter.label,
-          pathName: chapter.pathName,
-          route: chapter.route,
-          items: chapter.items
-        };
-      });
-    };
-    const chapters = await readFile(FSCONFIG);
+    let chapters;
+    if ((params == null ? void 0 : params.forMenu) === true) {
+      chapters = await readFile(FSCONFIG_MENU);
+    } else chapters = await readFile(FSCONFIG);
+    if (!chapters) throw "[getChapters]>> INTERNAL_ERROR";
     if (params && params.page && params.perPage) {
       const right = params.perPage * params.page;
       const left = right - params.perPage;
       let chaptersChunk = chapters.slice(left, right);
-      return formattedChapters(chaptersChunk);
+      return chaptersChunk;
     }
-    return formattedChapters(chapters);
+    return chapters;
   } catch (err) {
     console.error(err);
     throw err;
@@ -372,6 +383,41 @@ async function createSubChapter(params) {
     throw err;
   }
 }
+async function syncMaterialsStores() {
+  console.log("syncMaterialsStores");
+  function correctChapter(chapter, initPathName) {
+    const { icon, iconType, id, label, pathName: pathName2, fullpath, route, items } = chapter;
+    return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName2, fullpath, route, items };
+  }
+  let pathName;
+  function sync(chapters) {
+    return chapters.map((chapter) => {
+      if (chapter.pathName && chapter.pathName !== pathName) {
+        pathName = chapter.pathName;
+      }
+      if (chapter.chapterType === "file" && !chapter.items) {
+        return correctChapter(chapter, pathName);
+      } else if (chapter.chapterType === "dir" && chapter.items) {
+        if (chapter.items.length > 0) {
+          const syncCh = correctChapter(chapter, pathName);
+          syncCh.items = sync(chapter.items);
+          return syncCh;
+        } else {
+          return correctChapter(chapter, pathName);
+        }
+      } else throw "[syncMaterialsStores]>> INVALID_CHAPTER_TYPE";
+    });
+  }
+  try {
+    const materials = await readFile(FSCONFIG);
+    const syncMaterials = sync(materials);
+    await writeFile(syncMaterials, FSCONFIG_MENU);
+    return syncMaterials;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -391,6 +437,7 @@ function createWindow() {
     let isReliableStores = true;
     isReliableStores = await prepareUsersStore();
     isReliableStores = await prepareMaterialsStore();
+    isReliableStores = await prepareMaterialsStoreForMenu();
     win == null ? void 0 : win.webContents.send("main-process-message", isReliableStores);
     console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
   });
@@ -436,6 +483,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("create-sub-chapter", async (event, params) => {
     return await createSubChapter(params);
+  });
+  ipcMain.handle("sync-materials", async (event) => {
+    return await syncMaterialsStores();
   });
 });
 export {
