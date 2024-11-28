@@ -1,13 +1,14 @@
 <template>
     <div class="materials-view">
         <header class="materials-header">
-            <span class="flex">Materials > {{ openChapterName }}</span> 
+            <span class="flex">Materials {{ openChapterName }}</span> 
         </header>
         <div class="materials-main">
             <addChapter v-show="$route.params['chapter'] === 'add-chapter'"/>
             <wrapperChapter 
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => labelChapter = label"
+            @quit="labelChapter = null"
             />
         </div>
     </div>
@@ -21,7 +22,11 @@ import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 const labelChapter: Ref<string | null> = ref(null);
 
 const openChapterName = computed(() => {
-    return (labelChapter.value !== 'add-chapter') ? labelChapter.value : 'New Chapter';
+    if(labelChapter.value !== 'add-chapter') {
+        if(labelChapter.value) return `> ${labelChapter.value}`;
+        else return '';
+    }
+    else return '> New Chapter';
 });
 </script>
 

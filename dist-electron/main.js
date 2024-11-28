@@ -309,17 +309,23 @@ async function getOneChapter(params) {
     throw err;
   }
 }
-function findLevel(items, initPath) {
+function findLevel(items, initPath, config) {
   if (items.length <= 0) return null;
   const current = initPath.shift();
+  const bundleLabels = [];
   console.log("current:", current);
   for (const chapter of items) {
     const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
     console.log("selfPath:", selfPath);
     if (selfPath === current) {
+      if ((config == null ? void 0 : config.labels) === true) bundleLabels.push(chapter.label);
       console.log("НАшли нужный уровень", selfPath === current);
       if (initPath.length <= 0) {
-        return chapter;
+        if ((config == null ? void 0 : config.labels) === true) {
+          return { chapter, labels: bundleLabels };
+        } else {
+          return chapter;
+        }
       } else {
         console.log("Путь еще не пуст:", initPath);
         if (chapter.items && chapter.items.length > 0) {
@@ -351,7 +357,7 @@ async function createSubChapter(params) {
         },
         icon: params.icon,
         iconType: params.iconType,
-        fullpath: params.fullpath,
+        fullpath: trimPath(params.fullpath),
         label: params.label,
         route: params.route,
         items: params.chapterType === "dir" ? [] : null,
@@ -413,6 +419,23 @@ async function syncMaterialsStores() {
     const syncMaterials = sync(materials);
     await writeFile(syncMaterials, FSCONFIG_MENU);
     return syncMaterials;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function getOneSubChapter(params) {
+  console.log("getOneSubChapter");
+  try {
+    const materials = await readFile(FSCONFIG);
+    const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
+    if ((chapter == null ? void 0 : chapter.items) && chapter.items.length) {
+      const correctFullpath = trimPath(params.fullpath, { split: true }).slice(1);
+      const { chapter: findedChapter, labels } = findLevel(chapter == null ? void 0 : chapter.items, correctFullpath, { labels: true });
+      if (!findedChapter) throw "[getOneSubChapter]>> NOT_FOUND";
+      labels.unshift(chapter.label);
+      return { chapter: findedChapter, labels };
+    } else throw "[getOneSubChapter]>> INTERNAL_ERROR";
   } catch (err) {
     console.error(err);
     throw err;
@@ -486,6 +509,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("sync-materials", async (event) => {
     return await syncMaterialsStores();
+  });
+  ipcMain.handle("get-one-sub-chapter", async (event, params) => {
+    return await getOneSubChapter(params);
   });
 });
 export {

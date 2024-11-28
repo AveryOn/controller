@@ -29,6 +29,12 @@ export interface GetChapterOneParams {
     pathName?: string;
 }
 
+export interface GetSubChapterOneParams {
+    pathName: string;
+    fullpath: string;
+}
+
+
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string | null;

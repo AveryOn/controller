@@ -2,27 +2,25 @@
     <aside class="panel-menu">
         <PanelMenu class="w-full h-full" :model="items">
             <template #item="{ item }">
-                <div>
-                    <a
-                    class="inner-item flex items-center cursor-pointer px-2 py-1"
-                    @click="() => console.log(item)"
-                    >
-                        <cIcon v-if="item.iconType === 'mdi'" class="mdi-icon-type" :icon="item.icon" :size="20"/>
-                        <span v-else="item.iconType === 'pi'" v-show="item.type !== 'loading'" class="item-icon" :class="item.icon" />
-                        <span class="item-label ml-2">
-                            {{ item.label }}
-                            <ProgressSpinner
-                            class="ml-auto"
-                            v-if="item.type === 'loading'"
-                            style="width: 16px; height: 16px" 
-                            strokeWidth="4" 
-                            fill="transparent"
-                            animationDuration=".5s" 
-                            aria-label="Custom ProgressSpinner" 
-                            />
-                        </span>
-                        <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
-                    </a>
+                <div
+                class="inner-item flex items-center cursor-pointer px-2 py-1"
+                @click="() => selectItem(item)"
+                >
+                    <cIcon v-if="item.iconType === 'mdi'" class="mdi-icon-type" :icon="item.icon" :size="20"/>
+                    <span v-else="item.iconType === 'pi'" v-show="item.type !== 'loading'" class="item-icon" :class="item.icon" />
+                    <span class="item-label ml-2">
+                        {{ item.label }}
+                        <ProgressSpinner
+                        class="ml-auto"
+                        v-if="item.type === 'loading'"
+                        style="width: 16px; height: 16px" 
+                        strokeWidth="4" 
+                        fill="transparent"
+                        animationDuration=".5s" 
+                        aria-label="Custom ProgressSpinner" 
+                        />
+                    </span>
+                    <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
                 </div>
 
             </template>
@@ -35,8 +33,11 @@ import { ref } from 'vue';
 import cIcon from '../base/cIcon.vue';
 import { getChapters } from '../../api/materials.api';
 import { useMainStore } from '../../stores/main.store';
+import { useRouter } from 'vue-router';
+import { replacePathForMaterials } from '../../utils/strings.utils';
 
 const mainStore = useMainStore();
+const router = useRouter();
 const isLoadingMaterials = ref(false); 
 
 const items = ref([
@@ -90,6 +91,22 @@ const items = ref([
         ]
     }
 ]);
+
+// Когда выбираем какой-либо элемент меню
+function selectItem(item: any) {
+    if(item.route === 'materials') {
+        let querySubChapter: string | undefined = undefined; 
+        if(item.fullpath) {
+            querySubChapter = replacePathForMaterials(item.fullpath);
+        }
+        // Открываем подраздел
+        router.push({ 
+            name: item.route, 
+            params: { chapter: item.pathName }, 
+            query: { subChapter: querySubChapter },
+        });
+    }
+}
 
 async function getMaterials() {
     try {

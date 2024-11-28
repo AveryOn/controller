@@ -1,7 +1,7 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
 import { app } from 'electron';
-import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChaptersConfig, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
 import { excludesWords, trimPath } from "../services/string.service";
 
 const MATERIALS_FILENAME = 'materials.json';
@@ -155,19 +155,29 @@ export async function getOneChapter(params: GetChapterOneParams): Promise<Chapte
 }
 
 // Поиск нужного подраздела по полному пути
-function findLevel(items: SubChapter[], initPath: string[]): SubChapter | null {
+interface LevelWithLabels { chapter: SubChapter, labels: string[] }
+type FindLevelResult = SubChapter | null | LevelWithLabels;
+function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: boolean }): FindLevelResult {
     if(items.length <= 0) return null;
     const current = initPath.shift();
+    const bundleLabels: string[] = [];
     console.log('current:', current);
     for (const chapter of items) {
         const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
         console.log('selfPath:', selfPath);
         // Нашли нужный уровень
         if(selfPath === current) {
+            // Собираем массив название разделов, если на клиенте был на это запрос
+            if(config?.labels === true) bundleLabels.push(chapter.label);
             console.log('НАшли нужный уровень', selfPath === current);
             // если исчерпан, то мы нашли искомый подраздел
             if(initPath.length <= 0) {
-                return chapter;
+                if(config?.labels === true) {
+                    return {chapter, labels: bundleLabels};
+                }
+                else {
+                    return chapter;
+                }
             } 
             // Если путь еще не пуст, то продолжаем проходить по нему
             else {
@@ -203,7 +213,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
                 },
                 icon: params.icon,
                 iconType: params.iconType,
-                fullpath: params.fullpath,
+                fullpath: trimPath(params.fullpath) as string,
                 label: params.label,
                 route: params.route,
                 items: (params.chapterType === 'dir')? [] : null,
@@ -219,7 +229,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
                 chapter.items.push(newSubChapter);
             } else {
                 console.log(chapter.items, correctFullPath);
-                const needLevel = findLevel(chapter.items, correctFullPath);
+                const needLevel = findLevel(chapter.items, correctFullPath) as SubChapter | null;
                 // Если нужный уровень не найден
                 if(!needLevel) {
                     throw '[createSubChapter]>> Нужный уровень найти не удалось';
@@ -282,6 +292,27 @@ export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
         // Запись синхроинзованных данных в БД materials-menu
         await writeFile(syncMaterials, FSCONFIG_MENU);
         return syncMaterials;
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Получить конкретный ПОДраздел с БД материалов
+export async function getOneSubChapter(params: GetSubChapterOneParams): Promise<LevelWithLabels> {
+    console.log('getOneSubChapter');
+    try {
+        // Получение материалов с БД
+        const materials: Chapter[] = await readFile(FSCONFIG);
+        const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
+        if(chapter?.items && chapter.items.length) {
+            const correctFullpath = trimPath(params.fullpath, { split: true }).slice(1) as string[];
+            const { chapter: findedChapter, labels } = findLevel(chapter?.items, correctFullpath, { labels: true }) as LevelWithLabels;
+            if(!findedChapter) throw '[getOneSubChapter]>> NOT_FOUND';
+            labels.unshift(chapter.label);
+            return { chapter: findedChapter, labels };
+        }
+        else throw '[getOneSubChapter]>> INTERNAL_ERROR';
     } catch (err) {
         console.error(err);
         throw err;

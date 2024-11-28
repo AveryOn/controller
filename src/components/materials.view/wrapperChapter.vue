@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, getOneChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -74,6 +74,7 @@ const items = ref([
 ]);
 const emit = defineEmits<{
     (e: 'openChapter', label: string): void;
+    (e: 'quit'): void;
 }>();
 
 const blocks = computed(() => {
@@ -114,12 +115,28 @@ onBeforeRouteUpdate( async (to, from, next) => {
     // Запрос на получение данных раздела в случае его выбора
     const prevChapter = from.params['chapter'] as string;
     const nextChapter = to.params['chapter'] as string;
-    console.log(prevChapter, nextChapter);
+    const nextSubChapter = to.query['subChapter'] as string | undefined;
+    const prevSubChapter = from.query['subChapter'] as string | undefined;
     if(nextChapter !== 'add-chapter') {
-        if( nextChapter && nextChapter !== prevChapter) {
+        if(nextChapter && nextChapter !== prevChapter) {
             opennedChapter.value = await getOneChapter({ pathName: nextChapter });
-            console.log(opennedChapter.value);
             emit('openChapter', opennedChapter.value.label);
+        }
+        // Если происходит выход из просмотра разделов и подразделов
+        else if(!nextChapter) emit('quit');
+        // В случае смены подраздела при активном разделе
+        if(nextSubChapter && nextSubChapter !== prevSubChapter) {
+            const correctFullpath = nextSubChapter.split('>').join('/');
+            const { chapter, labels } = await getOneSubChapter({ pathName: nextChapter, fullpath: correctFullpath });
+            opennedChapter.value = chapter;
+            emit('openChapter', labels.join(' > '));
+        } 
+        else {
+            // Если маршрут перешел с подраздела на раздел
+            if(prevChapter === nextChapter && !nextSubChapter) {
+                opennedChapter.value = await getOneChapter({ pathName: nextChapter });
+                emit('openChapter', opennedChapter.value.label);
+            }
         }
         return void next();
     } else {

@@ -129,3 +129,8 @@ export interface GetOneChapterParams {
     chapterId?: number;
     pathName?: string;
 }
+
+export interface GetOneSubChapterParams {
+    pathName: string;
+    fullpath: string;
+}
