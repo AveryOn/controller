@@ -5,7 +5,10 @@
         </header>
         <div class="materials-main">
             <addChapter v-if="$route.params['chapter'] === 'add-chapter'"/>
-            <wrapperChapter v-else v-show="$route.params['chapter']" @open-chapter="(label) => labelChapter = label"/>
+            <wrapperChapter 
+            v-else-if="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
+            @open-chapter="(label) => labelChapter = label"
+            />
         </div>
     </div>
 </template>

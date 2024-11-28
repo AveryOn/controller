@@ -1,7 +1,8 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
 import { app } from 'electron';
-import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChaptersConfig } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChaptersConfig, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { excludesWords, trimPath } from "../services/string.service";
 
 const MATERIALS_FILENAME = 'materials.json';
 const FSCONFIG: FsOperationConfig = {
@@ -15,7 +16,6 @@ const FSCONFIG: FsOperationConfig = {
 export async function prepareMaterialsStore(): Promise<boolean> {
     return readFile(FSCONFIG)
         .then((data) => {
-            console.log(data);
             return true;
         })
         .catch(async () => {
@@ -127,6 +127,81 @@ export async function getOneChapter(params: GetChapterOneParams): Promise<Chapte
         } 
         else {
             throw '[getOneChapter]>> NOT_EXISTS_RECORD';
+        }
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Поиск нужного подраздела по полному пути
+function findLevel(items: SubChapter[], initPath: string[]): SubChapter | null {
+    if(items.length <= 0) return null;
+    const current = initPath.shift();
+    console.log('current:', current);
+    for (const chapter of items) {
+        const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
+        console.log('selfPath:', selfPath);
+        // Нашли нужный уровень
+        if(selfPath === current) {
+            console.log('НАшли нужный уровень', selfPath === current);
+            // если исчерпан, то мы нашли искомый подраздел
+            if(initPath.length <= 0) {
+                return chapter;
+            } 
+            // Если путь еще не пуст, то продолжаем проходить по нему
+            else {
+                console.log('Путь еще не пуст:', initPath);
+                if(chapter.items && chapter.items.length > 0) {
+                    console.log('Выполняем поиск по items:', chapter.items.length);
+                    return findLevel(chapter.items, initPath);
+                }
+                else {
+                    throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
+                }
+            }
+        } else {
+            console.log('Нужный уровень не найден:', selfPath === current);
+        }
+    }
+    return null;
+}
+
+// Создание нового подраздела
+export async function createSubChapter(params: SubChapterCreate) {
+    try {
+        if(!params) throw '[createSubChapter]>> INVALID_INPUT_DATA';
+        const materials: Chapter[] = await readFile(FSCONFIG);
+        const chapter = materials.find((chapter) => chapter.id === params.chapterId);
+        if(chapter?.chapterType === 'dir' && chapter.items) {
+            const newSubChapter: SubChapter = {
+                id: (chapter.items.length || 0) + 1,
+                chapterType: params.chapterType,
+                content: {
+                    blocks: [],
+                    title: null,
+                },
+                icon: params.icon,
+                iconType: params.iconType,
+                fullpath: params.fullpath,
+                label: params.label,
+                route: params.route,
+                items: (params.chapterType === 'dir')? [] : null,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            }
+            const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
+            // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
+            if(correctFullPath.length <= 0) {
+                chapter.items.push(newSubChapter);
+            }
+            const needLevel = findLevel(chapter.items, correctFullPath);
+            // Если нужный уровень не найден
+            if(!needLevel) {
+                throw '[createSubChapter]>> Нужный уровень найти не удалось';
+            }
+        } else {
+            throw '[createSubChapter]>> INVALID_CHAPTER_TYPE';
         }
     } catch (err) {
         console.error(err);

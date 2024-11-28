@@ -182,6 +182,22 @@ async function readFile(config) {
     throw err;
   }
 }
+function trimPath(fullpath, config) {
+  const symbols = ` !"#$%&'()*+,-./:;<=>?@[\\]^_\`{|}~	
+\r\v\f`;
+  const separator = (config == null ? void 0 : config.separator) || "/";
+  let pathChunks = fullpath.split(separator);
+  let correctFullPath;
+  if (pathChunks.at(-1) === "") fullpath = fullpath.slice(0, -1);
+  if (symbols.includes(pathChunks[0])) correctFullPath = fullpath.slice(2);
+  else if (pathChunks[0] === "") correctFullPath = fullpath.slice(1);
+  else correctFullPath = fullpath;
+  pathChunks = void 0;
+  if ((config == null ? void 0 : config.split) === true) {
+    return correctFullPath.split(separator);
+  }
+  return correctFullPath;
+}
 const MATERIALS_FILENAME = "materials.json";
 const FSCONFIG = {
   directory: "appData",
@@ -191,7 +207,6 @@ const FSCONFIG = {
 };
 async function prepareMaterialsStore() {
   return readFile(FSCONFIG).then((data) => {
-    console.log(data);
     return true;
   }).catch(async () => {
     try {
@@ -283,6 +298,70 @@ async function getOneChapter(params) {
     throw err;
   }
 }
+function findLevel(items, initPath) {
+  if (items.length <= 0) return null;
+  const current = initPath.shift();
+  console.log("current:", current);
+  for (const chapter of items) {
+    const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
+    console.log("selfPath:", selfPath);
+    if (selfPath === current) {
+      console.log("НАшли нужный уровень", selfPath === current);
+      if (initPath.length <= 0) {
+        return chapter;
+      } else {
+        console.log("Путь еще не пуст:", initPath);
+        if (chapter.items && chapter.items.length > 0) {
+          console.log("Выполняем поиск по items:", chapter.items.length);
+          return findLevel(chapter.items, initPath);
+        } else {
+          throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
+        }
+      }
+    } else {
+      console.log("Нужный уровень не найден:", selfPath === current);
+    }
+  }
+  return null;
+}
+async function createSubChapter(params) {
+  try {
+    if (!params) throw "[createSubChapter]>> INVALID_INPUT_DATA";
+    const materials = await readFile(FSCONFIG);
+    const chapter = materials.find((chapter2) => chapter2.id === params.chapterId);
+    if ((chapter == null ? void 0 : chapter.chapterType) === "dir" && chapter.items) {
+      const newSubChapter = {
+        id: (chapter.items.length || 0) + 1,
+        chapterType: params.chapterType,
+        content: {
+          blocks: [],
+          title: null
+        },
+        icon: params.icon,
+        iconType: params.iconType,
+        fullpath: params.fullpath,
+        label: params.label,
+        route: params.route,
+        items: params.chapterType === "dir" ? [] : null,
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
+      if (correctFullPath.length <= 0) {
+        chapter.items.push(newSubChapter);
+      }
+      const needLevel = findLevel(chapter.items, correctFullPath);
+      if (!needLevel) {
+        throw "[createSubChapter]>> Нужный уровень найти не удалось";
+      }
+    } else {
+      throw "[createSubChapter]>> INVALID_CHAPTER_TYPE";
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -344,6 +423,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("get-one-chapter", async (event, params) => {
     return await getOneChapter(params);
+  });
+  ipcMain.handle("create-sub-chapter", async (event, params) => {
+    return await createSubChapter(params);
   });
 });
 export {

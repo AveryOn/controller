@@ -1,6 +1,14 @@
 <template>
     <div class="wrapper-material-chapter">
-        <Menubar class="w-full" :model="items" />
+        <Menubar class="w-11" :model="items" >
+            <template #item="{ item, props }">
+                <a class="flex items-center" v-bind="props.action">
+                    <svg-icon v-if="item.iconType === 'mdi'" :type="item.iconType" :path="item.icon" :size="20"></svg-icon>
+                    <i v-else :class="item.icon"></i>
+                    <span>{{ item.label }}</span>
+                </a>
+            </template>
+        </Menubar>
         <h2 class="not-data-note" v-show="blocks.length === 0">
             Empty
         </h2>
@@ -21,20 +29,32 @@ import { onBeforeRouteUpdate } from 'vue-router';
 import { getOneChapter } from '../../api/materials.api';
 import { computed, ref, type Ref } from 'vue';
 import { Chapter } from '../../@types/entities/materials.types';
+import SvgIcon from '@jamescoyle/vue-icon';
+import { mdiTabPlus } from '@mdi/js';
+
 
 const opennedChapter: Ref<Chapter | null> = ref(null);
     const items = ref([
     {
         label: 'New Block',
         icon: 'pi pi-plus',
+        iconType: 'pi'
+    },
+    {
+        label: 'Add SubChapter',
+        icon: mdiTabPlus,
+        iconType: 'mdi',
+        command: addNewSubChapter,
     },
     {
         label: 'Edit',
         icon: 'pi pi-pencil',
+        iconType: 'pi'
     },
     {
         label: 'Delete',
         icon: 'pi pi-trash',
+        iconType: 'pi'
     },
 ]);
 const emit = defineEmits<{
@@ -46,17 +66,26 @@ const blocks = computed(() => {
         return opennedChapter.value.content.blocks;
     }
     return [/* {id: 1}, {id: 2}, {id:3} */];
-})
+});
+
+function addNewSubChapter() {
+
+}
 
 onBeforeRouteUpdate( async (to, from, next) => {
     // Запрос на получение данных раздела в случае его выбора
     const prevChapter = from.params['chapter'] as string;
     const nextChapter = to.params['chapter'] as string;
-    if( nextChapter && nextChapter !== prevChapter) {
-        opennedChapter.value = await getOneChapter({ pathName: nextChapter });
-        emit('openChapter', opennedChapter.value.label);
+    console.log(prevChapter, nextChapter);
+    if(nextChapter !== 'add-chapter') {
+        if( nextChapter && nextChapter !== prevChapter) {
+            opennedChapter.value = await getOneChapter({ pathName: nextChapter });
+            emit('openChapter', opennedChapter.value.label);
+        }
+        next();
+    } else {
+        next();
     }
-    next();
 });
 
 
@@ -64,7 +93,7 @@ onBeforeRouteUpdate( async (to, from, next) => {
 <style scoped>
 .wrapper-material-chapter {
     width: 100%;
-    height: 98vh !important;
+    height: 95vh !important;
     display: flex;
     flex-direction: column;
     align-items: center;

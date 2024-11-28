@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, GetChapterOneParams, GetChaptersConfig } from './server/types/controllers/materials.types'
-import { createChapter, getChapters, getOneChapter, prepareMaterialsStore, resetMaterialDB } from './server/controllers/materials'
+import type { ChapterCreate, GetChapterOneParams, GetChaptersConfig, SubChapterCreate } from './server/types/controllers/materials.types'
+import { createChapter, createSubChapter, getChapters, getOneChapter, prepareMaterialsStore, resetMaterialDB } from './server/controllers/materials'
+import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -68,6 +69,8 @@ app.on('activate', () => {
 app.whenReady().then(() => {
     createWindow();
 
+    // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
+
     // Обработчики IPC
     // Получение пользователей
     ipcMain.handle("get-users", async (event, config?: GetUsersConfig) => {
@@ -103,5 +106,10 @@ app.whenReady().then(() => {
     // Получение раздела
     ipcMain.handle("get-one-chapter", async (event, params: GetChapterOneParams) => {
         return await getOneChapter(params);
+    });
+
+    // Создание подраздела
+    ipcMain.handle("create-sub-chapter", async (event, params: SubChapterCreate) => {
+        return await createSubChapter(params);
     });
 })

@@ -17,3 +17,12 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
         throw err; 
     }
 }
+
+// Создание нового подраздела
+export async function createSubChapter() {
+    try {
+        
+    } catch (err) {
+        throw err; 
+    }
+}

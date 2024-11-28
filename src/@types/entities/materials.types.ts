@@ -108,6 +108,16 @@ export interface CreateChapterForm {
     type: ChapterType;
 }
 
+export interface CreateSubChapterForm {
+    chapterId: number;
+    label: string;
+    fullpath: string;
+    icon: string;
+    iconType: IconType;
+    chapterType: ChapterType;
+    route: string,
+}
+
 export interface GetChaptersParams {
     page?: number;
     perPage?: number;

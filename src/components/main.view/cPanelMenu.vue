@@ -37,7 +37,7 @@ import { getChapters } from '../../api/materials.api';
 import { useMainStore } from '../../stores/main.store';
 
 const mainStore = useMainStore();
-const isLoadingMaterials = ref(false);
+const isLoadingMaterials = ref(false); 
 
 const items = ref([
     {
@@ -64,12 +64,14 @@ const items = ref([
         items: [
             {
                 type: 'loading',
+                meta:true,
             },
             {
                 label: 'Add Chapter',
                 icon: 'pi pi-plus',
                 route: 'materials',
                 pathName: 'add-chapter',
+                meta:true,
             },
         ]
     },
