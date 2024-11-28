@@ -168,7 +168,7 @@ function findLevel(items: SubChapter[], initPath: string[]): SubChapter | null {
 }
 
 // Создание нового подраздела
-export async function createSubChapter(params: SubChapterCreate) {
+export async function createSubChapter(params: SubChapterCreate): Promise<SubChapter> {
     try {
         if(!params) throw '[createSubChapter]>> INVALID_INPUT_DATA';
         const materials: Chapter[] = await readFile(FSCONFIG);
@@ -193,13 +193,25 @@ export async function createSubChapter(params: SubChapterCreate) {
             const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
             // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
             if(correctFullPath.length <= 0) {
+                // Проверка на уникальность создаваемого подраздела
+                const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
+                if(alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
                 chapter.items.push(newSubChapter);
+            } else {
+                console.log(chapter.items, correctFullPath);
+                const needLevel = findLevel(chapter.items, correctFullPath);
+                // Если нужный уровень не найден
+                if(!needLevel) {
+                    throw '[createSubChapter]>> Нужный уровень найти не удалось';
+                }
+                // Проверка на уникальность создаваемого подраздела
+                const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
+                if(alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
+                needLevel.items?.push(newSubChapter);
             }
-            const needLevel = findLevel(chapter.items, correctFullPath);
-            // Если нужный уровень не найден
-            if(!needLevel) {
-                throw '[createSubChapter]>> Нужный уровень найти не удалось';
-            }
+            // Запись изменений в БД
+            await writeFile(materials, FSCONFIG);
+            return newSubChapter; 
         } else {
             throw '[createSubChapter]>> INVALID_CHAPTER_TYPE';
         }

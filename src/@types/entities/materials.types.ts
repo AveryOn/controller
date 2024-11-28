@@ -10,9 +10,9 @@ export interface ChapterCreate {
 }
 
 export interface SubChapterCreate {
+    chapterId: number;
     label: string;
-    pathName: string;
-    queryName: string;
+    fullpath: string;
     icon: string;
     iconType: IconType;
     chapterType: ChapterType;
@@ -37,8 +37,7 @@ export type ChapterType = 'file' | 'dir' | string;
 
 export interface SubChapter {
     id: number;
-    pathName: string;
-    queryName: string;
+    fullpath: string;
     label: string;
     icon: string;
     iconType: IconType;
@@ -52,7 +51,8 @@ export interface SubChapter {
 
 export interface Chapter {
     id: number;
-    pathName: string;
+    pathName?: string;
+    fullpath?: string;
     label: string;
     icon: string;
     iconType: IconType;

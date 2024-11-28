@@ -1,4 +1,4 @@
-import type { Chapter, ChapterForMenu, GetChaptersParams, GetOneChapterParams } from "../@types/entities/materials.types";
+import type { Chapter, ChapterForMenu, GetChaptersParams, GetOneChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
 
 // Получить материлы с БД
 export async function getChapters(params?: GetChaptersParams): Promise<ChapterForMenu[]> {
@@ -19,9 +19,9 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
 }
 
 // Создание нового подраздела
-export async function createSubChapter() {
+export async function createSubChapter(params: SubChapterCreate) {
     try {
-        
+        return await window.electron.createSubChapter(params);
     } catch (err) {
         throw err; 
     }

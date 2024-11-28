@@ -9,6 +9,7 @@ import Select from 'primevue/select';
 import FileUpload from 'primevue/fileupload';
 import ProgressSpinner from 'primevue/progressspinner';
 import Menubar from 'primevue/menubar';
+import Dialog from 'primevue/dialog';
 
 buttonComp.name = 'cButton';
 
@@ -24,4 +25,5 @@ export default [
     FileUpload,
     ProgressSpinner,
     Menubar,
+    Dialog,
 ] as any[];

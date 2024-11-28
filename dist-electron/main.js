@@ -325,6 +325,7 @@ function findLevel(items, initPath) {
   return null;
 }
 async function createSubChapter(params) {
+  var _a;
   try {
     if (!params) throw "[createSubChapter]>> INVALID_INPUT_DATA";
     const materials = await readFile(FSCONFIG);
@@ -348,12 +349,21 @@ async function createSubChapter(params) {
       };
       const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
       if (correctFullPath.length <= 0) {
+        const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
+        if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
         chapter.items.push(newSubChapter);
+      } else {
+        console.log(chapter.items, correctFullPath);
+        const needLevel = findLevel(chapter.items, correctFullPath);
+        if (!needLevel) {
+          throw "[createSubChapter]>> Нужный уровень найти не удалось";
+        }
+        const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
+        if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
+        (_a = needLevel.items) == null ? void 0 : _a.push(newSubChapter);
       }
-      const needLevel = findLevel(chapter.items, correctFullPath);
-      if (!needLevel) {
-        throw "[createSubChapter]>> Нужный уровень найти не удалось";
-      }
+      await writeFile(materials, FSCONFIG);
+      return newSubChapter;
     } else {
       throw "[createSubChapter]>> INVALID_CHAPTER_TYPE";
     }

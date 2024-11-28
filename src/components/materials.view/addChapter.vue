@@ -121,6 +121,16 @@ import { type Ref, ref } from 'vue';
 import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIcon,  } from '../../@types/entities/materials.types';
 import useNotices from '../../composables/notices';
 
+interface Props {
+    formType?: 'return' | 'inner';
+}
+const props = withDefaults(defineProps<Props>(), {
+    formType: 'inner',
+});
+
+const emit = defineEmits<{
+    (e: 'submitForm', newChapter: ChapterCreate): void;
+}>();
 
 const notices = useNotices();
 
@@ -192,10 +202,13 @@ async function send() {
             chapterType: form.value.type!,
             route: 'materials',
         }
-        const res = await window.electron.createChapter(newChapter);
-        console.log(res);
+        if(props.formType === 'inner') {
+            const res = await window.electron.createChapter(newChapter);
+        }
+        else if(props.formType === 'return') {
+            emit('submitForm', newChapter);
+        }
     } catch (err) {
-        console.log(err);
         notices.show({ detail: '', severity: 'error' });
         throw err;    
     } finally { 

@@ -4,9 +4,9 @@
             <span class="flex">Materials > {{ openChapterName }}</span> 
         </header>
         <div class="materials-main">
-            <addChapter v-if="$route.params['chapter'] === 'add-chapter'"/>
+            <addChapter v-show="$route.params['chapter'] === 'add-chapter'"/>
             <wrapperChapter 
-            v-else-if="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
+            v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => labelChapter = label"
             />
         </div>

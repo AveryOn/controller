@@ -1,0 +1,10 @@
+
+:root {
+    --p-dialog-background: var(--bg-color) !important;
+    --p-dialog-border-color: rgba(128, 128, 128, 0.618) !important;
+    --p-dialog-color: var(--fg-color) !important;
+    --p-dialog-border-radius: var(--rounded) !important;
+    --p-dialog-shadow: var(--shadow-2) !important;
+    --p-dialog-header-padding: 0rem !important;
+    --p-dialog-content-padding: 0rem !important;
+}
