@@ -13,9 +13,9 @@
         </dialogComp>
 
         <!-- Menu -->
-        <Menubar class="w-11" :model="items" >
+        <Menubar class="w-11" :model="itemsCorrect" >
             <template #item="{ item, props }">
-                <a class="flex items-center" v-bind="props.action">
+                <a class="menu-bar-item" v-bind="props.action">
                     <svg-icon v-if="item.iconType === 'mdi'" :type="item.iconType" :path="item.icon" :size="20"></svg-icon>
                     <i v-else :class="item.icon"></i>
                     <span>{{ item.label }}</span>
@@ -48,6 +48,11 @@ import dialogComp from '../base/dialogComp.vue';
 import addChapter from './addChapter.vue';
 import { trimPath } from '../../utils/strings.utils';
 
+const emit = defineEmits<{
+    (e: 'openChapter', label: string): void;
+    (e: 'quit'): void;
+}>();
+
 const isShowCreateSubChapter = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
 const items = ref([
@@ -60,6 +65,7 @@ const items = ref([
         label: 'Add SubChapter',
         icon: mdiTabPlus,
         iconType: 'mdi',
+        forType: 'dir',
         command: addNewSubChapter,
     },
     {
@@ -73,11 +79,18 @@ const items = ref([
         iconType: 'pi'
     },
 ]);
-const emit = defineEmits<{
-    (e: 'openChapter', label: string): void;
-    (e: 'quit'): void;
-}>();
 
+
+const itemsCorrect = computed(() => {
+    return items.value.filter((item) => {
+        if(opennedChapter.value?.chapterType !== 'dir') {
+            if(item.forType === 'dir') {
+                return false;
+            }
+        }
+        return true;
+    })
+})
 const blocks = computed(() => {
     if(opennedChapter.value) {
         return opennedChapter.value.content.blocks;
@@ -165,6 +178,10 @@ onBeforeRouteUpdate( async (to, from, next) => {
     align-items: center;
     justify-content: start;
     overflow: hidden !important;
+}
+.menu-bar-item {
+    display: flex;
+    align-items: center;
 }
 .not-data-note {
     font-family: var(--font);

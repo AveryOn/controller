@@ -1,8 +1,7 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
-import { app } from 'electron';
 import { Chapter, ChapterCreate, ChapterForMenu, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
-import { excludesWords, trimPath } from "../services/string.service";
+import { trimPath } from "../services/string.service";
 
 const MATERIALS_FILENAME = 'materials.json';
 const MATERIALS_MENU_FILENAME = 'materials-menu.json';
@@ -21,6 +20,7 @@ const FSCONFIG_MENU: FsOperationConfig = {
 
 // Подготовить базу данных материалов
 export async function prepareMaterialsStore(): Promise<boolean> {
+    console.log('prepareMaterialsStore');
     return readFile(FSCONFIG)
         .then((data) => {
             return true;
@@ -38,6 +38,7 @@ export async function prepareMaterialsStore(): Promise<boolean> {
 
 // Подготовить базу данных для меню материалов
 export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
+    console.log('prepareMaterialsStoreForMenu');
     return readFile(FSCONFIG_MENU)
         .then((data) => {
             return true;
@@ -55,6 +56,7 @@ export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
 
 // Сбросить все данные materials 
 export async function resetMaterialDB() {
+    console.log('resetMaterialDB');
     try {
         await writeFile([], FSCONFIG);
     } catch (err) {
@@ -65,6 +67,7 @@ export async function resetMaterialDB() {
 
 // Создание нового раздела в материалах
 export async function createChapter(params: ChapterCreate) {
+    console.log('createChapter => ', params);
     try {
         // Получние материалов с БД
         const materials: Chapter[] = await readFile(FSCONFIG);
@@ -104,6 +107,7 @@ export async function createChapter(params: ChapterCreate) {
 
 // Получение данных сущности Материалы (Либо для панели меню, либо оригинальные данные)
 export async function getChapters(params?: GetChaptersConfig): Promise<ChapterForMenu[] | Chapter[]> {
+    console.log('getChapters => ', params);
     try {
         // Если запрос шел от панели меню
         let chapters: ChapterForMenu[] | Chapter[];
@@ -130,6 +134,7 @@ export async function getChapters(params?: GetChaptersConfig): Promise<ChapterFo
 
 // Получение конкретного раздела
 export async function getOneChapter(params: GetChapterOneParams): Promise<Chapter> {
+    console.log('getOneChapter => ', params);
     try {
         // Получение materials
         const materials: Chapter[] = await readFile(FSCONFIG);
@@ -187,8 +192,6 @@ function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: 
                     throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
                 }
             }
-        } else {
-            console.log('Нужный уровень не найден:', selfPath === current);
         }
     }
     return null;
@@ -297,7 +300,7 @@ export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
 
 // Получить конкретный ПОДраздел с БД материалов
 export async function getOneSubChapter(params: GetSubChapterOneParams): Promise<LevelWithLabels> {
-    console.log('getOneSubChapter');
+    console.log('getOneSubChapter => ', params);
     try {
         // Получение материалов с БД
         const materials: Chapter[] = await readFile(FSCONFIG);

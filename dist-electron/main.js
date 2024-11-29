@@ -213,6 +213,7 @@ const FSCONFIG_MENU = {
   format: "json"
 };
 async function prepareMaterialsStore() {
+  console.log("prepareMaterialsStore");
   return readFile(FSCONFIG).then((data) => {
     return true;
   }).catch(async () => {
@@ -226,6 +227,7 @@ async function prepareMaterialsStore() {
   });
 }
 async function prepareMaterialsStoreForMenu() {
+  console.log("prepareMaterialsStoreForMenu");
   return readFile(FSCONFIG_MENU).then((data) => {
     return true;
   }).catch(async () => {
@@ -239,6 +241,7 @@ async function prepareMaterialsStoreForMenu() {
   });
 }
 async function createChapter(params) {
+  console.log("createChapter => ", params);
   try {
     const materials = await readFile(FSCONFIG);
     materials.forEach((chapter) => {
@@ -272,6 +275,7 @@ async function createChapter(params) {
   }
 }
 async function getChapters(params) {
+  console.log("getChapters => ", params);
   try {
     let chapters;
     if ((params == null ? void 0 : params.forMenu) === true) {
@@ -291,6 +295,7 @@ async function getChapters(params) {
   }
 }
 async function getOneChapter(params) {
+  console.log("getOneChapter => ", params);
   try {
     const materials = await readFile(FSCONFIG);
     if (params.chapterId) {
@@ -332,8 +337,6 @@ function findLevel(items, initPath, config) {
           throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
         }
       }
-    } else {
-      console.log("Нужный уровень не найден:", selfPath === current);
     }
   }
   return null;
@@ -422,7 +425,7 @@ async function syncMaterialsStores() {
   }
 }
 async function getOneSubChapter(params) {
-  console.log("getOneSubChapter");
+  console.log("getOneSubChapter => ", params);
   try {
     const materials = await readFile(FSCONFIG);
     const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
