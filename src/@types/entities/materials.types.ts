@@ -10,7 +10,7 @@ export interface ChapterCreate {
 }
 
 export interface SubChapterCreate {
-    chapterId: number;
+    pathName: string;
     label: string;
     fullpath: string;
     icon: string;

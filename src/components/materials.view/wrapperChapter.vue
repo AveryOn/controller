@@ -46,6 +46,7 @@ import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiTabPlus } from '@mdi/js';
 import dialogComp from '../base/dialogComp.vue';
 import addChapter from './addChapter.vue';
+import { trimPath } from '../../utils/strings.utils';
 
 const isShowCreateSubChapter = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
@@ -91,9 +92,15 @@ function addNewSubChapter() {
 // Запрос на создание нового подраздела
 async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
     try {
+        let pathName: string;
+        if(opennedChapter.value?.fullpath) {
+            pathName = trimPath(opennedChapter.value.fullpath, { split: true })[0];
+        } 
+        else pathName = opennedChapter.value?.pathName!;
+        if(!pathName) throw '[requestForCreateSubChapter]>> pathName не сформирован';
         const currentPath = opennedChapter.value?.pathName? opennedChapter.value?.pathName : opennedChapter.value?.fullpath;
         const correctSubChapter: SubChapterCreate = {
-            chapterId: opennedChapter.value!.id,
+            pathName: pathName,
             chapterType: newSubChapter.chapterType,
             fullpath: `${currentPath}/${newSubChapter.pathName}`,
             icon: newSubChapter.icon,
@@ -110,7 +117,6 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
         throw err;
     }
 }
-
 onBeforeRouteUpdate( async (to, from, next) => {
     // Запрос на получение данных раздела в случае его выбора
     const prevChapter = from.params['chapter'] as string;

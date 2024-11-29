@@ -157,23 +157,22 @@ export async function getOneChapter(params: GetChapterOneParams): Promise<Chapte
 // Поиск нужного подраздела по полному пути
 interface LevelWithLabels { chapter: SubChapter, labels: string[] }
 type FindLevelResult = SubChapter | null | LevelWithLabels;
+const bundleLabels: string[] = [];
 function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: boolean }): FindLevelResult {
     if(items.length <= 0) return null;
     const current = initPath.shift();
-    const bundleLabels: string[] = [];
-    console.log('current:', current);
     for (const chapter of items) {
         const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
-        console.log('selfPath:', selfPath);
         // Нашли нужный уровень
         if(selfPath === current) {
             // Собираем массив название разделов, если на клиенте был на это запрос
             if(config?.labels === true) bundleLabels.push(chapter.label);
-            console.log('НАшли нужный уровень', selfPath === current);
             // если исчерпан, то мы нашли искомый подраздел
             if(initPath.length <= 0) {
                 if(config?.labels === true) {
-                    return {chapter, labels: bundleLabels};
+                    const labels = [...bundleLabels];
+                    bundleLabels.length = 0;
+                    return { chapter, labels: labels };
                 }
                 else {
                     return chapter;
@@ -181,10 +180,8 @@ function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: 
             } 
             // Если путь еще не пуст, то продолжаем проходить по нему
             else {
-                console.log('Путь еще не пуст:', initPath);
                 if(chapter.items && chapter.items.length > 0) {
-                    console.log('Выполняем поиск по items:', chapter.items.length);
-                    return findLevel(chapter.items, initPath);
+                    return findLevel(chapter.items, initPath, config);
                 }
                 else {
                     throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
@@ -202,7 +199,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
     try {
         if(!params) throw '[createSubChapter]>> INVALID_INPUT_DATA';
         const materials: Chapter[] = await readFile(FSCONFIG);
-        const chapter = materials.find((chapter) => chapter.id === params.chapterId);
+        const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
         if(chapter?.chapterType === 'dir' && chapter.items) {
             const newSubChapter: SubChapter = {
                 id: (chapter.items.length || 0) + 1,
