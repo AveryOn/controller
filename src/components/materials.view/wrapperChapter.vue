@@ -1,17 +1,17 @@
 <template>
     <div class="wrapper-material-chapter">
-        <!-- Диалоговое меню -->
-        <dialogComp v-model="isShowCreateSubChapter" :is-modal="false">
-            <template #header>
-                <div class="subchapter-form-header w-full flex justify-content-center">
-                    <span class="font-bold">Add New Subchapter</span> 
-                </div>
-            </template>
-            <template #default>
-                <addChapter @submit-form="requestForCreateSubChapter" form-type="return"/>
-            </template>
-        </dialogComp>
-
+        <!-- Диалоговое меню для создания нового подраздела -->
+        <createSubChapterDialog 
+        v-model="isShowCreateSubChapter" 
+        @submit-form="requestForCreateSubChapter"
+        />
+        <!-- Диалоговое окно для удаление подраздела -->
+        <deleteChapterDialog v-model="isShowDeleteChapter" @delete="requestDeleteChapter"/>
+        <!-- Диалоговое окно для удаление раздела/подраздела -->
+        <editChapterDialog 
+        :chapter-label="opennedChapter?.label!"
+        v-model="isShowEditChapter"
+        />
         <!-- Menu -->
         <Menubar class="w-11" :model="itemsCorrect" >
             <template #item="{ item, props }">
@@ -44,8 +44,10 @@ import { computed, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiTabPlus } from '@mdi/js';
-import dialogComp from '../base/dialogComp.vue';
-import addChapter from './addChapter.vue';
+import createSubChapterDialog from './dialogs/createSubChapterDialog.vue';
+import deleteChapterDialog from './dialogs/deleteChapterDialog.vue';
+import editChapterDialog from './dialogs/editChapterDialog.vue';
+
 import { trimPath } from '../../utils/strings.utils';
 
 const emit = defineEmits<{
@@ -54,6 +56,8 @@ const emit = defineEmits<{
 }>();
 
 const isShowCreateSubChapter = ref(false);
+const isShowDeleteChapter = ref(false);
+const isShowEditChapter = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
 const items = ref([
     {
@@ -71,12 +75,14 @@ const items = ref([
     {
         label: 'Edit',
         icon: 'pi pi-pencil',
-        iconType: 'pi'
+        iconType: 'pi',
+        command: editChapter,
     },
     {
         label: 'Delete',
         icon: 'pi pi-trash',
-        iconType: 'pi'
+        iconType: 'pi',
+        command: deleteChapter,
     },
 ]);
 
@@ -101,6 +107,12 @@ const blocks = computed(() => {
 function addNewSubChapter() {
     isShowCreateSubChapter.value = true;
 }
+function deleteChapter() {
+    isShowDeleteChapter.value = true;
+}
+function editChapter() {
+    isShowEditChapter.value = true;
+}
 
 // Запрос на создание нового подраздела
 async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
@@ -124,7 +136,17 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
         const result = await createSubChapter(correctSubChapter);
         // Синхронизация подразделов с меню
         await syncMaterials();
-        console.log(result);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Запрос на удаление Раздела/Подраздела
+async function requestDeleteChapter() {
+    try {
+        console.log('request delete');
+        isShowDeleteChapter.value = false;
     } catch (err) {
         console.error(err);
         throw err;
@@ -167,9 +189,7 @@ onBeforeRouteUpdate( async (to, from, next) => {
 
 </script>
 <style scoped>
-.subchapter-form-header {
-    cursor: move;
-}
+
 .wrapper-material-chapter {
     width: 100%;
     height: 95vh !important;
