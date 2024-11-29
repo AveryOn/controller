@@ -11,8 +11,14 @@
         </template>
         <template #default>
             <div class="chapter-editor-body">
-                <div class="body-actions flex justify-content-center gap-4 pt-5 pb-3">
-                    EDITOR
+                <div class="body-actions flex justify-content-center gap-4">
+                    <addChapter
+                    :title="'Change some fields'"
+                    form-type="return"
+                    :init-form-data="props.initFormData"
+                    :reset-btn="true"
+                    @submit-form="(data: ChapterCreate) => confirmEditForm(data)"
+                    />
                 </div>
             </div>
         </template>
@@ -22,11 +28,14 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
+import addChapter from '../addChapter.vue';
+import { ChapterCreate, CreateChapterForm } from '../../../@types/entities/materials.types';
 
 interface Props {
     modelValue?: boolean;
     isModal?: boolean;
     closeble?: boolean;
+    initFormData: CreateChapterForm | null;
     chapterLabel: string | undefined; 
 }
 const props = withDefaults(defineProps<Props>(), {
@@ -37,9 +46,12 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: 'update:modelValue', visible: boolean): void;
-    (e: 'confirm'): void;
+    (e: 'submitForm', data: ChapterCreate): void;
 }>();
 
+function confirmEditForm(data: ChapterCreate) {
+    emit('submitForm', data)
+}
 </script>
 
 <style scoped>

@@ -1,6 +1,6 @@
 <template>
     <form class="add-chapter-form" @submit.prevent>
-        <h2 class="mb-2">Add New Chapter</h2>
+        <h2 class="mb-2">{{ props.title }}</h2>
         <div class="w-9 mt-3 flex flex-column gap-2">
             <!-- Label -->
             <InputText 
@@ -27,7 +27,7 @@
             <span class="mt-2 font-bold">Icon Type</span>
             <Select 
             size="small"
-            v-model="selectIconType" 
+            v-model="form.iconType" 
             :options="iconsTypes" 
             @change="(e) => chooseIconType(e.value)"
             optionLabel="name" 
@@ -37,6 +37,7 @@
             />
             <!-- Symbol / Icon -->
             <div class="w-full flex gap-2 align-items-start">
+                <!-- ICON MODE -->
                 <Select 
                 v-model="modeIcon" 
                 :options="modesIcon" 
@@ -77,8 +78,6 @@
                     severity="secondary" 
                     class="p-button-outlined" 
                     >
-                        <template #content="{  }">
-                        </template>
                         <template #header="{ clearCallback }">
                             <Button @click="clearCallback" label="HELLLO" rounded outlined severity="danger"></Button>
                         </template>
@@ -95,7 +94,7 @@
             <span class="mt-2 font-bold">Chapter Type</span>
             <Select 
             class="w-full -mt-1" 
-            v-model="selectChapType"
+            v-model="form.type"
             @change="(e) => form.type = e.value"
             size="small"
             :options="chapterTypes" 
@@ -103,29 +102,51 @@
             option-value="value" 
             placeholder="Chapter Type" 
             />
-            <Button 
-            class="mt-2 text-xs font-bold w-max ml-auto" 
-            size="small" 
-            severity="info"
-            :loading="isLoadingForm"
-            @click="send"
-            >
-                Create
-            </Button>
+            <div class="form-actions flex gap-3">
+                <!-- Кнопка Сбросить -->
+                <Button 
+                v-if="props.resetBtn"
+                class="mt-2 text-xs font-bold w-max ml-auto" 
+                size="small" 
+                severity="warn"
+                icon="pi pi-"
+                title="Reset Form"
+                @click="resetForm"
+                >
+                    <svg-icon type="mdi" :path="mdiBackupRestore" :size="18"></svg-icon>
+                </Button>
+                <!-- Кнопка Submit -->
+                <Button 
+                class="mt-2 text-xs font-bold w-max" 
+                size="small" 
+                severity="info"
+                :loading="isLoadingForm"
+                label="Submit"
+                @click="send"
+                />
+           
+            </div>
         </div>
     </form>
 </template>
 
 <script setup lang="ts">
-import { type Ref, ref } from 'vue';
+import { onMounted, type Ref, ref, watch } from 'vue';
 import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIcon,  } from '../../@types/entities/materials.types';
 import useNotices from '../../composables/notices';
+import SvgIcon from '@jamescoyle/vue-icon';
+import { mdiBackupRestore } from '@mdi/js';
 
 interface Props {
     formType?: 'return' | 'inner';
+    title?: string;
+    initFormData?: CreateChapterForm | null;
+    resetBtn?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
     formType: 'inner',
+    title: 'Add New Chapter',
+    resetBtn: false,
 });
 
 const emit = defineEmits<{
@@ -133,7 +154,6 @@ const emit = defineEmits<{
 }>();
 
 const notices = useNotices();
-
 
 const isLoadingForm = ref(false);
 const src = ref<any>(null);
@@ -143,12 +163,10 @@ const modesIcon: Ref<ModesIcon[]> = ref([
     { name: 'Symbol', value: 'sym' },
     { name: 'Svg path', value: 'svg' },
 ]);
-const selectChapType = ref('file');
 const chapterTypes: Ref<ChapterTypes[]> = ref([
     { name: 'Directory', value: 'dir' },
     { name: 'File', value: 'file' },
 ]);
-const selectIconType = ref('pi');
 const iconsTypes: Ref<IconTypes[]> = ref([
     { name: 'PI', value: 'pi' },
     { name: 'MDI', value: 'mdi' },
@@ -168,7 +186,6 @@ const form: Ref<CreateChapterForm> = ref<CreateChapterForm>({
     iconImg: null,
     type: 'file',
 });
-
 // Установка префикса pi
 function correctSymbol() {
     if(form.value.iconType === 'pi') {
@@ -178,7 +195,24 @@ function correctSymbol() {
         return form.value.symbol;
     }
 }
-
+// Очистка формы
+function cleanForm() {
+    form.value = {
+        label: '',
+        pathName: '',
+        symbol: '',
+        iconType: 'pi',
+        iconImg: null,
+        type: 'file',
+    }
+}
+// Сброс формы
+function resetForm() {
+    if(props.initFormData) {
+        filledInitForm(props.initFormData);
+    } 
+    else cleanForm();
+}
 function validateForm() {
     let isValid = true;
     if(!form.value.type) return false;
@@ -189,7 +223,6 @@ function validateForm() {
     if(form.value.iconType === 'img' && !form.value.iconImg) return false;
     return isValid;
 }
-
 async function send() {
     try {
         if(!validateForm()) return notices.show({ detail: 'Filled form', severity: 'error' });
@@ -231,6 +264,26 @@ function onFileSelect(event: any) {
     };
     reader.readAsDataURL(file);
 }
+// Заполнить форму в случае если она инициализирутся с данными по умолчанию (props.initFormData)
+const filledInitForm = (newData: CreateChapterForm | null | undefined) => {
+    if (newData) {
+        form.value = { ...newData };
+        // Корректировка имени иконки для типа pi
+        if(form.value.iconType === 'pi') {
+            const symbolChunks = form.value.symbol.trim().split(' ')
+            if(symbolChunks.length > 1) form.value.symbol = symbolChunks.slice(1).join('');
+        }
+        // Корректировка типа иконки
+        modeIcon.value = mapIconTypesModes[newData.iconType] as keyof typeof mapIconTypesModes;
+    }
+    else cleanForm();
+}
+
+onMounted(() => {
+    // Установка по данных формы по умолчанию, если они пришли в пропсах
+    watch(() => props.initFormData, (newData) => filledInitForm(newData))
+    filledInitForm(props.initFormData);
+})
 
 </script>
 

@@ -1,7 +1,9 @@
 <template>
     <div class="materials-view">
         <header class="materials-header">
-            <span class="flex">Materials {{ openChapterName }}</span> 
+            <svg-icon class="head-icon" type="mdi" :path="mdiSpaceInvaders" :size="18"></svg-icon>
+            <span class="flex head-label">Materials {{ openChapterName }}</span> 
+            <ProgressBar class="progress-bar" v-if="false" mode="indeterminate" style="height: 2px"></ProgressBar>
         </header>
         <div class="materials-main">
             <addChapter v-show="$route.params['chapter'] === 'add-chapter'"/>
@@ -18,6 +20,8 @@
 import { computed, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
+import SvgIcon from '@jamescoyle/vue-icon';
+import { mdiSpaceInvaders } from '@mdi/js';
 
 const labelChapter: Ref<string | null> = ref(null);
 
@@ -42,6 +46,7 @@ const openChapterName = computed(() => {
     color: var(--fg-color);
 }
 .materials-header {
+    position: relative;
     width: 100%;
     height: max-content;
     display: flex;
@@ -51,6 +56,17 @@ const openChapterName = computed(() => {
     color: var(--materials-header-fg);
     font-weight: bolder;
 }
+.progress-bar {
+    width: 100%;
+    position: absolute;
+}
+.head-icon {
+    position: absolute;
+    left: 1rem;
+}
+.head-label {
+    user-select: none;
+}
 .materials-main {
     height: 100%;
     width: 100%;
@@ -59,4 +75,5 @@ const openChapterName = computed(() => {
     justify-content: center;
     align-items: center;
 }
+
 </style>
