@@ -203,6 +203,19 @@ async function requestDeleteChapter() {
             await syncMaterials();
             console.log(result);
         } 
+        // Если был выбран подраздел то вызываем соответствующий api
+        else requestDeleteSubChapter();
+    } catch (err) {
+        console.error(err);
+        throw err;
+    } finally {
+        isLoadDelete.value = false;
+    }
+}
+// Запрос на удаление Подраздела
+async function requestDeleteSubChapter() {
+    try {
+        isLoadDelete.value = true;
     } catch (err) {
         console.error(err);
         throw err;
