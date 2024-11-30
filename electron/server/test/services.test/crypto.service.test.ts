@@ -116,5 +116,19 @@ describe('[Service: crypto]', () => {
                 .rejects
                 .toThrowError('[Services.decryptJsonData]>> INVALID_INIT_VECTOR');
         });
+        test('decryptJsonData -> на вход неверный шифр 3 (string)', async () => {
+            const result = await encryptJsonData(123, 'signature');
+            // result = 477e36e7d8bde431991da854bf937c4cbc01ce0bee888bde1a946a416dcf9fc1
+            await expect(decryptJsonData(result + '1', 'signature'))
+                .rejects
+                .toThrowError("The argument 'encoding' is invalid for data of length 33. Received 'hex'");
+        });
+        test('decryptJsonData -> на вход неверный шифр 4 (string)', async () => {
+            // result = 477e36e7d8bde431991da854bf937c4cbc01ce0bee888bde1a946a416dcf9fc1
+            const result = '477e36e7d8bde431991da854bf937c4cbc01ce0bee888bde1a946a416dcf9fc3'
+            await expect(decryptJsonData(result, 'signature'))
+                .rejects
+                .toThrowError("error:1C800064:Provider routines::bad decrypt");
+        });
     });
 });
