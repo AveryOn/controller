@@ -47,6 +47,17 @@ export interface EditChapterParams {
     }
 }
 
+// Параметры для удаления раздела
+export interface DeleteChapterParams {
+    chapterId?: number;
+    pathName?: string;
+}
+// Параметры для удаления ПОДраздела
+export interface DeleteSubChapterParams {
+    fullpath: string;
+}
+
+export type DeleteResponseMessage = 'success' | 'failed';
 
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {

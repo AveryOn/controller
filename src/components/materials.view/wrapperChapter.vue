@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, type ComputedRef, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -62,6 +62,7 @@ const emit = defineEmits<{
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
+const isLoadDelete = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
 const items = ref([
     {
@@ -189,13 +190,44 @@ function resetState() {
     opennedChapter.value = null;
 }
 
-// Запрос на удаление Раздела/Подраздела
+// Запрос на удаление Раздела
 async function requestDeleteChapter() {
     try {
+        isLoadDelete.value = true;
         isShowDeleteChapter.value = false;
+        // Убеждаемся, что выбран раздела а не ПОДраздел
+        if(opennedChapter.value?.pathName && !opennedChapter.value.fullpath) {
+            // Запрос к серверной стороне на удаление раздела
+            const result = await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
+            // Синхронизация данных в панели меню
+            await syncMaterials();
+            console.log(result);
+        } 
+        // Если был выбран подраздел то вызываем соответствующий api
+        else requestDeleteSubChapter();
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        isLoadDelete.value = false;
+    }
+}
+// Запрос на удаление Подраздела
+async function requestDeleteSubChapter() {
+    try {
+        isLoadDelete.value = true;
+        if(opennedChapter.value?.fullpath) {
+            const result = await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
+            // Синхронизация панели меню материалов
+            await syncMaterials();
+            console.log(result);
+        }
+        else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');
+    } catch (err) {
+        console.error(err);
+        throw err;
+    } finally {
+        isLoadDelete.value = false;
     }
 }
 
