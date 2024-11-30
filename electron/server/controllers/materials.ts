@@ -1,6 +1,6 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
-import { Chapter, ChapterCreate, ChapterForMenu, DeleteChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, DeleteChapterParams, DeleteResponseMessage, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 
@@ -392,13 +392,29 @@ export async function editChapter(input: EditChapterParams): Promise<Chapter | S
     }
 }
 
-
 // Удаление раздела из materials
-export async function deleteChapter(params: DeleteChapterParams) {
+export async function deleteChapter(params: DeleteChapterParams): Promise<DeleteResponseMessage> {
     console.log('[deleteChapter] => ', params);
     try {
-        console.log('PING', params);
-        return 'PONG';
+        if(!params) throw new Error('[deleteChapter]>> INVALID_INPUT');
+        // Получение всех materials 
+        let materials: Chapter[] = await readFile(FSCONFIG);
+        // Фильтрация по pathName если указано в параметрах
+        if(params.pathName) {
+            materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
+        }
+        // Фильтрация по chapter.id если указано в параметрах
+        else if (params.chapterId) {
+            materials = materials.filter((chapter) => chapter.id !== params.chapterId);
+        }
+        // Если нужные параметры не были переданы 
+        else {
+            return 'failed';
+        }
+        // Сохранение изменений в БД
+        await writeFile(materials, FSCONFIG);
+        console.log(materials);
+        return 'success';
     } catch (err) {
         console.error(err);
         throw err;

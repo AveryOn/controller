@@ -4496,8 +4496,18 @@ async function editChapter(input) {
 async function deleteChapter(params) {
   console.log("[deleteChapter] => ", params);
   try {
-    console.log("PING", params);
-    return "PONG";
+    if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
+    let materials = await readFile(FSCONFIG);
+    if (params.pathName) {
+      materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
+    } else if (params.chapterId) {
+      materials = materials.filter((chapter) => chapter.id !== params.chapterId);
+    } else {
+      return "failed";
+    }
+    await writeFile(materials, FSCONFIG);
+    console.log(materials);
+    return "success";
   } catch (err) {
     console.error(err);
     throw err;

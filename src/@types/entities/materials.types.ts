@@ -43,7 +43,8 @@ export interface ChapterEditRequest {
 }
 
 export interface DeleteChapterParams {
-
+    chapterId?: number;
+    pathName?: string;
 }
 
 // Контент для каждого раздела и подраздела

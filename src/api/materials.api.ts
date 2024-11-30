@@ -55,7 +55,7 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
 }
 
 // Удаление раздела
-export async function deleteChapterApi(params: DeleteChapterParams): Promise<Chapter> {
+export async function deleteChapterApi(params: DeleteChapterParams): Promise<void> {
     try {
         return await window.electron.deleteChapter(params);
     } catch (err) {

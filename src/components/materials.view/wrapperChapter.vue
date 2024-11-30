@@ -190,13 +190,19 @@ function resetState() {
     opennedChapter.value = null;
 }
 
-// Запрос на удаление Раздела/Подраздела
+// Запрос на удаление Раздела
 async function requestDeleteChapter() {
     try {
         isLoadDelete.value = true;
         isShowDeleteChapter.value = false;
-        const result = await deleteChapterApi({});
-        console.log(result);
+        // Убеждаемся, что выбран раздела а не ПОДраздел
+        if(opennedChapter.value?.pathName && !opennedChapter.value.fullpath) {
+            // Запрос к серверной стороне на удаление раздела
+            const result = await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
+            // Синхронизация данных в панели меню
+            await syncMaterials();
+            console.log(result);
+        } 
     } catch (err) {
         console.error(err);
         throw err;
