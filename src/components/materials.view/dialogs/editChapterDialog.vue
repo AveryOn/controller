@@ -1,7 +1,7 @@
 <template>
     <dialogComp 
     :model-value="props.modelValue" 
-    @update:model-value="(visible) => emit('update:modelValue', visible)" 
+    @update:model-value="(visible) => emit('update:modelValue', visible)"
     :is-modal="false"
     >
         <template #header>
@@ -17,6 +17,7 @@
                     form-type="return"
                     :init-form-data="props.initFormData"
                     :reset-btn="true"
+                    :exclude-fields="excludedFields"
                     @submit-form="(data: ChapterCreate) => confirmEditForm(data)"
                     />
                 </div>
@@ -26,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, computed } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
 import addChapter from '../addChapter.vue';
 import { ChapterCreate, CreateChapterForm } from '../../../@types/entities/materials.types';
@@ -43,6 +44,14 @@ const props = withDefaults(defineProps<Props>(), {
     isModal: true,
     closeble: true,
 });
+
+// Вычислить поля которые нужно исключить и формы
+const excludedFields = computed(() => {
+    if(props.initFormData && props.initFormData.type === 'dir') {
+        return ['pathName', 'type'] as (keyof CreateChapterForm)[];
+    }
+    else return undefined;
+})
 
 const emit = defineEmits<{
     (e: 'update:modelValue', visible: boolean): void;

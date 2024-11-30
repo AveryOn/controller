@@ -44,9 +44,9 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, type ComputedRef, ref, type Ref } from 'vue';
-import { Chapter, ChapterCreate, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
+import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiTabPlus } from '@mdi/js';
 import createSubChapterDialog from './dialogs/createSubChapterDialog.vue';
@@ -108,7 +108,7 @@ const initDataEditForm: ComputedRef<CreateChapterForm | null> = computed(() => {
             iconImg: opennedChapter.value.iconType === 'img'? opennedChapter.value.icon : null,
             iconType: opennedChapter.value.iconType,
             label: opennedChapter.value.label,
-            pathName: opennedChapter.value.pathName,
+            pathName: computePathNameForEdit(),
             symbol: 
                 (opennedChapter.value.iconType === 'mdi' || opennedChapter.value.iconType === 'pi') ? 
                 opennedChapter.value.icon : '',
@@ -125,14 +125,25 @@ const copyEditFormData = computed(() => {
     else return void undefined;
 });
 
+// Вычисляет ключ pathName для computed initDataEditForm чтобы подразделы имели свой pathName
+function computePathNameForEdit() {
+    if(opennedChapter.value?.pathName) return opennedChapter.value.pathName;
+    if(opennedChapter.value?.fullpath) {
+        return trimPath(opennedChapter.value.fullpath, { split: true }).at(-1);
+    }
+}
+
+// Вызов окна для создания нового подраздела 
 function addNewSubChapter() {
     closeAllWins();
     isShowCreateSubChapter.value = true;
 }
+// Вызов окна для удаления текущего раздела 
 function deleteChapter() {
     closeAllWins();
     isShowDeleteChapter.value = true;
 }
+// Вызов окна для редактировния текущего раздела 
 function editChapter() {
     closeAllWins();
     isShowEditChapter.value = true;
@@ -141,13 +152,17 @@ function editChapter() {
 // Запрос на создание нового подраздела
 async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
     try {
+        console.log('1) ДАННЫЕ С ФОРМЫ:', newSubChapter);
         let pathName: string;
         if(opennedChapter.value?.fullpath) {
             pathName = trimPath(opennedChapter.value.fullpath, { split: true })[0];
         } 
         else pathName = opennedChapter.value?.pathName!;
+        console.log('2) pathName:', pathName);
         if(!pathName) throw '[requestForCreateSubChapter]>> pathName не сформирован';
+        console.log('**) opennedChapter:', opennedChapter.value);
         const currentPath = opennedChapter.value?.pathName? opennedChapter.value?.pathName : opennedChapter.value?.fullpath;
+        console.log('3) currentPath:', currentPath);
         const correctSubChapter: SubChapterCreate = {
             pathName: pathName,
             chapterType: newSubChapter.chapterType,
@@ -157,7 +172,10 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
             label: newSubChapter.label,
             route: newSubChapter.route,
         }
+        console.log('4) correctSubChapter:', correctSubChapter);
+        
         const result = await createSubChapter(correctSubChapter);
+        console.log('5) Сервер вернул новый подраздел:', result);
         // Синхронизация подразделов с меню
         await syncMaterials();
     } catch (err) {
@@ -178,8 +196,6 @@ function resetState() {
     opennedChapter.value = null;
 }
 
-
-
 // Запрос на удаление Раздела/Подраздела
 async function requestDeleteChapter() {
     try {
@@ -191,22 +207,73 @@ async function requestDeleteChapter() {
 }
 
 // Поиск разницы в данных копии и новый данных при редактировании
-function isDifferentDataEditForm(copy: CreateChapterForm, newData: ChapterCreate): boolean {
-    if(copy.iconType !== newData.iconType) return true;
-    if(copy.iconType === 'img' && copy.iconImg !== newData.icon) return true;
-    if(copy.iconImg !== 'img' && copy.symbol !== newData.icon) return true;
-    if(copy.label !== newData.label) return true;
-    if(copy.pathName !== newData.pathName) return true;
-    if(copy.type !== newData.chapterType) return true; 
-    return false;
+function isDifferentDataEditForm(copy: CreateChapterForm, newData: ChapterCreate): { isDiff: boolean, keys: string[] } {
+    try {
+        let isDifferent = false;
+        const setDiffTrue = (key: string) => {
+            diffDataKeys.push(key);
+            isDifferent = true;
+        }
+        const diffDataKeys: string[] = [];  // Массив ключей, данных которые были изменены
+        if(copy.iconType !== newData.iconType) setDiffTrue('iconType');
+        if(copy.iconType === 'img' && copy.iconImg !== newData.icon) setDiffTrue('icon');
+        if(copy.iconImg !== 'img' && copy.symbol !== newData.icon) {
+            console.log('ВОТ ЭТА', copy.symbol, newData.icon);
+            setDiffTrue('icon');
+        }
+        if(copy.label !== newData.label) setDiffTrue('label');
+        if(copy.pathName !== newData.pathName) setDiffTrue('pathName');
+        if(copy.type !== newData.chapterType) setDiffTrue('chapterType');
+        return { isDiff: isDifferent, keys: diffDataKeys };
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
 }
+// Подготовить данные для редактирования раздела/подраздела
+function prepareDataForEdit(data: ChapterCreate, diffKeys: string[]): ChapterEdit {
+    try {
+        if (!diffKeys || !Array.isArray(diffKeys)) throw TypeError('prepareDataForEdit > аргумент diffKeys должен быть массивом');
+        type KeyDiffs = keyof ChapterCreate;
+        const finalObj: ChapterEdit = {};
+        return diffKeys.reduce((acc: ChapterEdit, key: string) => {
+            let keyDiff = key as KeyDiffs;
+            acc[keyDiff] = data[keyDiff] as any;
+            return acc;
+        }, finalObj);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
 // Запрос на редактирование общих данных подраздела (иконка, название, путь и пр.)
 async function requestForEdit(data: ChapterCreate) {
+    const computePathName = () => {
+        if(opennedChapter.value?.pathName) return opennedChapter.value?.pathName;
+        else if(opennedChapter.value?.fullpath) {
+            return trimPath(opennedChapter.value?.fullpath, { split: true })[0];
+        }
+        else throw '[requestForEdit > computePathName]>> Ошибка при извлечении pathName';
+    }
     try {
         if(copyEditFormData.value) {
+            const { isDiff, keys } = isDifferentDataEditForm(copyEditFormData.value, data);
             // Если данные были изменены, то запрос проходит
-            if(isDifferentDataEditForm(copyEditFormData.value, data)) {
-                console.log('ЗАпрос')
+            if(isDiff) {
+                // Подготовливаем данные для отправки на сервер
+                const editData: ChapterEdit = prepareDataForEdit(data, keys);
+                const readyObject: ChapterEditRequest = { 
+                    params: editData, 
+                    fullpath: opennedChapter.value?.fullpath || undefined, 
+                    pathName: computePathName(),
+                }
+                console.log('1) Данные уходят на сервер:', JSON.parse(JSON.stringify(readyObject)));
+                const result: Chapter = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
+                // Синзронизация материалов в меню
+                await syncMaterials();
+                console.log('2) Сервер вернул данные:',result);
+                return result;
             }
         }
         else console.log('[requestForEdit] Копии формы для редактирования нет');
@@ -238,6 +305,7 @@ onBeforeRouteUpdate( async (to, from, next) => {
     const prevSubChapter = from.query['subChapter'] as string | undefined;
     if(nextChapter !== 'add-chapter') {
         if(nextChapter && nextChapter !== prevChapter) {
+            console.log('Получние: ', nextChapter, nextSubChapter);
             opennedChapter.value = await getOneChapter({ pathName: nextChapter });
             emit('openChapter', opennedChapter.value.label);
         }
@@ -247,7 +315,8 @@ onBeforeRouteUpdate( async (to, from, next) => {
         if(nextSubChapter && nextSubChapter !== prevSubChapter) {
             const correctFullpath = nextSubChapter.split('>').join('/');
             const { chapter, labels } = await getOneSubChapter({ pathName: nextChapter, fullpath: correctFullpath });
-            opennedChapter.value = addPathNameInSubChapter(chapter);
+            // opennedChapter.value = addPathNameInSubChapter(chapter);
+            opennedChapter.value = chapter;
             emit('openChapter', labels.join(' > '));
         } 
         else {

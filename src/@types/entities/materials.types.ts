@@ -19,6 +19,29 @@ export interface SubChapterCreate {
     route: string,
 }
 
+export interface ChapterEdit {
+    fullpath?: string;
+    label?: string;
+    pathName?: string;
+    icon?: string;
+    iconType?: IconType;
+    chapterType?: ChapterType;
+    route?: string,
+}
+
+export interface ChapterEditRequest {
+    pathName?: string;
+    fullpath?: string;
+    params: {
+        label?: string;
+        pathName?: string;
+        icon?: string;
+        iconType?: IconType;
+        chapterType?: ChapterType;
+        route?: string,
+    }
+}
+
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string;

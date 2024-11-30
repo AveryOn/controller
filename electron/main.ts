@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createSubChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
+import type { ChapterCreate, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
+import { createChapter, createSubChapter, editChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
 
 const require = createRequire(import.meta.url)
@@ -31,7 +31,8 @@ function createWindow() {
 
     // Test active push message to Renderer-process.
     win.webContents.on('did-finish-load', async () => {
-        // await resetMaterialDB()
+        // Сброс БД materials
+        // await resetMaterialDB();
         let isReliableStores: boolean = true;
         // Проверка баз данных
         isReliableStores = await prepareUsersStore(); // Users
@@ -122,5 +123,10 @@ app.whenReady().then(() => {
     // Получить конкретный ПОДраздел с БД материалов
     ipcMain.handle("get-one-sub-chapter", async (event, params: GetSubChapterOneParams) => {
         return await getOneSubChapter(params);
+    });
+
+    // Редактирование общих данных раздела/подраздела
+    ipcMain.handle("edit-chapter", async (event, params: EditChapterParams) => {
+        return await editChapter(params);
     });
 })

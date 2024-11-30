@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import cIcon from '../base/cIcon.vue';
-import { getChapters } from '../../api/materials.api';
+import { getChapters, syncMaterials } from '../../api/materials.api';
 import { useMainStore } from '../../stores/main.store';
 import { useRouter } from 'vue-router';
 import { replacePathForMaterials } from '../../utils/strings.utils';
@@ -99,7 +99,7 @@ function selectItem(item: any) {
         if(item.fullpath) {
             querySubChapter = replacePathForMaterials(item.fullpath);
         }
-        // Открываем подраздел
+        console.log('ПЕРЕХОД:', item.pathName);
         router.push({ 
             name: item.route, 
             params: { chapter: item.pathName }, 
@@ -113,6 +113,7 @@ async function getMaterials() {
         isLoadingMaterials.value = true;
         if(mainStore.materialChaptersMenu.length <= 0) {
             mainStore.materialChaptersMenu = await getChapters({ forMenu: true });
+            await syncMaterials()
         }
         let materials: any = items.value[1];
         if(materials.items && materials.items.slice(0, -2).length <= 0) {
@@ -120,6 +121,7 @@ async function getMaterials() {
             materials.items.length = 0;
             materials.items.push(...mainStore.materialChaptersMenu, addedItem);
         }
+        
     } catch (err) {
         throw err;
     }

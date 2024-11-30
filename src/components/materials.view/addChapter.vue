@@ -4,19 +4,21 @@
         <div class="w-9 mt-3 flex flex-column gap-2">
             <!-- Label -->
             <InputText 
+            v-if="computeVisible['label']"
             class="w-full" 
-            type="text" 
+            type="text"
             v-model="form.label" 
             placeholder="Label" 
             size="small"
             />
-            <span class="flex gap-1 font-bold mt-2">Example: 
+            <span v-if="computeVisible['pathName']" class="flex gap-1 font-bold mt-2">Example: 
                 <span class="example-item">foobar</span> 
                 <span class="example-item">foo-bar</span> 
                 <span class="example-item">foo_bar</span> 
             </span>
             <!-- Query Name -->
             <InputText 
+            v-if="computeVisible['pathName']"
             class="w-full" 
             type="text" 
             v-model="form.pathName" 
@@ -24,8 +26,9 @@
             size="small"
             />
             <!-- ICON TYPE -->
-            <span class="mt-2 font-bold">Icon Type</span>
+            <span v-if="computeVisible['iconType']" class="mt-2 font-bold">Icon Type</span>
             <Select 
+            v-if="computeVisible['iconType']"
             size="small"
             v-model="form.iconType" 
             :options="iconsTypes" 
@@ -91,8 +94,9 @@
             class="img w-8 mx-auto" 
             />
             <!-- CHAPTER TYPE -->
-            <span class="mt-2 font-bold">Chapter Type</span>
+            <span v-if="computeVisible['type']" class="mt-2 font-bold">Chapter Type</span>
             <Select 
+            v-if="computeVisible['type']"
             class="w-full -mt-1" 
             v-model="form.type"
             @change="(e) => form.type = e.value"
@@ -102,7 +106,7 @@
             option-value="value" 
             placeholder="Chapter Type" 
             />
-            <div class="form-actions flex gap-3">
+            <div class="form-actions flex gap-3 ml-auto">
                 <!-- Кнопка Сбросить -->
                 <Button 
                 v-if="props.resetBtn"
@@ -113,7 +117,7 @@
                 title="Reset Form"
                 @click="resetForm"
                 >
-                    <svg-icon type="mdi" :path="mdiBackupRestore" :size="18"></svg-icon>
+                    <svg-icon type="mdi" :path="mdiBackupRestore" :size="16"></svg-icon>
                 </Button>
                 <!-- Кнопка Submit -->
                 <Button 
@@ -122,6 +126,7 @@
                 severity="info"
                 :loading="isLoadingForm"
                 label="Submit"
+                :disabled="props.disableSubmit"
                 @click="send"
                 />
            
@@ -131,22 +136,26 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, type Ref, ref, watch } from 'vue';
+import { computed, onMounted, type Ref, ref, watch } from 'vue';
 import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIcon,  } from '../../@types/entities/materials.types';
 import useNotices from '../../composables/notices';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiBackupRestore } from '@mdi/js';
+import { syncMaterials } from '../../api/materials.api';
 
 interface Props {
     formType?: 'return' | 'inner';
     title?: string;
     initFormData?: CreateChapterForm | null;
     resetBtn?: boolean;
+    excludeFields?: Array<keyof CreateChapterForm>;
+    disableSubmit?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
     formType: 'inner',
     title: 'Add New Chapter',
     resetBtn: false,
+    disableSubmit: false,
 });
 
 const emit = defineEmits<{
@@ -186,6 +195,18 @@ const form: Ref<CreateChapterForm> = ref<CreateChapterForm>({
     iconImg: null,
     type: 'file',
 });
+
+// Свойство вычисляет хеш-таблицу, по которой меняется видимость полей формы 
+const computeVisible = computed(() => {
+    const visibleMap = { label: true, pathName: true, symbol: true, iconType: true, iconImg: true, type: true };
+    if(props.excludeFields) {
+        props.excludeFields.forEach((key) => {
+            visibleMap[key] = false;
+        })
+    } 
+    return visibleMap;
+})
+
 // Установка префикса pi
 function correctSymbol() {
     if(form.value.iconType === 'pi') {
@@ -213,19 +234,27 @@ function resetForm() {
     } 
     else cleanForm();
 }
-function validateForm() {
+function validateForm(config?: { exclude?: (keyof CreateChapterForm)[] }) {
     let isValid = true;
-    if(!form.value.type) return false;
-    if(!form.value.symbol) return false;
-    if(!form.value.pathName) return false;
-    if(!form.value.label) return false;
-    if(!form.value.iconType) return false;
+    const setValidFalse = (key: keyof CreateChapterForm) => {
+        // Если ключ исключен в конфиге для проверки на валидацию, игнорируем его 
+        if(config && config.exclude?.includes(key)) {
+            return true;
+        }
+        console.log('validateForm => Ключ не прошел проверку', key, 'config:', config);
+        return false;
+    }
+    if(!form.value.type) return setValidFalse('type');
+    if(!form.value.symbol) return setValidFalse('symbol');
+    if(!form.value.pathName) return setValidFalse('pathName');
+    if(!form.value.label) return setValidFalse('label');
+    if(!form.value.iconType) return setValidFalse('iconType');
     if(form.value.iconType === 'img' && !form.value.iconImg) return false;
     return isValid;
 }
 async function send() {
     try {
-        if(!validateForm()) return notices.show({ detail: 'Filled form', severity: 'error' });
+        if(!validateForm({ exclude: props.excludeFields })) return notices.show({ detail: 'Filled form', severity: 'error' });
         isLoadingForm.value = true;
         const newChapter: ChapterCreate = {
             label: form.value.label,
@@ -237,6 +266,7 @@ async function send() {
         }
         if(props.formType === 'inner') {
             const res = await window.electron.createChapter(newChapter);
+            await syncMaterials();
         }
         else if(props.formType === 'return') {
             emit('submitForm', newChapter);

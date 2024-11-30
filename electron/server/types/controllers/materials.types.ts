@@ -34,6 +34,19 @@ export interface GetSubChapterOneParams {
     fullpath: string;
 }
 
+// Данные приходят с запросом на редактирование раздела/подраздела
+export interface EditChapterParams {
+    pathName?: string;
+    fullpath?: string;
+    params: {
+        label?: string;
+        pathName?: string;
+        icon?: string;
+        iconType?: IconType;
+        chapterType?: ChapterType;
+    }
+}
+
 
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
@@ -52,6 +65,7 @@ export type ChapterType = 'file' | 'dir';
 export interface SubChapter {
     id: number;
     fullpath: string;
+    pathName?: string;
     icon: string;
     iconType: IconType;
     chapterType: ChapterType;

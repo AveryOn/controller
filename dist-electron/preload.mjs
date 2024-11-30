@@ -11,7 +11,8 @@ electron.contextBridge.exposeInMainWorld("electron", {
   getChapter: (params) => electron.ipcRenderer.invoke("get-one-chapter", params),
   createSubChapter: (params) => electron.ipcRenderer.invoke("create-sub-chapter", params),
   syncMaterials: () => electron.ipcRenderer.invoke("sync-materials"),
-  getOneSubChapter: (params) => electron.ipcRenderer.invoke("get-one-sub-chapter", params)
+  getOneSubChapter: (params) => electron.ipcRenderer.invoke("get-one-sub-chapter", params),
+  editChapter: (params) => electron.ipcRenderer.invoke("edit-chapter", params)
 });
 electron.ipcRenderer.on("main-process-message", (event, message) => {
   console.log("Сообщение от основного процесса:", message);
