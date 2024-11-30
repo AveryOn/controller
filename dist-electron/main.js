@@ -4358,9 +4358,7 @@ async function createSubChapter(params) {
         createdAt: formatDate(),
         updatedAt: formatDate()
       };
-      console.log("1) params.fullpath:", params.fullpath);
       const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
-      console.log("2) correctFullPath:", correctFullPath);
       if (correctFullPath.length <= 0) {
         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
         if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
@@ -4385,7 +4383,7 @@ async function createSubChapter(params) {
   }
 }
 async function syncMaterialsStores() {
-  console.log("syncMaterialsStores");
+  console.log("[syncMaterialsStores]");
   function correctChapter(chapter, initPathName) {
     const { icon, iconType, id, label, pathName: pathName2, fullpath, route, items } = chapter;
     return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName2, fullpath, route, items };
@@ -4396,7 +4394,6 @@ async function syncMaterialsStores() {
       if (chapter.pathName && chapter.pathName !== pathName) {
         pathName = chapter.pathName;
       }
-      console.log("Label:", chapter.label, "CHAPTER PATHNAME:", chapter.pathName, "PathName:", pathName);
       if (chapter.chapterType === "file" && !chapter.items) {
         return correctChapter(chapter, pathName);
       } else if (chapter.chapterType === "dir" && chapter.items) {
@@ -4421,7 +4418,7 @@ async function syncMaterialsStores() {
   }
 }
 async function getOneSubChapter(params) {
-  console.log("getOneSubChapter => ", params);
+  console.log("[getOneSubChapter] => ", params);
   try {
     const materials = await readFile(FSCONFIG);
     const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
@@ -4470,7 +4467,6 @@ async function editChapter(input) {
       const correctPath = trimPath(fullpath, { split: true });
       const root = correctPath[0];
       const findedChapter = materials.find((chapter) => chapter.pathName === root);
-      console.log("findedChapter: ", findedChapter);
       const lastPath = correctPath.slice(1);
       if (findedChapter == null ? void 0 : findedChapter.items) {
         let subchapter = findLevel(findedChapter.items, lastPath);

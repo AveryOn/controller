@@ -222,10 +222,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
                 createdAt: formatDate(),
                 updatedAt: formatDate(),
             }
-            console.log('1) params.fullpath:', params.fullpath);
             const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
-            console.log('2) correctFullPath:', correctFullPath);
-            
             // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
             if (correctFullPath.length <= 0) {
                 // Проверка на уникальность создаваемого подраздела
@@ -257,7 +254,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
 
 // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
 export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
-    console.log('syncMaterialsStores');
+    console.log('[syncMaterialsStores]');
     function correctChapter(chapter: Chapter & SubChapter, initPathName?: string): ChapterForMenu {
         const { icon, iconType, id, label, pathName, fullpath, route, items } = chapter;
         return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName, fullpath, route, items }
@@ -268,7 +265,6 @@ export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
             if (chapter.pathName && chapter.pathName !== pathName!) {
                 pathName = chapter.pathName;
             }
-            console.log('Label:', chapter.label, 'CHAPTER PATHNAME:', chapter.pathName, 'PathName:', pathName);
             // Если подраздел является конечным файлом а не директорией
             if (chapter.chapterType === 'file' && !chapter.items) {
                 return correctChapter(chapter, pathName);
@@ -305,7 +301,7 @@ export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
 
 // Получить конкретный ПОДраздел с БД материалов
 export async function getOneSubChapter(params: GetSubChapterOneParams): Promise<LevelWithLabels> {
-    console.log('getOneSubChapter => ', params);
+    console.log('[getOneSubChapter] => ', params);
     try {
         // Получение материалов с БД
         const materials: Chapter[] = await readFile(FSCONFIG);
@@ -367,8 +363,6 @@ export async function editChapter(input: EditChapterParams): Promise<Chapter | S
             const correctPath = trimPath(fullpath, { split: true }) as string[];
             const root: string = correctPath[0];
             const findedChapter = materials.find((chapter) => chapter.pathName === root);
-            console.log('findedChapter: ',findedChapter);
-            
             const lastPath: string[] = correctPath.slice(1);
             if (findedChapter?.items) {
                 let subchapter = findLevel(findedChapter.items, lastPath) as SubChapter;

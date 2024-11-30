@@ -152,17 +152,13 @@ function editChapter() {
 // Запрос на создание нового подраздела
 async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
     try {
-        console.log('1) ДАННЫЕ С ФОРМЫ:', newSubChapter);
         let pathName: string;
         if(opennedChapter.value?.fullpath) {
             pathName = trimPath(opennedChapter.value.fullpath, { split: true })[0];
         } 
         else pathName = opennedChapter.value?.pathName!;
-        console.log('2) pathName:', pathName);
         if(!pathName) throw '[requestForCreateSubChapter]>> pathName не сформирован';
-        console.log('**) opennedChapter:', opennedChapter.value);
         const currentPath = opennedChapter.value?.pathName? opennedChapter.value?.pathName : opennedChapter.value?.fullpath;
-        console.log('3) currentPath:', currentPath);
         const correctSubChapter: SubChapterCreate = {
             pathName: pathName,
             chapterType: newSubChapter.chapterType,
@@ -172,10 +168,7 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
             label: newSubChapter.label,
             route: newSubChapter.route,
         }
-        console.log('4) correctSubChapter:', correctSubChapter);
-        
         const result = await createSubChapter(correctSubChapter);
-        console.log('5) Сервер вернул новый подраздел:', result);
         // Синхронизация подразделов с меню
         await syncMaterials();
     } catch (err) {
@@ -218,7 +211,6 @@ function isDifferentDataEditForm(copy: CreateChapterForm, newData: ChapterCreate
         if(copy.iconType !== newData.iconType) setDiffTrue('iconType');
         if(copy.iconType === 'img' && copy.iconImg !== newData.icon) setDiffTrue('icon');
         if(copy.iconImg !== 'img' && copy.symbol !== newData.icon) {
-            console.log('ВОТ ЭТА', copy.symbol, newData.icon);
             setDiffTrue('icon');
         }
         if(copy.label !== newData.label) setDiffTrue('label');
@@ -268,11 +260,9 @@ async function requestForEdit(data: ChapterCreate) {
                     fullpath: opennedChapter.value?.fullpath || undefined, 
                     pathName: computePathName(),
                 }
-                console.log('1) Данные уходят на сервер:', JSON.parse(JSON.stringify(readyObject)));
                 const result: Chapter = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
                 // Синзронизация материалов в меню
                 await syncMaterials();
-                console.log('2) Сервер вернул данные:',result);
                 return result;
             }
         }
@@ -305,7 +295,6 @@ onBeforeRouteUpdate( async (to, from, next) => {
     const prevSubChapter = from.query['subChapter'] as string | undefined;
     if(nextChapter !== 'add-chapter') {
         if(nextChapter && nextChapter !== prevChapter) {
-            console.log('Получние: ', nextChapter, nextSubChapter);
             opennedChapter.value = await getOneChapter({ pathName: nextChapter });
             emit('openChapter', opennedChapter.value.label);
         }

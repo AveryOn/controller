@@ -241,7 +241,6 @@ function validateForm(config?: { exclude?: (keyof CreateChapterForm)[] }) {
         if(config && config.exclude?.includes(key)) {
             return true;
         }
-        console.log('validateForm => Ключ не прошел проверку', key, 'config:', config);
         return false;
     }
     if(!form.value.type) return setValidFalse('type');

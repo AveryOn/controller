@@ -99,7 +99,6 @@ function selectItem(item: any) {
         if(item.fullpath) {
             querySubChapter = replacePathForMaterials(item.fullpath);
         }
-        console.log('ПЕРЕХОД:', item.pathName);
         router.push({ 
             name: item.route, 
             params: { chapter: item.pathName }, 
