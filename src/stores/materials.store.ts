@@ -8,6 +8,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     const loadingGetChapter = ref(false);
     const loadingCreateChapter = ref(false);
     const loadingEditChapter = ref(false);
+    const loadingDeleteChapter = ref(false);
 
     // Состояние определяет какую либо асинхронную операцию для отображение прогресс бара в заголовке стр materials
     const globalLoadingMaterials = computed(() => {
@@ -25,5 +26,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         globalLoadingMaterials,
         loadingCreateChapter,
         loadingEditChapter,
+        loadingDeleteChapter,
     }
 });

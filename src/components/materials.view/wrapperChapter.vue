@@ -7,7 +7,8 @@
         />
         <!-- Диалоговое окно для удаление подраздела -->
         <deleteChapterDialog 
-        v-model="isShowDeleteChapter" 
+        v-model="isShowDeleteChapter"
+        :loading="materialStore.loadingDeleteChapter"
         @delete="requestDeleteChapter"
         />
         <!-- Диалоговое окно для удаление раздела/подраздела -->
@@ -67,7 +68,6 @@ const emit = defineEmits<{
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
-const isLoadDelete = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
 const items = ref([
     {
@@ -197,42 +197,41 @@ function resetState() {
 
 // Запрос на удаление Раздела
 async function requestDeleteChapter() {
-    try {
-        isLoadDelete.value = true;
-        isShowDeleteChapter.value = false;
-        // Убеждаемся, что выбран раздела а не ПОДраздел
-        if(opennedChapter.value?.pathName && !opennedChapter.value.fullpath) {
+    // Убеждаемся, что выбран раздела а не ПОДраздел
+    if (opennedChapter.value?.pathName && !opennedChapter.value.fullpath) {
+        try {
+            materialStore.loadingDeleteChapter = true;
             // Запрос к серверной стороне на удаление раздела
             const result = await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
             // Синхронизация данных в панели меню
             await syncMaterials();
-            console.log(result);
-        } 
-        // Если был выбран подраздел то вызываем соответствующий api
-        else requestDeleteSubChapter();
-    } catch (err) {
-        console.error(err);
-        throw err;
-    } finally {
-        isLoadDelete.value = false;
+            isShowDeleteChapter.value = false;
+        } catch (err) {
+            console.error(err);
+            throw err;
+        } finally {
+            materialStore.loadingDeleteChapter = false;
+        }
     }
+    // Если был выбран подраздел то вызываем соответствующий api
+    else requestDeleteSubChapter();
 }
 // Запрос на удаление Подраздела
 async function requestDeleteSubChapter() {
     try {
-        isLoadDelete.value = true;
+        materialStore.loadingDeleteChapter = true;
         if(opennedChapter.value?.fullpath) {
             const result = await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
             // Синхронизация панели меню материалов
             await syncMaterials();
-            console.log(result);
+            isShowDeleteChapter.value = false;
         }
         else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');
     } catch (err) {
         console.error(err);
         throw err;
     } finally {
-        isLoadDelete.value = false;
+        materialStore.loadingDeleteChapter = false;
     }
 }
 

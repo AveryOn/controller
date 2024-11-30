@@ -19,6 +19,7 @@
                     severity="danger" 
                     size="small"
                     label="Yes" 
+                    :loading="props.loading"
                     @click="emit('delete')"
                     />
                     <Button 
@@ -44,6 +45,7 @@ interface Props {
     modelValue?: boolean;
     isModal?: boolean;
     closeble?: boolean;
+    loading?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
     modelValue: false,
