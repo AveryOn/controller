@@ -108,13 +108,14 @@ export interface SubChapterForMenu {
 }
 
 export interface ChapterForMenu {
-    id: number;
-    pathName: string;
+    id?: number;
+    pathName?: string;
     fullpath?: string;
-    icon: string;
-    iconType: IconType;
-    label: string;
-    route: string;
+    icon?: string;
+    iconType?: IconType;
+    type?: string;
+    label?: string;
+    route?: string;
     items?: SubChapterForMenu[] | null;
 }
 

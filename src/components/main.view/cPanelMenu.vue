@@ -1,6 +1,6 @@
 <template>
     <aside class="panel-menu">
-        <PanelMenu class="w-full h-full" :model="items">
+        <PanelMenu class="w-full h-full" :model="mainStore.menuPanelItems">
             <template #item="{ item }">
                 <div
                 class="inner-item flex items-center cursor-pointer px-2 py-1"
@@ -29,68 +29,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import cIcon from '../base/cIcon.vue';
-import { getChapters, syncMaterials } from '../../api/materials.api';
 import { useRouter } from 'vue-router';
 import { replacePathForMaterials } from '../../utils/strings.utils';
-import { useMaterialsStore } from '../../stores/materials.store';
+import { useMainStore } from '../../stores/main.store';
 
-const materialStore = useMaterialsStore();
 const router = useRouter();
-const isLoadingMaterials = ref(false); 
-
-const items = ref([
-    {
-        label: 'Applications',
-        icon: 'pi pi-th-large',
-        items: [
-            {
-                label: 'Projects',
-                icon: 'pi pi-file',
-                route: ''
-            },
-            {
-                label: 'Secrets',
-                icon: 'pi pi-key',
-                route: ''
-            }
-        ]
-    },
-    {
-        label: 'Materials',
-        icon: 'pi pi-book',
-        route: 'materials',
-        command: getMaterials,
-        items: [
-            {
-                type: 'loading',
-                meta:true,
-            },
-            {
-                label: 'Add Chapter',
-                icon: 'pi pi-plus',
-                route: 'materials',
-                pathName: 'add-chapter',
-                meta:true,
-            },
-        ]
-    },
-    {
-        label: 'Settings',
-        icon: 'pi pi-cog',
-        items: [
-            {
-                label: 'Apperiance',
-                icon: 'pi pi-image',
-            },
-            {
-                label: 'Security',
-                icon: 'pi pi-shield',
-            }
-        ]
-    }
-]);
+const mainStore = useMainStore();
 
 // Когда выбираем какой-либо элемент меню
 function selectItem(item: any) {
@@ -104,27 +49,6 @@ function selectItem(item: any) {
             params: { chapter: item.pathName }, 
             query: { subChapter: querySubChapter },
         });
-    }
-}
-
-async function getMaterials() {
-    try {
-        isLoadingMaterials.value = true;
-        if(materialStore.materialChaptersMenu.length <= 0) {
-            materialStore.materialChaptersMenu = await getChapters({ forMenu: true });
-            await syncMaterials()
-        }
-        let materials: any = items.value[1];
-        if(materials.items && materials.items.slice(0, -2).length <= 0) {
-            const addedItem = materials.items.pop();
-            materials.items.length = 0;
-            materials.items.push(...materialStore.materialChaptersMenu, addedItem);
-        }
-    } catch (err) {
-        throw err;
-    }
-    finally {
-        isLoadingMaterials.value = false;
     }
 }
 </script>

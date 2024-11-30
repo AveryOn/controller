@@ -1,10 +1,19 @@
 import { defineStore } from "pinia";
 import { computed, type Ref, ref } from "vue";
 import { Chapter, ChapterForMenu } from "../@types/entities/materials.types";
+import { getChapters } from "../api/materials.api";
 
 export const useMaterialsStore = defineStore('materialsStored', () => {
-    const materialChaptersMenu: Ref<ChapterForMenu[]> = ref([]);
+    const addChapterItem = {
+        label: 'Add Chapter',
+        icon: 'pi pi-plus',
+        route: 'materials',
+        pathName: 'add-chapter',
+        meta: true,
+    }
+    const materialChaptersMenu: Ref<ChapterForMenu[]> = ref([{ type: 'loading' }, addChapterItem]);
     const materialChapters: Ref<Chapter[]> = ref([]);
+    const loadingGetMenuChapters = ref(true);
     const loadingGetChapter = ref(false);
     const loadingCreateChapter = ref(false);
     const loadingEditChapter = ref(false);
@@ -19,6 +28,23 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         return deps.some((state) => state === true);
     });
 
+    // Запросить элементы меню панели материалов
+    async function getMaterialsMenu() {
+        try {
+            loadingGetMenuChapters.value = true;
+            if(materialChaptersMenu.value[0].type === 'loading') {
+                const items = await getChapters({ forMenu: true });
+                materialChaptersMenu.value.length = 0;
+                materialChaptersMenu.value.push(...items, addChapterItem);
+            } 
+        } catch (err) {
+            throw err;
+        }
+        finally {
+            loadingGetMenuChapters.value = false;
+        }
+    }
+
     return {
         materialChaptersMenu,
         materialChapters,
@@ -27,5 +53,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         loadingCreateChapter,
         loadingEditChapter,
         loadingDeleteChapter,
+        getMaterialsMenu,
     }
 });
