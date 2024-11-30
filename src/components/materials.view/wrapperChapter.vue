@@ -2,7 +2,8 @@
     <div class="wrapper-material-chapter">
         <!-- Диалоговое меню для создания нового подраздела -->
         <createSubChapterDialog 
-        v-model="isShowCreateSubChapter" 
+        :loading="materialStore.loadingCreateChapter"
+        v-model="isShowCreateSubChapter"
         @submit-form="requestForCreateSubChapter"
         />
         <!-- Диалоговое окно для удаление подраздела -->
@@ -158,6 +159,7 @@ function editChapter() {
 // Запрос на создание нового подраздела
 async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
     try {
+        materialStore.loadingCreateChapter = true;
         let pathName: string;
         if(opennedChapter.value?.fullpath) {
             pathName = trimPath(opennedChapter.value.fullpath, { split: true })[0];
@@ -180,6 +182,8 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        materialStore.loadingCreateChapter = false;
     }
 }
 // Закрыть все диалоговые окна
