@@ -442,7 +442,7 @@ export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<
         // }
         // Сохранение изменений в БД
         // await writeFile(materials, FSCONFIG);
-        console.log(materials);
+        // console.log(materials);
         return 'success';
     } catch (err) {
         console.error(err);

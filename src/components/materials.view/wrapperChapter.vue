@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, deleteChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, type ComputedRef, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -216,6 +216,13 @@ async function requestDeleteChapter() {
 async function requestDeleteSubChapter() {
     try {
         isLoadDelete.value = true;
+        if(opennedChapter.value?.fullpath) {
+            const result = await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
+            // Синхронизация панели меню материалов
+            // await syncMaterials();
+            console.log(result);
+        }
+        else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');
     } catch (err) {
         console.error(err);
         throw err;

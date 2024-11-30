@@ -4513,6 +4513,17 @@ async function deleteChapter(params) {
     throw err;
   }
 }
+async function deleteSubChapter(params) {
+  console.log("[deleteSubChapter] => ", params);
+  try {
+    if (!params) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
+    let materials = await readFile(FSCONFIG);
+    return "success";
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -4590,6 +4601,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("delete-chapter", async (event, params) => {
     return await deleteChapter(params);
+  });
+  ipcMain.handle("delete-sub-chapter", async (event, params) => {
+    return await deleteSubChapter(params);
   });
 });
 export {
