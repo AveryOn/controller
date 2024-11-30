@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, deleteChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, type ComputedRef, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -62,6 +62,7 @@ const emit = defineEmits<{
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
+const isLoadDelete = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
 const items = ref([
     {
@@ -192,10 +193,15 @@ function resetState() {
 // Запрос на удаление Раздела/Подраздела
 async function requestDeleteChapter() {
     try {
+        isLoadDelete.value = true;
         isShowDeleteChapter.value = false;
+        const result = await deleteChapterApi({});
+        console.log(result);
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        isLoadDelete.value = false;
     }
 }
 

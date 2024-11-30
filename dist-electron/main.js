@@ -10,6 +10,8 @@ const N = 16384;
 const r = 8;
 const p = 1;
 async function encrypt(input) {
+  if (!input) throw new Error("input - обязательный аргумент");
+  if (typeof input !== "string") throw new Error("input - должен быть типа string");
   return new Promise((resolve, reject) => {
     try {
       const salt = crypto.randomBytes(16).toString("hex");
@@ -26,6 +28,10 @@ async function encrypt(input) {
 }
 async function verify(input, salt, hash) {
   return new Promise((resolve, reject) => {
+    if (!input || !salt || !hash) throw new Error("input, salt, hash - обязательные аргмуенты");
+    if (typeof input !== "string" || typeof salt !== "string" || typeof hash !== "string") {
+      throw new Error("аргументы input, salt, hash должны быть типа string");
+    }
     try {
       crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
         if (err) throw err;
@@ -4434,20 +4440,20 @@ async function getOneSubChapter(params) {
     throw err;
   }
 }
+function updateChapter(chapter, params) {
+  try {
+    if (params.chapterType) chapter.chapterType = params.chapterType;
+    if (params.icon) chapter.icon = params.icon;
+    if (params.iconType) chapter.iconType = params.iconType;
+    if (params.label) chapter.label = params.label;
+    if (params.pathName && chapter.pathName) chapter.pathName = params.pathName;
+  } catch (err) {
+    console.error("[editChapter]>> Ошибка при обновлении раздела/подраздела");
+    throw err;
+  }
+}
 async function editChapter(input) {
   console.log("[editChapter] => ", input);
-  function updateChapter(chapter, params) {
-    try {
-      if (params.chapterType) chapter.chapterType = params.chapterType;
-      if (params.icon) chapter.icon = params.icon;
-      if (params.iconType) chapter.iconType = params.iconType;
-      if (params.label) chapter.label = params.label;
-      if (params.pathName && chapter.pathName) chapter.pathName = params.pathName;
-    } catch (err) {
-      console.error("[editChapter]>> Ошибка при обновлении раздела/подраздела");
-      throw err;
-    }
-  }
   try {
     const { params, fullpath, pathName } = input;
     const materials = await readFile(FSCONFIG);
@@ -4482,6 +4488,16 @@ async function editChapter(input) {
         return subchapter;
       } else throw "[editChapter]>> INTERNAL_ERROR[2]";
     } else throw "[editChapter]>> INTERNAL_ERROR[3]";
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function deleteChapter(params) {
+  console.log("[deleteChapter] => ", params);
+  try {
+    console.log("PING", params);
+    return "PONG";
   } catch (err) {
     console.error(err);
     throw err;
@@ -4561,6 +4577,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("edit-chapter", async (event, params) => {
     return await editChapter(params);
+  });
+  ipcMain.handle("delete-chapter", async (event, params) => {
+    return await deleteChapter(params);
   });
 });
 export {

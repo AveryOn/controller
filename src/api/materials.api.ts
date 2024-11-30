@@ -1,4 +1,4 @@
-import type { Chapter, ChapterEditRequest, ChapterForMenu, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
+import type { Chapter, ChapterEditRequest, ChapterForMenu, DeleteChapterParams, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
 
 // Получить материлы с БД
 export async function getChapters(params?: GetChaptersParams): Promise<ChapterForMenu[]> {
@@ -49,6 +49,15 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
 export async function editChapterApi(params: ChapterEditRequest): Promise<Chapter> {
     try {
         return await window.electron.editChapter(params);
+    } catch (err) {
+        throw err; 
+    }
+}
+
+// Удаление раздела
+export async function deleteChapterApi(params: DeleteChapterParams): Promise<Chapter> {
+    try {
+        return await window.electron.deleteChapter(params);
     } catch (err) {
         throw err; 
     }

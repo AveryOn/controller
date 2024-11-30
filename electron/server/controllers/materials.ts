@@ -1,6 +1,6 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
-import { Chapter, ChapterCreate, ChapterForMenu, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, DeleteChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 
@@ -320,22 +320,23 @@ export async function getOneSubChapter(params: GetSubChapterOneParams): Promise<
     }
 }
 
+
+// Обновить Раздел/Подраздел данными из входных параметров
+function updateChapter(chapter: Chapter | SubChapter, params: EditChapterParams['params']) {
+    try {
+        if(params.chapterType) chapter.chapterType = params.chapterType;
+        if(params.icon) chapter.icon = params.icon;
+        if(params.iconType) chapter.iconType = params.iconType;
+        if(params.label) chapter.label = params.label;
+        if(params.pathName && chapter.pathName) chapter.pathName = params.pathName;
+    } catch (err) {
+        console.error('[editChapter]>> Ошибка при обновлении раздела/подраздела');
+        throw err
+    }
+}
 // Редактирование общих данных раздела/подраздела
 export async function editChapter(input: EditChapterParams): Promise<Chapter | SubChapter> {
     console.log('[editChapter] => ', input);
-    // Обновить Раздел/Подраздел данными из входных параметров
-    function updateChapter(chapter: Chapter | SubChapter, params: EditChapterParams['params']) {
-        try {
-            if(params.chapterType) chapter.chapterType = params.chapterType;
-            if(params.icon) chapter.icon = params.icon;
-            if(params.iconType) chapter.iconType = params.iconType;
-            if(params.label) chapter.label = params.label;
-            if(params.pathName && chapter.pathName) chapter.pathName = params.pathName;
-        } catch (err) {
-            console.error('[editChapter]>> Ошибка при обновлении раздела/подраздела');
-            throw err
-        }
-    }
     try {
         const { params, fullpath, pathName } = input;
         // Получение материалов с БД
@@ -385,6 +386,19 @@ export async function editChapter(input: EditChapterParams): Promise<Chapter | S
             else throw '[editChapter]>> INTERNAL_ERROR[2]';
         }
         else throw '[editChapter]>> INTERNAL_ERROR[3]';
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+
+// Удаление раздела из materials
+export async function deleteChapter(params: DeleteChapterParams) {
+    console.log('[deleteChapter] => ', params);
+    try {
+        console.log('PING', params);
+        return 'PONG';
     } catch (err) {
         console.error(err);
         throw err;

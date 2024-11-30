@@ -42,6 +42,10 @@ export interface ChapterEditRequest {
     }
 }
 
+export interface DeleteChapterParams {
+
+}
+
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string;

@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createSubChapter, editChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
+import type { ChapterCreate, DeleteChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
+import { createChapter, createSubChapter, deleteChapter, editChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
 
 const require = createRequire(import.meta.url)
@@ -128,5 +128,10 @@ app.whenReady().then(() => {
     // Редактирование общих данных раздела/подраздела
     ipcMain.handle("edit-chapter", async (event, params: EditChapterParams) => {
         return await editChapter(params);
+    });
+
+    // Удаление раздела
+    ipcMain.handle("delete-chapter", async (event, params: DeleteChapterParams) => {
+        return await deleteChapter(params);
     });
 })

@@ -47,6 +47,11 @@ export interface EditChapterParams {
     }
 }
 
+// Параметры для удаления раздела
+export interface DeleteChapterParams {
+    
+}
+
 
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
