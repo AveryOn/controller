@@ -47,6 +47,10 @@ export interface DeleteChapterParams {
     pathName?: string;
 }
 
+export interface DeleteSubChapterParams {
+    fullpath: string;
+}
+
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string;
