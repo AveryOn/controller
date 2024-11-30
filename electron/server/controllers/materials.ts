@@ -201,11 +201,13 @@ function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: 
 
 // Создание нового подраздела
 export async function createSubChapter(params: SubChapterCreate): Promise<SubChapter> {
+    console.log('createSubChapter => ', params);
     try {
         if (!params) throw '[createSubChapter]>> INVALID_INPUT_DATA';
         const materials: Chapter[] = await readFile(FSCONFIG);
         const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
         if (chapter?.chapterType === 'dir' && chapter.items) {
+            console.log('if-1');
             const newSubChapter: SubChapter = {
                 id: Date.now(),
                 chapterType: params.chapterType,
@@ -223,22 +225,28 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
                 updatedAt: formatDate(),
             }
             const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
+            console.log('|| correctFullPath:', correctFullPath);
+            
             // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
             if (correctFullPath.length <= 0) {
+                console.log('if-2');
                 // Проверка на уникальность создаваемого подраздела
                 const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
                 if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
                 chapter.items.push(newSubChapter);
             } else {
+                console.log('else-1');
                 const needLevel = findLevel(chapter.items, correctFullPath) as SubChapter | null;
                 // Если нужный уровень не найден
                 if (!needLevel) {
+                    console.log('if-3');
                     throw '[createSubChapter]>> Нужный уровень найти не удалось';
                 }
                 // Проверка на уникальность создаваемого подраздела
                 const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
                 if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
                 needLevel.items?.push(newSubChapter);
+                console.log('push');
             }
             // Запись изменений в БД
             await writeFile(materials, FSCONFIG);
@@ -421,28 +429,64 @@ export async function deleteChapter(params: DeleteChapterParams): Promise<Delete
     }
 }
 
+
+// Поиск и удаление нужного подраздела по полному пути
+function findAndDeleteLevel(items: SubChapter[], initPath: string[]): Array<SubChapter> | boolean {
+    if (items.length <= 0) return false;
+    const current = initPath.shift();
+    for (let i = 0; i < items.length; i++) {
+        const chapter = items[i];
+        const selfPath = trimPath(chapter!.fullpath, { split: true }).at(-1);
+        // Нашли нужный уровень
+        if (selfPath === current) {
+            // если исчерпан, то мы нашли искомый подраздел
+            if (initPath.length <= 0) {
+                console.log(chapter);
+                return items.filter((ch) => ch.id !== chapter.id);
+            }
+            // Если путь еще не пуст, то продолжаем проходить по нему
+            else {
+                if (chapter!.items && chapter!.items.length > 0) {
+                    const updateItems = findAndDeleteLevel(chapter!.items, initPath) as Array<SubChapter>;
+                    if(updateItems && Array.isArray(updateItems)) {
+                        chapter.items = updateItems;
+                    }
+                    return items;
+                }
+                else {
+                    throw `[Materials/findAndDeleteLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
+                }
+            }
+        }
+    }
+    return false;
+}
 // Удаление подраздела из materials
 export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<DeleteResponseMessage> {
     console.log('[deleteSubChapter] => ', params);
     try {
-        if(!params) throw new Error('[deleteSubChapter]>> INVALID_INPUT');
+        if(!params || !params.fullpath) throw new Error('[deleteSubChapter]>> INVALID_INPUT');
         // Получение всех materials 
         let materials: Chapter[] = await readFile(FSCONFIG);
-        // Фильтрация по pathName если указано в параметрах
-        // if(params.pathName) {
-        //     materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
-        // }
-        // // Фильтрация по chapter.id если указано в параметрах
-        // else if (params.chapterId) {
-        //     materials = materials.filter((chapter) => chapter.id !== params.chapterId);
-        // }
-        // // Если нужные параметры не были переданы 
-        // else {
-        //     return 'failed';
-        // }
+        
+        // Подготовить маршрут для поиска уровня
+        let correctPath = trimPath(params.fullpath, { split: true }) as string[];
+        // Поиск корневого раздела с которого идет поиск целевого подраздела
+        const rootName = correctPath[0];
+        const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
+
+        // Если корневой раздел не найден то ошибка
+        if(!rootChapter) throw new Error('[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER');
+        if(!rootChapter.items) throw new Error('[deleteSubChapter]>> INVALID_CHAPTER_TYPE');
+
+        // Поиск нужного уровня подраздела
+        const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1))
+        if(Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
+        else {
+            throw new Error('[deleteSubChapter]>> INTERNAL_ERROR')
+        }
         // Сохранение изменений в БД
-        // await writeFile(materials, FSCONFIG);
-        // console.log(materials);
+        await writeFile(materials, FSCONFIG);
         return 'success';
     } catch (err) {
         console.error(err);

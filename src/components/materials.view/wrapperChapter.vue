@@ -219,7 +219,7 @@ async function requestDeleteSubChapter() {
         if(opennedChapter.value?.fullpath) {
             const result = await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
             // Синхронизация панели меню материалов
-            // await syncMaterials();
+            await syncMaterials();
             console.log(result);
         }
         else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');

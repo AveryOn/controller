@@ -4343,11 +4343,13 @@ function findLevel(items, initPath, config) {
 }
 async function createSubChapter(params) {
   var _a;
+  console.log("createSubChapter => ", params);
   try {
     if (!params) throw "[createSubChapter]>> INVALID_INPUT_DATA";
     const materials = await readFile(FSCONFIG);
     const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
     if ((chapter == null ? void 0 : chapter.chapterType) === "dir" && chapter.items) {
+      console.log("if-1");
       const newSubChapter = {
         id: Date.now(),
         chapterType: params.chapterType,
@@ -4365,18 +4367,23 @@ async function createSubChapter(params) {
         updatedAt: formatDate()
       };
       const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
+      console.log("|| correctFullPath:", correctFullPath);
       if (correctFullPath.length <= 0) {
+        console.log("if-2");
         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
         if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
         chapter.items.push(newSubChapter);
       } else {
+        console.log("else-1");
         const needLevel = findLevel(chapter.items, correctFullPath);
         if (!needLevel) {
+          console.log("if-3");
           throw "[createSubChapter]>> Нужный уровень найти не удалось";
         }
         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
         if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
         (_a = needLevel.items) == null ? void 0 : _a.push(newSubChapter);
+        console.log("push");
       }
       await writeFile(materials, FSCONFIG);
       return newSubChapter;
@@ -4513,11 +4520,47 @@ async function deleteChapter(params) {
     throw err;
   }
 }
+function findAndDeleteLevel(items, initPath) {
+  if (items.length <= 0) return false;
+  const current = initPath.shift();
+  for (let i = 0; i < items.length; i++) {
+    const chapter = items[i];
+    const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
+    if (selfPath === current) {
+      if (initPath.length <= 0) {
+        console.log(chapter);
+        return items.filter((ch) => ch.id !== chapter.id);
+      } else {
+        if (chapter.items && chapter.items.length > 0) {
+          const updateItems = findAndDeleteLevel(chapter.items, initPath);
+          if (updateItems && Array.isArray(updateItems)) {
+            chapter.items = updateItems;
+          }
+          return items;
+        } else {
+          throw `[Materials/findAndDeleteLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
+        }
+      }
+    }
+  }
+  return false;
+}
 async function deleteSubChapter(params) {
   console.log("[deleteSubChapter] => ", params);
   try {
-    if (!params) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
+    if (!params || !params.fullpath) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
     let materials = await readFile(FSCONFIG);
+    let correctPath = trimPath(params.fullpath, { split: true });
+    const rootName = correctPath[0];
+    const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
+    if (!rootChapter) throw new Error("[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER");
+    if (!rootChapter.items) throw new Error("[deleteSubChapter]>> INVALID_CHAPTER_TYPE");
+    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1));
+    if (Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
+    else {
+      throw new Error("[deleteSubChapter]>> INTERNAL_ERROR");
+    }
+    await writeFile(materials, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
