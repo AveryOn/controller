@@ -3,7 +3,7 @@
         <header class="materials-header">
             <svg-icon class="head-icon" type="mdi" :path="mdiSpaceInvaders" :size="18"></svg-icon>
             <span class="flex head-label">Materials {{ openChapterName }}</span> 
-            <ProgressBar class="progress-bar" v-if="false" mode="indeterminate" style="height: 2px"></ProgressBar>
+            <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate" style="height: 2px"></ProgressBar>
         </header>
         <div class="materials-main">
             <addChapter 
@@ -27,8 +27,10 @@ import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiSpaceInvaders } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
 import { createChapter, syncMaterials } from '../api/materials.api';
+import { useMaterialsStore } from '../stores/materials.store';
 
 const labelChapter: Ref<string | null> = ref(null);
+const materialStore = useMaterialsStore();
 
 const openChapterName = computed(() => {
     if(labelChapter.value !== 'add-chapter') {
@@ -41,12 +43,15 @@ const openChapterName = computed(() => {
 // запрос на создание раздела
 async function requestForChapterCreate(newChapter: ChapterCreate) {
     try {
+        materialStore.loadingCreateChapter = true;
         const result = await createChapter(newChapter);
         await syncMaterials();
         console.log(result);
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        materialStore.loadingCreateChapter = false;
     }
 }
 </script>

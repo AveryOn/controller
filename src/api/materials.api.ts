@@ -1,39 +1,60 @@
 import type { Chapter, ChapterCreate, ChapterEditRequest, ChapterForMenu, DeleteChapterParams, DeleteSubChapterParams, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
 
+const TIMEOUT = 1003;
 // Получить материлы с БД
 export async function getChapters(params?: GetChaptersParams): Promise<ChapterForMenu[]> {
-    try {
-        return await window.electron.getChapters(params);
-    } catch (err) {
-        throw err;
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.getChapters(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Получить конкретный раздел
 export async function getOneChapter(params: GetOneChapterParams): Promise<Chapter> {
-    try {
-        return await window.electron.getChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(async () => {
+            try {
+                resolve(await window.electron.getChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Получить конкретный ПОДраздел
 export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<{ chapter: Chapter, labels: string[] }> {
-    try {
-        return await window.electron.getOneSubChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(async () => {
+            try {
+                resolve(await window.electron.getOneSubChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Создание нового раздела
 export async function createChapter(params: ChapterCreate) {
-    try {
-        return await window.electron.createChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.createChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Создание нового подраздела

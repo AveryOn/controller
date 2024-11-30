@@ -32,11 +32,11 @@
 import { ref } from 'vue';
 import cIcon from '../base/cIcon.vue';
 import { getChapters, syncMaterials } from '../../api/materials.api';
-import { useMainStore } from '../../stores/main.store';
 import { useRouter } from 'vue-router';
 import { replacePathForMaterials } from '../../utils/strings.utils';
+import { useMaterialsStore } from '../../stores/materials.store';
 
-const mainStore = useMainStore();
+const materialStore = useMaterialsStore();
 const router = useRouter();
 const isLoadingMaterials = ref(false); 
 
@@ -110,17 +110,16 @@ function selectItem(item: any) {
 async function getMaterials() {
     try {
         isLoadingMaterials.value = true;
-        if(mainStore.materialChaptersMenu.length <= 0) {
-            mainStore.materialChaptersMenu = await getChapters({ forMenu: true });
+        if(materialStore.materialChaptersMenu.length <= 0) {
+            materialStore.materialChaptersMenu = await getChapters({ forMenu: true });
             await syncMaterials()
         }
         let materials: any = items.value[1];
         if(materials.items && materials.items.slice(0, -2).length <= 0) {
             const addedItem = materials.items.pop();
             materials.items.length = 0;
-            materials.items.push(...mainStore.materialChaptersMenu, addedItem);
+            materials.items.push(...materialStore.materialChaptersMenu, addedItem);
         }
-        
     } catch (err) {
         throw err;
     }

@@ -53,11 +53,15 @@ import createSubChapterDialog from './dialogs/createSubChapterDialog.vue';
 import deleteChapterDialog from './dialogs/deleteChapterDialog.vue';
 import editChapterDialog from './dialogs/editChapterDialog.vue';
 import { trimPath } from '../../utils/strings.utils';
+import { useMaterialsStore } from '../../stores/materials.store';
+
+const materialStore = useMaterialsStore();
 
 const emit = defineEmits<{
     (e: 'openChapter', label: string): void;
     (e: 'quit'): void;
 }>();
+
 
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
@@ -270,7 +274,6 @@ function prepareDataForEdit(data: ChapterCreate, diffKeys: string[]): ChapterEdi
         throw err;
     }
 }
-
 // Запрос на редактирование общих данных подраздела (иконка, название, путь и пр.)
 async function requestForEdit(data: ChapterCreate) {
     const computePathName = () => {
@@ -305,15 +308,30 @@ async function requestForEdit(data: ChapterCreate) {
     }
 }
 
-// Добавить имя пути для подраздела (по умолчанию подразделы приходят с БД без ключа pathName)
-function addPathNameInSubChapter(subChapter: Chapter) {
+// Запрос на получение конкретного раздела
+async function requestGetOneChapter(pathName: string) {
+    if(!pathName) throw new Error('[requestGetOneChapter]>> pathName обязательный аргумент');
     try {
-        if(!subChapter.pathName && subChapter.fullpath) {
-            subChapter.pathName = trimPath(subChapter.fullpath, { split: true }).at(-1);
-        }
-        return subChapter;
+        materialStore.loadingGetChapter = true;
+        opennedChapter.value = await getOneChapter({ pathName });
+        emit('openChapter', opennedChapter.value.label);
     } catch (err) {
-        console.error(err);
+        throw err;
+    } finally {
+        materialStore.loadingGetChapter = false;
+    }
+}
+
+// Запрос на получение конкретного ПОДраздела
+async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
+    try {
+        // Обработка сырого query-параметра вида to>path>name в вид to/path/name
+        const correctFullpath = rawQuery.split('>').join('/');
+        const { chapter, labels } = await getOneSubChapter({ pathName, fullpath: correctFullpath });
+        opennedChapter.value = chapter;
+        // Выкидываем собранную Label строку для подстановки в заголовок
+        emit('openChapter', labels.join(' > '));
+    } catch (err) {
         throw err;
     }
 }
@@ -327,24 +345,18 @@ onBeforeRouteUpdate( async (to, from, next) => {
     const prevSubChapter = from.query['subChapter'] as string | undefined;
     if(nextChapter !== 'add-chapter') {
         if(nextChapter && nextChapter !== prevChapter) {
-            opennedChapter.value = await getOneChapter({ pathName: nextChapter });
-            emit('openChapter', opennedChapter.value.label);
+            await requestGetOneChapter(nextChapter);
         }
         // Если происходит выход из просмотра разделов и подразделов
         else if(!nextChapter) emit('quit');
         // В случае смены подраздела при активном разделе
         if(nextSubChapter && nextSubChapter !== prevSubChapter) {
-            const correctFullpath = nextSubChapter.split('>').join('/');
-            const { chapter, labels } = await getOneSubChapter({ pathName: nextChapter, fullpath: correctFullpath });
-            // opennedChapter.value = addPathNameInSubChapter(chapter);
-            opennedChapter.value = chapter;
-            emit('openChapter', labels.join(' > '));
+            await requestGetOneSubChapter(nextChapter, nextSubChapter);
         } 
         else {
             // Если маршрут перешел с подраздела на раздел
             if(prevChapter === nextChapter && !nextSubChapter) {
-                opennedChapter.value = await getOneChapter({ pathName: nextChapter });
-                emit('openChapter', opennedChapter.value.label);
+                await requestGetOneChapter(nextChapter)
             }
         }
         return void next();
