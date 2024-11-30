@@ -15,6 +15,7 @@
         :init-form-data="initDataEditForm"
         :chapter-label="opennedChapter?.label!"
         v-model="isShowEditChapter"
+        :loading="materialStore.loadingEditChapter"
         @submit-form="requestForEdit"
         />
         <!-- Menu -->
@@ -284,6 +285,7 @@ async function requestForEdit(data: ChapterCreate) {
         else throw '[requestForEdit > computePathName]>> Ошибка при извлечении pathName';
     }
     try {
+        materialStore.loadingEditChapter = true;
         if(copyEditFormData.value) {
             const { isDiff, keys } = isDifferentDataEditForm(copyEditFormData.value, data);
             // Если данные были изменены, то запрос проходит
@@ -305,6 +307,8 @@ async function requestForEdit(data: ChapterCreate) {
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        materialStore.loadingEditChapter = false;
     }
 }
 
