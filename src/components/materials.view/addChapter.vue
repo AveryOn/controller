@@ -141,7 +141,6 @@ import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIc
 import useNotices from '../../composables/notices';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiBackupRestore } from '@mdi/js';
-import { syncMaterials } from '../../api/materials.api';
 
 interface Props {
     formType?: 'return' | 'inner';
@@ -251,6 +250,8 @@ function validateForm(config?: { exclude?: (keyof CreateChapterForm)[] }) {
     if(form.value.iconType === 'img' && !form.value.iconImg) return false;
     return isValid;
 }
+
+// Отправка данных с формы
 async function send() {
     try {
         if(!validateForm({ exclude: props.excludeFields })) return notices.show({ detail: 'Filled form', severity: 'error' });
@@ -263,20 +264,13 @@ async function send() {
             chapterType: form.value.type!,
             route: 'materials',
         }
-        if(props.formType === 'inner') {
-            const res = await window.electron.createChapter(newChapter);
-            await syncMaterials();
-        }
-        else if(props.formType === 'return') {
-            emit('submitForm', newChapter);
-        }
+        emit('submitForm', newChapter);
     } catch (err) {
         notices.show({ detail: '', severity: 'error' });
         throw err;    
     } finally { 
         isLoadingForm.value = false;
     }
-
 }
 
 function chooseIconType(value: keyof typeof mapIconTypesModes) {

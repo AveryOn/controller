@@ -6,7 +6,10 @@
             <ProgressBar class="progress-bar" v-if="false" mode="indeterminate" style="height: 2px"></ProgressBar>
         </header>
         <div class="materials-main">
-            <addChapter v-show="$route.params['chapter'] === 'add-chapter'"/>
+            <addChapter 
+            v-show="$route.params['chapter'] === 'add-chapter'"
+            @submit-form="requestForChapterCreate"
+            />
             <wrapperChapter 
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => labelChapter = label"
@@ -22,6 +25,8 @@ import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiSpaceInvaders } from '@mdi/js';
+import { ChapterCreate } from '../@types/entities/materials.types';
+import { createChapter, syncMaterials } from '../api/materials.api';
 
 const labelChapter: Ref<string | null> = ref(null);
 
@@ -32,6 +37,18 @@ const openChapterName = computed(() => {
     }
     else return '> New Chapter';
 });
+
+// запрос на создание раздела
+async function requestForChapterCreate(newChapter: ChapterCreate) {
+    try {
+        const result = await createChapter(newChapter);
+        await syncMaterials();
+        console.log(result);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
 </script>
 
 <style scoped>
