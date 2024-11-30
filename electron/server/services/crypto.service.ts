@@ -8,6 +8,8 @@ const p = 1;        // Параметр параллельности
 
 // Хеширование с помощью scrypt
 export async function encrypt(input: string): Promise<{ hash: string, salt: string }> {
+    if(!input) throw new Error('input - обязательный аргумент');
+    if(typeof input !== 'string') throw new Error('input - должен быть типа string');
     return new Promise((resolve, reject) => {
         try {
             // Генерация соль
@@ -28,6 +30,10 @@ export async function encrypt(input: string): Promise<{ hash: string, salt: stri
 // Верификация строки
 export async function verify(input: string, salt: string, hash: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
+        if(!input || !salt || !hash) throw new Error('input, salt, hash - обязательные аргмуенты');
+        if(typeof input !== 'string' || typeof salt !== 'string' || typeof hash !== 'string') {
+            throw new Error('аргументы input, salt, hash должны быть типа string');
+        }
         try {
             crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
                 if (err) throw err;
@@ -45,12 +51,11 @@ export async function verify(input: string, salt: string, hash: string): Promise
 }
 
 
-
 // ########################  Работа с шифрованием файлов  ###########################
 // Шифрование json-данных (Документоориентированных БД и пр.)
 export async function encryptJsonData<T>(data: T, signature: string): Promise<string> {
-    if(!data) throw '[Services.encryptJsonData]>> NOT_DATA';
-    if(!signature) throw '[Services.encryptJsonData]>> INVALID_SIGNATURE';
+    if(!data) throw new Error('[Services.encryptJsonData]>> NOT_DATA');
+    if(!signature || typeof signature !== 'string') throw new Error('[Services.encryptJsonData]>> INVALID_SIGNATURE');
     return new Promise((resolve, reject) => {
         try {
             const ALG = 'aes-256-cbc';                               // Алгоритм шифрования
@@ -78,13 +83,16 @@ export async function encryptJsonData<T>(data: T, signature: string): Promise<st
 
 // Расшифровка json-данных (Документоориентированных БД и пр.)
 export async function decryptJsonData(data: string, signature: string): Promise<string> {
-    if(!data) throw '[Services.decryptJsonData]>> NOT_DATA';
-    if(!signature) throw '[Services.decryptJsonData]>> INVALID_SIGNATURE';
+    if(!data) throw new Error('[Services.decryptJsonData]>> NOT_DATA');
+    if(!signature || typeof signature !== 'string') throw new Error('[Services.decryptJsonData]>> INVALID_SIGNATURE');
     return new Promise((resolve, reject) => {
         try {
             const ALG = 'aes-256-cbc';                               // Алгоритм шифрования
             const KEY = crypto.scryptSync(signature, 'salt_NOT_SECURE', 32);    // Создаем ключ из пароля
             const IV = Buffer.from(data.slice(0, 32), 'hex');
+            if(IV.length < 16) throw new Error('[Services.decryptJsonData]>> INVALID_INIT_VECTOR');
+            console.log();
+            
             // Подготовка данных
             let readyData: string | null = data.slice(32);
             // Расшифровка данных
