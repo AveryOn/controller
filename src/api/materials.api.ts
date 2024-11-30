@@ -25,7 +25,7 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
             } catch (err) {
                 reject(err);
             }
-        }, TIMEOUT);
+        }, 0);
     });
 }
 
@@ -39,7 +39,7 @@ export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<
             } catch (err) {
                 reject(err);
             }
-        }, TIMEOUT);
+        }, 0);
     });
 }
 
@@ -59,45 +59,70 @@ export async function createChapter(params: ChapterCreate) {
 
 // Создание нового подраздела
 export async function createSubChapter(params: SubChapterCreate) {
-    try {
-        return await window.electron.createSubChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.createSubChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
 export async function syncMaterials(): Promise<ChapterForMenu[]> {
-    try {
-        return await window.electron.syncMaterials();
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.syncMaterials());
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Редактирование данных раздела/подраздела
 export async function editChapterApi(params: ChapterEditRequest): Promise<Chapter> {
-    try {
-        return await window.electron.editChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.editChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Удаление раздела
 export async function deleteChapterApi(params: DeleteChapterParams): Promise<void> {
-    try {
-        return await window.electron.deleteChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.deleteChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }
 
 // Удаление подраздела
 export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promise<void> {
-    try {
-        return await window.electron.deleteSubChapter(params);
-    } catch (err) {
-        throw err; 
-    }
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(() => {
+            try {
+                resolve(window.electron.deleteSubChapter(params));
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
 }

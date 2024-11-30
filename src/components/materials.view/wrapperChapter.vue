@@ -325,6 +325,7 @@ async function requestGetOneChapter(pathName: string) {
 // Запрос на получение конкретного ПОДраздела
 async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
     try {
+        materialStore.loadingGetChapter = true;
         // Обработка сырого query-параметра вида to>path>name в вид to/path/name
         const correctFullpath = rawQuery.split('>').join('/');
         const { chapter, labels } = await getOneSubChapter({ pathName, fullpath: correctFullpath });
@@ -333,6 +334,8 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
         emit('openChapter', labels.join(' > '));
     } catch (err) {
         throw err;
+    } finally {
+        materialStore.loadingGetChapter = false;
     }
 }
 
