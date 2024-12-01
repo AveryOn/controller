@@ -28,14 +28,19 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         return deps.some((state) => state === true);
     });
 
+    // Функция нужна, для перерисовки текущего состояния меню панели, при получении её обновленных данных
+    function updateMenuItems(items: ChapterForMenu[]) {
+        materialChaptersMenu.value.length = 0;
+        materialChaptersMenu.value.push(...items, addChapterItem);
+    }
+
     // Запросить элементы меню панели материалов
     async function getMaterialsMenu() {
         try {
             loadingGetMenuChapters.value = true;
             if(materialChaptersMenu.value[0].type === 'loading') {
                 const items = await getChapters({ forMenu: true });
-                materialChaptersMenu.value.length = 0;
-                materialChaptersMenu.value.push(...items, addChapterItem);
+                updateMenuItems(items);
             } 
         } catch (err) {
             throw err;
@@ -54,5 +59,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         loadingEditChapter,
         loadingDeleteChapter,
         getMaterialsMenu,
+        updateMenuItems,
     }
 });

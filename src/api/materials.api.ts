@@ -1,4 +1,5 @@
 import type { Chapter, ChapterCreate, ChapterEditRequest, ChapterForMenu, DeleteChapterParams, DeleteSubChapterParams, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
+import { useMaterialsStore } from "../stores/materials.store";
 
 const TIMEOUT = 1003;
 // Получить материлы с БД
@@ -77,11 +78,14 @@ export async function createSubChapter(params: SubChapterCreate) {
 
 // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
 export async function syncMaterials(): Promise<ChapterForMenu[]> {
+    const materialStore = useMaterialsStore();
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                resolve(window.electron.syncMaterials());
+                const items: ChapterForMenu[] = await window.electron.syncMaterials();
+                materialStore.updateMenuItems(items); // Обновить состояние меню панели
+                resolve(items);
             } catch (err) {
                 reject(err);
             }
