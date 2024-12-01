@@ -1,7 +1,12 @@
 <template>
     <div class="materials-workspace gap-2">
+        <!-- Форма создания нового блока -->
+        <CreateBlockForm 
+        v-model="isActiveCreateForm"
+        @submit-form="reqCreateBlockMaterial"
+        />
         <!-- Если блоков нет -->
-        <div v-if="blocks.length <= 0 && isActiveTextEditor === false" class="if-not-blocks gap-3">
+        <div v-if="blocks.length <= 0" class="if-not-blocks gap-3">
             <h2 class="if-not-blocks__note">Empty</h2>
             <Button 
             label="Add Block"
@@ -9,10 +14,10 @@
             outlined
             icon-pos="right"
             icon="pi pi-plus"
-            @click="() => activeTextEditor('new-block')"
+            @click="() => activeCreateForm()"
             />
         </div>
-        <div class="editor-wrapper gap-2" v-if="isActiveTextEditor">
+        <!-- <div class="editor-wrapper gap-2" v-if="isActiveTextEditor">
             <IftaLabel class="w-5 mt-2 mx-auto" >
                 <InputText class="w-full" id="label" v-model="label" />
                 <label for="label">Label</label>
@@ -23,8 +28,8 @@
             :editor-styles="{ height: '100%', width: '100%' }"
             show-save
             />
-            <Button class="-mt-1 mb-1" label="Save" @click="saveContentBlock"/>
-        </div>
+            <Button class="-mt-1 mb-1" label="Save" @click="saveContentBlock" :loading="isLoadingSaveContent"/>
+        </div> -->
         <div class="wrapper-blocks px-4 py-2" v-show="blocks.length > 0 && !isActiveTextEditor">
             <article
             class="data-block" 
@@ -39,11 +44,12 @@
 
 <script setup lang="ts">
 import { computed, defineProps } from 'vue';
-import { Chapter } from '../../@types/entities/materials.types';
+import { Chapter, CreateChapterBlock } from '../../../@types/entities/materials.types';
 import textEditor from '../base/textEditor.vue';
 import { ref, type Ref } from 'vue';
-import useNotices from '../../composables/notices';
-
+import useNotices from '../../../composables/notices';
+import CreateBlockForm from './createBlockForm.vue';
+type ModeEditor = 'new-block' | 'edit-block';
 interface Props {
     chapter: Chapter | null;
 }
@@ -53,9 +59,10 @@ const props = withDefaults(defineProps<Props>(), {
 
 const notice = useNotices();
 
-type ModeEditor = 'new-block' | 'edit-block';
+const isLoadingSaveContent = ref(false);
 const modeEditor: Ref<ModeEditor> = ref('new-block');
 const isActiveTextEditor = ref(false);
+const isActiveCreateForm = ref(false);
 const label = ref('');
 const editorContent = ref('');
 const initEditorContent = ref(null);
@@ -67,6 +74,11 @@ const blocks = computed(() => {
     return [/* {id: 1}, {id: 2}, {id:3} */];
 });
 
+// Включить форму создания нового блока
+function activeCreateForm() {
+    isActiveCreateForm.value = true;
+}
+
 // Включить текстовый редактор
 function activeTextEditor(mode: 'new-block' | 'edit-block') {
     modeEditor.value = mode;
@@ -75,10 +87,21 @@ function activeTextEditor(mode: 'new-block' | 'edit-block') {
 
 // Сохранить контент для текущего блока
 function saveContentBlock() {
-    if(!label.value || !editorContent.value) {
-        return notice.show({ detail: 'Filled All Data!', severity: 'error' })
-    } 
-    console.log(label.value, label.value.length);
+    try {
+        isLoadingSaveContent.value = true;
+        if (!label.value || !editorContent.value) {
+            return notice.show({ detail: 'Filled All Data!', severity: 'error' });
+        }
+        console.log(label.value, label.value.length);
+    } catch (err) {
+        throw err
+    } finally {
+        isLoadingSaveContent.value = false;
+    }
+}
+
+function reqCreateBlockMaterial(data: CreateChapterBlock) {
+    console.log(data);
 }
 
 </script>

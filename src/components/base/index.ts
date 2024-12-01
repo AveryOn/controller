@@ -12,7 +12,7 @@ import Menubar from 'primevue/menubar';
 import Dialog from 'primevue/dialog';
 import ProgressBar from 'primevue/progressbar';
 import IftaLabel from 'primevue/iftalabel';
-
+import Message from "primevue/message";
 
 buttonComp.name = 'cButton';
 
@@ -31,4 +31,5 @@ export default [
     Dialog,
     ProgressBar,
     IftaLabel,
+    Message,
 ] as any[];

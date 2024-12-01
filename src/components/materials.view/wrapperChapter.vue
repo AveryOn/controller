@@ -30,7 +30,7 @@
                 </a>
             </template>
         </Menubar>
-        <WorkSpace :chapter="opennedChapter"/>
+        <workSpace :chapter="opennedChapter"/>
     </div>
 </template>
 
@@ -44,7 +44,7 @@ import { mdiTabPlus } from '@mdi/js';
 import createSubChapterDialog from './dialogs/createSubChapterDialog.vue';
 import deleteChapterDialog from './dialogs/deleteChapterDialog.vue';
 import editChapterDialog from './dialogs/editChapterDialog.vue';
-import WorkSpace from './workSpace.vue';
+import workSpace from './workspace/workSpace.vue';
 import { trimPath } from '../../utils/strings.utils';
 import { useMaterialsStore } from '../../stores/materials.store';
 

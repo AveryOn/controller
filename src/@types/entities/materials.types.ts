@@ -63,6 +63,11 @@ export interface ChapterContent {
     }>;
 }
 
+// Объект для создания нового блока в разделе
+export interface CreateChapterBlock {
+    title: string;
+}
+
 export type IconMode = 'img' | 'sym' | 'svg' | string;
 export type IconType = 'pi' | 'mdi' | 'img';
 export type ChapterType = 'file' | 'dir' | string;

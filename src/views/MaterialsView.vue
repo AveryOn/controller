@@ -7,6 +7,7 @@
         </header>
         <div class="materials-main">
             <addChapter 
+            class="m-auto"
             v-show="$route.params['chapter'] === 'add-chapter'"
             :loading="materialStore.loadingCreateChapter"
             @submit-form="requestForChapterCreate"
