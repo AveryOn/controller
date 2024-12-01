@@ -8,6 +8,7 @@
         <div class="materials-main">
             <addChapter 
             v-show="$route.params['chapter'] === 'add-chapter'"
+            :loading="materialStore.loadingCreateChapter"
             @submit-form="requestForChapterCreate"
             />
             <wrapperChapter 
@@ -44,9 +45,7 @@ const openChapterName = computed(() => {
 async function requestForChapterCreate(newChapter: ChapterCreate) {
     try {
         materialStore.loadingCreateChapter = true;
-        const result = await createChapter(newChapter);
-        await syncMaterials();
-        console.log(result);
+        await createChapter(newChapter);
     } catch (err) {
         console.error(err);
         throw err;

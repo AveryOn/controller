@@ -47,7 +47,7 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter } from '../../api/materials.api';
 import { computed, type ComputedRef, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -176,9 +176,7 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
             label: newSubChapter.label,
             route: newSubChapter.route,
         }
-        const result = await createSubChapter(correctSubChapter);
-        // Синхронизация подразделов с меню
-        await syncMaterials();
+        await createSubChapter(correctSubChapter);
     } catch (err) {
         console.error(err);
         throw err;
@@ -206,9 +204,7 @@ async function requestDeleteChapter() {
         try {
             materialStore.loadingDeleteChapter = true;
             // Запрос к серверной стороне на удаление раздела
-            const result = await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
-            // Синхронизация данных в панели меню
-            await syncMaterials();
+            await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
             isShowDeleteChapter.value = false;
         } catch (err) {
             console.error(err);
@@ -225,9 +221,7 @@ async function requestDeleteSubChapter() {
     try {
         materialStore.loadingDeleteChapter = true;
         if(opennedChapter.value?.fullpath) {
-            const result = await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
-            // Синхронизация панели меню материалов
-            await syncMaterials();
+            await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
             isShowDeleteChapter.value = false;
         }
         else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');
@@ -278,7 +272,7 @@ function prepareDataForEdit(data: ChapterCreate, diffKeys: string[]): ChapterEdi
         throw err;
     }
 }
-// Запрос на редактирование общих данных подраздела (иконка, название, путь и пр.)
+// Запрос на редактирование общих данных раздела/подраздела (иконка, название, путь и пр.)
 async function requestForEdit(data: ChapterCreate) {
     const computePathName = () => {
         if(opennedChapter.value?.pathName) return opennedChapter.value?.pathName;
@@ -300,10 +294,7 @@ async function requestForEdit(data: ChapterCreate) {
                     fullpath: opennedChapter.value?.fullpath || undefined, 
                     pathName: computePathName(),
                 }
-                const result: Chapter = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
-                // Синзронизация материалов в меню
-                await syncMaterials();
-                return result;
+                return await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
             }
         }
         else console.log('[requestForEdit] Копии формы для редактирования нет');

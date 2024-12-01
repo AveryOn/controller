@@ -47,9 +47,11 @@ export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<
 export async function createChapter(params: ChapterCreate) {
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                resolve(window.electron.createChapter(params));
+                const result = await window.electron.createChapter(params);
+                await syncMaterials();
+                resolve(result);
             } catch (err) {
                 reject(err);
             }
@@ -61,9 +63,11 @@ export async function createChapter(params: ChapterCreate) {
 export async function createSubChapter(params: SubChapterCreate) {
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                resolve(window.electron.createSubChapter(params));
+                const result = await window.electron.createSubChapter(params);
+                await syncMaterials();  // Синхронизация подразделов с меню
+                resolve(result);
             } catch (err) {
                 reject(err);
             }
@@ -89,9 +93,11 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
 export async function editChapterApi(params: ChapterEditRequest): Promise<Chapter> {
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                resolve(window.electron.editChapter(params));
+                const result = await window.electron.editChapter(params);
+                await syncMaterials();  // Синзронизация материалов в меню
+                resolve(result);
             } catch (err) {
                 reject(err);
             }
@@ -103,9 +109,11 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
 export async function deleteChapterApi(params: DeleteChapterParams): Promise<void> {
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                resolve(window.electron.deleteChapter(params));
+                const result = await window.electron.deleteChapter(params);
+                await syncMaterials(); // Синхронизация данных в панели меню
+                resolve(result);
             } catch (err) {
                 reject(err);
             }
@@ -117,9 +125,11 @@ export async function deleteChapterApi(params: DeleteChapterParams): Promise<voi
 export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promise<void> {
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                resolve(window.electron.deleteSubChapter(params));
+                const result = await window.electron.deleteSubChapter(params);
+                await syncMaterials();  // Синхронизация панели меню материалов
+                resolve(result);
             } catch (err) {
                 reject(err);
             }
