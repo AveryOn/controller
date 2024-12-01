@@ -18,6 +18,7 @@
                     :init-form-data="props.initFormData"
                     :reset-btn="true"
                     :exclude-fields="excludedFields"
+                    :loading="props.loading"
                     @submit-form="(data: ChapterCreate) => confirmEditForm(data)"
                     />
                 </div>
@@ -37,7 +38,8 @@ interface Props {
     isModal?: boolean;
     closeble?: boolean;
     initFormData: CreateChapterForm | null;
-    chapterLabel: string | undefined; 
+    chapterLabel: string | undefined;
+    loading?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
     modelValue: false,

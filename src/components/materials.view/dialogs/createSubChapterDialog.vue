@@ -12,6 +12,7 @@
         <template #default>
             <addChapter 
             @submit-form="(data) => emit('submitForm', data)" 
+            :loading="props.loading"
             form-type="return" 
             />
         </template>
@@ -28,6 +29,7 @@ interface Props {
     modelValue?: boolean;
     isModal?: boolean;
     closeble?: boolean;
+    loading?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
     modelValue: false,

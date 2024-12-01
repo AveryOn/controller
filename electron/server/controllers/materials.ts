@@ -21,7 +21,7 @@ const FSCONFIG_MENU: FsOperationConfig = {
 
 // Подготовить базу данных материалов
 export async function prepareMaterialsStore(): Promise<boolean> {
-    console.log('prepareMaterialsStore');
+    console.log('[prepareMaterialsStore] => void');
     return readFile(FSCONFIG)
         .then((data) => {
             return true;
@@ -39,7 +39,7 @@ export async function prepareMaterialsStore(): Promise<boolean> {
 
 // Подготовить базу данных для меню материалов
 export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
-    console.log('prepareMaterialsStoreForMenu');
+    console.log('[prepareMaterialsStoreForMenu] => void');
     return readFile(FSCONFIG_MENU)
         .then((data) => {
             return true;
@@ -57,7 +57,7 @@ export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
 
 // Сбросить все данные materials 
 export async function resetMaterialDB() {
-    console.log('resetMaterialDB');
+    console.log('[resetMaterialDB] => void');
     try {
         await writeFile([], FSCONFIG);
         await writeFile([], FSCONFIG_MENU);
@@ -69,7 +69,7 @@ export async function resetMaterialDB() {
 
 // Создание нового раздела в материалах
 export async function createChapter(params: ChapterCreate) {
-    console.log('createChapter => ', params);
+    console.log('[createChapter] => ', params);
     try {
         // Получние материалов с БД
         const materials: Chapter[] = await readFile(FSCONFIG);
@@ -136,7 +136,7 @@ export async function getChapters(params?: GetChaptersConfig): Promise<ChapterFo
 
 // Получение конкретного раздела
 export async function getOneChapter(params: GetChapterOneParams): Promise<Chapter> {
-    console.log('getOneChapter => ', params);
+    console.log('[getOneChapter] => ', params);
     try {
         // Получение materials
         const materials: Chapter[] = await readFile(FSCONFIG);
@@ -201,13 +201,12 @@ function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: 
 
 // Создание нового подраздела
 export async function createSubChapter(params: SubChapterCreate): Promise<SubChapter> {
-    console.log('createSubChapter => ', params);
+    console.log('[createSubChapter] => ', params);
     try {
         if (!params) throw '[createSubChapter]>> INVALID_INPUT_DATA';
         const materials: Chapter[] = await readFile(FSCONFIG);
         const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
         if (chapter?.chapterType === 'dir' && chapter.items) {
-            console.log('if-1');
             const newSubChapter: SubChapter = {
                 id: Date.now(),
                 chapterType: params.chapterType,
@@ -225,28 +224,23 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
                 updatedAt: formatDate(),
             }
             const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
-            console.log('|| correctFullPath:', correctFullPath);
             
             // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
             if (correctFullPath.length <= 0) {
-                console.log('if-2');
                 // Проверка на уникальность создаваемого подраздела
                 const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
                 if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
                 chapter.items.push(newSubChapter);
             } else {
-                console.log('else-1');
                 const needLevel = findLevel(chapter.items, correctFullPath) as SubChapter | null;
                 // Если нужный уровень не найден
                 if (!needLevel) {
-                    console.log('if-3');
                     throw '[createSubChapter]>> Нужный уровень найти не удалось';
                 }
                 // Проверка на уникальность создаваемого подраздела
                 const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
                 if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
                 needLevel.items?.push(newSubChapter);
-                console.log('push');
             }
             // Запись изменений в БД
             await writeFile(materials, FSCONFIG);
@@ -262,7 +256,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
 
 // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
 export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
-    console.log('[syncMaterialsStores]');
+    console.log('[syncMaterialsStores] => void');
     function correctChapter(chapter: Chapter & SubChapter, initPathName?: string): ChapterForMenu {
         const { icon, iconType, id, label, pathName, fullpath, route, items } = chapter;
         return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName, fullpath, route, items }
@@ -421,7 +415,6 @@ export async function deleteChapter(params: DeleteChapterParams): Promise<Delete
         }
         // Сохранение изменений в БД
         await writeFile(materials, FSCONFIG);
-        console.log(materials);
         return 'success';
     } catch (err) {
         console.error(err);
@@ -441,7 +434,6 @@ function findAndDeleteLevel(items: SubChapter[], initPath: string[]): Array<SubC
         if (selfPath === current) {
             // если исчерпан, то мы нашли искомый подраздел
             if (initPath.length <= 0) {
-                console.log(chapter);
                 return items.filter((ch) => ch.id !== chapter.id);
             }
             // Если путь еще не пуст, то продолжаем проходить по нему

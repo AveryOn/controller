@@ -1,6 +1,6 @@
 <template>
     <aside class="panel-menu">
-        <PanelMenu class="w-full h-full" :model="items">
+        <PanelMenu class="w-full h-full" :model="mainStore.menuPanelItems">
             <template #item="{ item }">
                 <div
                 class="inner-item flex items-center cursor-pointer px-2 py-1"
@@ -20,7 +20,11 @@
                         aria-label="Custom ProgressSpinner" 
                         />
                     </span>
-                    <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
+                    <span 
+                    v-if="isShowMaterialsIcon(item).show" 
+                    class="text-primary ml-auto" 
+                    :class="isShowMaterialsIcon(item).icon"
+                    />
                 </div>
 
             </template>
@@ -29,68 +33,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import cIcon from '../base/cIcon.vue';
-import { getChapters, syncMaterials } from '../../api/materials.api';
-import { useMainStore } from '../../stores/main.store';
 import { useRouter } from 'vue-router';
 import { replacePathForMaterials } from '../../utils/strings.utils';
+import { useMainStore } from '../../stores/main.store';
+import { computed } from 'vue';
 
-const mainStore = useMainStore();
 const router = useRouter();
-const isLoadingMaterials = ref(false); 
+const mainStore = useMainStore();
 
-const items = ref([
-    {
-        label: 'Applications',
-        icon: 'pi pi-th-large',
-        items: [
-            {
-                label: 'Projects',
-                icon: 'pi pi-file',
-                route: ''
-            },
-            {
-                label: 'Secrets',
-                icon: 'pi pi-key',
-                route: ''
+const isShowMaterialsIcon = computed(() => {
+    return (item: any) => {
+        if(item.route === 'materials') {
+            if(item.meta === true) return { show: true, icon: 'xxx' }
+            if(item.items) {
+                let icon = 'pi pi-folder-plus'
+                if(item.items.length > 0) icon = 'pi pi-folder-open';
+                return { show: true, icon };
             }
-        ]
-    },
-    {
-        label: 'Materials',
-        icon: 'pi pi-book',
-        route: 'materials',
-        command: getMaterials,
-        items: [
-            {
-                type: 'loading',
-                meta:true,
-            },
-            {
-                label: 'Add Chapter',
-                icon: 'pi pi-plus',
-                route: 'materials',
-                pathName: 'add-chapter',
-                meta:true,
-            },
-        ]
-    },
-    {
-        label: 'Settings',
-        icon: 'pi pi-cog',
-        items: [
-            {
-                label: 'Apperiance',
-                icon: 'pi pi-image',
-            },
-            {
-                label: 'Security',
-                icon: 'pi pi-shield',
-            }
-        ]
+            else return { show: true, icon: 'pi pi-file' }
+        }
+        else return { show: true, icon: 'pi pi-angle-down' }
     }
-]);
+})
 
 // Когда выбираем какой-либо элемент меню
 function selectItem(item: any) {
@@ -104,28 +69,6 @@ function selectItem(item: any) {
             params: { chapter: item.pathName }, 
             query: { subChapter: querySubChapter },
         });
-    }
-}
-
-async function getMaterials() {
-    try {
-        isLoadingMaterials.value = true;
-        if(mainStore.materialChaptersMenu.length <= 0) {
-            mainStore.materialChaptersMenu = await getChapters({ forMenu: true });
-            await syncMaterials()
-        }
-        let materials: any = items.value[1];
-        if(materials.items && materials.items.slice(0, -2).length <= 0) {
-            const addedItem = materials.items.pop();
-            materials.items.length = 0;
-            materials.items.push(...mainStore.materialChaptersMenu, addedItem);
-        }
-        
-    } catch (err) {
-        throw err;
-    }
-    finally {
-        isLoadingMaterials.value = false;
     }
 }
 </script>

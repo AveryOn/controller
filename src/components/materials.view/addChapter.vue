@@ -124,7 +124,7 @@
                 class="mt-2 text-xs font-bold w-max" 
                 size="small" 
                 severity="info"
-                :loading="isLoadingForm"
+                :loading="loading"
                 label="Submit"
                 :disabled="props.disableSubmit"
                 @click="send"
@@ -149,6 +149,7 @@ interface Props {
     resetBtn?: boolean;
     excludeFields?: Array<keyof CreateChapterForm>;
     disableSubmit?: boolean;
+    loading?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
     formType: 'inner',
@@ -204,6 +205,12 @@ const computeVisible = computed(() => {
         })
     } 
     return visibleMap;
+});
+
+// Определить актульное состояние для прогресс значка
+const loading = computed(() => {
+    if(typeof props.loading !== 'undefined') return props.loading;
+    else return isLoadingForm.value;
 })
 
 // Установка префикса pi

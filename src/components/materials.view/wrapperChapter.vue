@@ -2,12 +2,14 @@
     <div class="wrapper-material-chapter">
         <!-- Диалоговое меню для создания нового подраздела -->
         <createSubChapterDialog 
-        v-model="isShowCreateSubChapter" 
+        :loading="materialStore.loadingCreateChapter"
+        v-model="isShowCreateSubChapter"
         @submit-form="requestForCreateSubChapter"
         />
         <!-- Диалоговое окно для удаление подраздела -->
         <deleteChapterDialog 
-        v-model="isShowDeleteChapter" 
+        v-model="isShowDeleteChapter"
+        :loading="materialStore.loadingDeleteChapter"
         @delete="requestDeleteChapter"
         />
         <!-- Диалоговое окно для удаление раздела/подраздела -->
@@ -15,6 +17,7 @@
         :init-form-data="initDataEditForm"
         :chapter-label="opennedChapter?.label!"
         v-model="isShowEditChapter"
+        :loading="materialStore.loadingEditChapter"
         @submit-form="requestForEdit"
         />
         <!-- Menu -->
@@ -44,7 +47,7 @@
 
 <script setup lang="ts">
 import { onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
+import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter } from '../../api/materials.api';
 import { computed, type ComputedRef, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -53,16 +56,19 @@ import createSubChapterDialog from './dialogs/createSubChapterDialog.vue';
 import deleteChapterDialog from './dialogs/deleteChapterDialog.vue';
 import editChapterDialog from './dialogs/editChapterDialog.vue';
 import { trimPath } from '../../utils/strings.utils';
+import { useMaterialsStore } from '../../stores/materials.store';
+
+const materialStore = useMaterialsStore();
 
 const emit = defineEmits<{
     (e: 'openChapter', label: string): void;
     (e: 'quit'): void;
 }>();
 
+
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
-const isLoadDelete = ref(false);
 const opennedChapter: Ref<Chapter | null> = ref(null);
 const items = ref([
     {
@@ -153,6 +159,7 @@ function editChapter() {
 // Запрос на создание нового подраздела
 async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
     try {
+        materialStore.loadingCreateChapter = true;
         let pathName: string;
         if(opennedChapter.value?.fullpath) {
             pathName = trimPath(opennedChapter.value.fullpath, { split: true })[0];
@@ -169,12 +176,13 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
             label: newSubChapter.label,
             route: newSubChapter.route,
         }
-        const result = await createSubChapter(correctSubChapter);
-        // Синхронизация подразделов с меню
-        await syncMaterials();
+        await createSubChapter(correctSubChapter);
+        isShowCreateSubChapter.value = false;
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        materialStore.loadingCreateChapter = false;
     }
 }
 // Закрыть все диалоговые окна
@@ -192,42 +200,37 @@ function resetState() {
 
 // Запрос на удаление Раздела
 async function requestDeleteChapter() {
-    try {
-        isLoadDelete.value = true;
-        isShowDeleteChapter.value = false;
-        // Убеждаемся, что выбран раздела а не ПОДраздел
-        if(opennedChapter.value?.pathName && !opennedChapter.value.fullpath) {
+    // Убеждаемся, что выбран раздела а не ПОДраздел
+    if (opennedChapter.value?.pathName && !opennedChapter.value.fullpath) {
+        try {
+            materialStore.loadingDeleteChapter = true;
             // Запрос к серверной стороне на удаление раздела
-            const result = await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
-            // Синхронизация данных в панели меню
-            await syncMaterials();
-            console.log(result);
-        } 
-        // Если был выбран подраздел то вызываем соответствующий api
-        else requestDeleteSubChapter();
-    } catch (err) {
-        console.error(err);
-        throw err;
-    } finally {
-        isLoadDelete.value = false;
+            await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
+            isShowDeleteChapter.value = false;
+        } catch (err) {
+            console.error(err);
+            throw err;
+        } finally {
+            materialStore.loadingDeleteChapter = false;
+        }
     }
+    // Если был выбран подраздел то вызываем соответствующий api
+    else requestDeleteSubChapter();
 }
 // Запрос на удаление Подраздела
 async function requestDeleteSubChapter() {
     try {
-        isLoadDelete.value = true;
+        materialStore.loadingDeleteChapter = true;
         if(opennedChapter.value?.fullpath) {
-            const result = await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
-            // Синхронизация панели меню материалов
-            await syncMaterials();
-            console.log(result);
+            await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
+            isShowDeleteChapter.value = false;
         }
         else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');
     } catch (err) {
         console.error(err);
         throw err;
     } finally {
-        isLoadDelete.value = false;
+        materialStore.loadingDeleteChapter = false;
     }
 }
 
@@ -270,8 +273,7 @@ function prepareDataForEdit(data: ChapterCreate, diffKeys: string[]): ChapterEdi
         throw err;
     }
 }
-
-// Запрос на редактирование общих данных подраздела (иконка, название, путь и пр.)
+// Запрос на редактирование общих данных раздела/подраздела (иконка, название, путь и пр.)
 async function requestForEdit(data: ChapterCreate) {
     const computePathName = () => {
         if(opennedChapter.value?.pathName) return opennedChapter.value?.pathName;
@@ -281,6 +283,7 @@ async function requestForEdit(data: ChapterCreate) {
         else throw '[requestForEdit > computePathName]>> Ошибка при извлечении pathName';
     }
     try {
+        materialStore.loadingEditChapter = true;
         if(copyEditFormData.value) {
             const { isDiff, keys } = isDifferentDataEditForm(copyEditFormData.value, data);
             // Если данные были изменены, то запрос проходит
@@ -292,9 +295,9 @@ async function requestForEdit(data: ChapterCreate) {
                     fullpath: opennedChapter.value?.fullpath || undefined, 
                     pathName: computePathName(),
                 }
-                const result: Chapter = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
-                // Синзронизация материалов в меню
-                await syncMaterials();
+                const result = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
+                opennedChapter.value = result;
+                isShowEditChapter.value = false;
                 return result;
             }
         }
@@ -302,19 +305,39 @@ async function requestForEdit(data: ChapterCreate) {
     } catch (err) {
         console.error(err);
         throw err;
+    } finally {
+        materialStore.loadingEditChapter = false;
     }
 }
 
-// Добавить имя пути для подраздела (по умолчанию подразделы приходят с БД без ключа pathName)
-function addPathNameInSubChapter(subChapter: Chapter) {
+// Запрос на получение конкретного раздела
+async function requestGetOneChapter(pathName: string) {
+    if(!pathName) throw new Error('[requestGetOneChapter]>> pathName обязательный аргумент');
     try {
-        if(!subChapter.pathName && subChapter.fullpath) {
-            subChapter.pathName = trimPath(subChapter.fullpath, { split: true }).at(-1);
-        }
-        return subChapter;
+        materialStore.loadingGetChapter = true;
+        opennedChapter.value = await getOneChapter({ pathName });
+        emit('openChapter', opennedChapter.value.label);
     } catch (err) {
-        console.error(err);
         throw err;
+    } finally {
+        materialStore.loadingGetChapter = false;
+    }
+}
+
+// Запрос на получение конкретного ПОДраздела
+async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
+    try {
+        materialStore.loadingGetChapter = true;
+        // Обработка сырого query-параметра вида to>path>name в вид to/path/name
+        const correctFullpath = rawQuery.split('>').join('/');
+        const { chapter, labels } = await getOneSubChapter({ pathName, fullpath: correctFullpath });
+        opennedChapter.value = chapter;
+        // Выкидываем собранную Label строку для подстановки в заголовок
+        emit('openChapter', labels.join(' > '));
+    } catch (err) {
+        throw err;
+    } finally {
+        materialStore.loadingGetChapter = false;
     }
 }
 
@@ -327,24 +350,18 @@ onBeforeRouteUpdate( async (to, from, next) => {
     const prevSubChapter = from.query['subChapter'] as string | undefined;
     if(nextChapter !== 'add-chapter') {
         if(nextChapter && nextChapter !== prevChapter) {
-            opennedChapter.value = await getOneChapter({ pathName: nextChapter });
-            emit('openChapter', opennedChapter.value.label);
+            await requestGetOneChapter(nextChapter);
         }
         // Если происходит выход из просмотра разделов и подразделов
         else if(!nextChapter) emit('quit');
         // В случае смены подраздела при активном разделе
         if(nextSubChapter && nextSubChapter !== prevSubChapter) {
-            const correctFullpath = nextSubChapter.split('>').join('/');
-            const { chapter, labels } = await getOneSubChapter({ pathName: nextChapter, fullpath: correctFullpath });
-            // opennedChapter.value = addPathNameInSubChapter(chapter);
-            opennedChapter.value = chapter;
-            emit('openChapter', labels.join(' > '));
+            await requestGetOneSubChapter(nextChapter, nextSubChapter);
         } 
         else {
             // Если маршрут перешел с подраздела на раздел
             if(prevChapter === nextChapter && !nextSubChapter) {
-                opennedChapter.value = await getOneChapter({ pathName: nextChapter });
-                emit('openChapter', opennedChapter.value.label);
+                await requestGetOneChapter(nextChapter)
             }
         }
         return void next();
