@@ -1,0 +1,14 @@
+
+
+:root {
+
+}
+
+.ql-toolbar {
+    display: flex;
+    justify-content: center;
+}
+
+.ql-editor {
+    padding: 2rem 5rem;
+}

@@ -1,12 +1,128 @@
 <template>
-    <div>
-        
+    <div class="materials-workspace gap-2">
+        <!-- Если блоков нет -->
+        <div v-if="blocks.length <= 0 && isActiveTextEditor === false" class="if-not-blocks gap-3">
+            <h2 class="if-not-blocks__note">Empty</h2>
+            <Button 
+            label="Add Block"
+            severity="help"
+            outlined
+            icon-pos="right"
+            icon="pi pi-plus"
+            @click="() => activeTextEditor('new-block')"
+            />
+        </div>
+        <div class="editor-wrapper gap-2" v-if="isActiveTextEditor">
+            <IftaLabel class="w-5 mt-2 mx-auto" >
+                <InputText class="w-full" id="label" v-model="label" />
+                <label for="label">Label</label>
+            </IftaLabel>
+            <textEditor
+            :initial-value="initEditorContent"
+            @update:content="(content: string) => editorContent = content"
+            :editor-styles="{ height: '100%', width: '100%' }"
+            show-save
+            />
+            <Button class="-mt-1 mb-1" label="Save" @click="saveContentBlock"/>
+        </div>
+        <div class="wrapper-blocks px-4 py-2" v-show="blocks.length > 0 && !isActiveTextEditor">
+            <article
+            class="data-block" 
+            v-for="block in blocks" 
+            :key="block.id"
+            >
+                article {{ block.id }}
+            </article>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { computed, defineProps } from 'vue';
+import { Chapter } from '../../@types/entities/materials.types';
+import textEditor from '../base/textEditor.vue';
+import { ref, type Ref } from 'vue';
+import useNotices from '../../composables/notices';
+
+interface Props {
+    chapter: Chapter | null;
+}
+const props = withDefaults(defineProps<Props>(), {
+
+});
+
+const notice = useNotices();
+
+type ModeEditor = 'new-block' | 'edit-block';
+const modeEditor: Ref<ModeEditor> = ref('new-block');
+const isActiveTextEditor = ref(false);
+const label = ref('');
+const editorContent = ref('');
+const initEditorContent = ref(null);
+
+const blocks = computed(() => {
+    // if(props.chapter) {
+    //     return props.chapter.content.blocks;
+    // }
+    return [/* {id: 1}, {id: 2}, {id:3} */];
+});
+
+// Включить текстовый редактор
+function activeTextEditor(mode: 'new-block' | 'edit-block') {
+    modeEditor.value = mode;
+    isActiveTextEditor.value = true;
+}
+
+// Сохранить контент для текущего блока
+function saveContentBlock() {
+    if(!label.value || !editorContent.value) {
+        return notice.show({ detail: 'Filled All Data!', severity: 'error' })
+    } 
+    console.log(label.value, label.value.length);
+}
+
 </script>
 
 <style scoped>
-    
+.materials-workspace {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: 1px solid var(--light-text-1);
+}
+.if-not-blocks {
+    width: 200px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+}
+.if-not-blocks__note {
+    font-family: var(--font);
+    color: var(--light-text-3);
+    margin: auto;
+    user-select: none;
+}
+.editor-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.wrapper-blocks {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.data-block {
+    width: 100%;
+    height: 600px;
+    flex: 0 0 auto;
+    border: 1px solid red; 
+}
 </style>

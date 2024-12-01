@@ -11,7 +11,8 @@ import ProgressSpinner from 'primevue/progressspinner';
 import Menubar from 'primevue/menubar';
 import Dialog from 'primevue/dialog';
 import ProgressBar from 'primevue/progressbar';
-import Editor from 'primevue/editor';
+import IftaLabel from 'primevue/iftalabel';
+
 
 buttonComp.name = 'cButton';
 
@@ -29,5 +30,5 @@ export default [
     Menubar,
     Dialog,
     ProgressBar,
-    Editor,
+    IftaLabel,
 ] as any[];

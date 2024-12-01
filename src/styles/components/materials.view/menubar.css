@@ -9,7 +9,8 @@
     --p-menubar-mobile-button-hover-background: var(--light-text-1) !important;
     --p-menubar-border-color: var(--light-text-1) !important;
     --p-menubar-submenu-border-color: var(--light-text-1) !important;
-
+    --p-menubar-border-radius: 0 !important;
+    --p-menubar-base-item-border-radius: var(--rounded) !important;
 }
 
 .p-menubar-item {

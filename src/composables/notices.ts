@@ -20,7 +20,7 @@ export default function useNotices() {
         severity: 'info',
         summary: 'Info',
         detail: 'Message Content',
-        group: 'br',
+        group: 'tr',
         life: 3000,
     }
     function show(config=defaultConfig) {

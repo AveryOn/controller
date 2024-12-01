@@ -96,7 +96,7 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
     width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: start;
     align-items: center;
 }
 

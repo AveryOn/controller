@@ -21,7 +21,7 @@
         @submit-form="requestForEdit"
         />
         <!-- Menu -->
-        <Menubar class="w-11" :model="itemsCorrect" >
+        <Menubar class="w-full" :model="itemsCorrect">
             <template #item="{ item, props }">
                 <a class="menu-bar-item" v-bind="props.action">
                     <svg-icon v-if="item.iconType === 'mdi'" :type="item.iconType" :path="item.icon" :size="20"></svg-icon>
@@ -30,18 +30,7 @@
                 </a>
             </template>
         </Menubar>
-        <h2 class="not-data-note" v-show="blocks.length === 0">
-            Empty
-        </h2>
-        <div class="wrapper-blocks px-4 py-2" v-show="blocks.length > 0">
-            <article
-            class="data-block" 
-            v-for="block in blocks" 
-            :key="block.id"
-            >
-                article {{ block.id }}
-            </article>
-        </div>
+        <WorkSpace :chapter="opennedChapter"/>
     </div>
 </template>
 
@@ -55,6 +44,7 @@ import { mdiTabPlus } from '@mdi/js';
 import createSubChapterDialog from './dialogs/createSubChapterDialog.vue';
 import deleteChapterDialog from './dialogs/deleteChapterDialog.vue';
 import editChapterDialog from './dialogs/editChapterDialog.vue';
+import WorkSpace from './workSpace.vue';
 import { trimPath } from '../../utils/strings.utils';
 import { useMaterialsStore } from '../../stores/materials.store';
 
@@ -64,7 +54,6 @@ const emit = defineEmits<{
     (e: 'openChapter', label: string): void;
     (e: 'quit'): void;
 }>();
-
 
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
@@ -103,12 +92,7 @@ const itemsCorrect = computed(() => {
         return true;
     })
 });
-const blocks = computed(() => {
-    if(opennedChapter.value) {
-        return opennedChapter.value.content.blocks;
-    }
-    return [/* {id: 1}, {id: 2}, {id:3} */];
-});
+
 const initDataEditForm: ComputedRef<CreateChapterForm | null> = computed(() => {
     if(opennedChapter.value) {
         return {
@@ -377,7 +361,7 @@ onBeforeRouteUpdate( async (to, from, next) => {
 
 .wrapper-material-chapter {
     width: 100%;
-    height: 95vh !important;
+    height: 98vh !important;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -387,25 +371,5 @@ onBeforeRouteUpdate( async (to, from, next) => {
 .menu-bar-item {
     display: flex;
     align-items: center;
-}
-.not-data-note {
-    font-family: var(--font);
-    color: var(--light-text-3);
-    margin: auto;
-    user-select: none;
-}
-.wrapper-blocks {
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-.data-block {
-    width: 100%;
-    height: 600px;
-    flex: 0 0 auto;
-    border: 1px solid red; 
 }
 </style>

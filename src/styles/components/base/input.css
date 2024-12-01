@@ -1,0 +1,11 @@
+
+:root {
+    --p-iftalabel-color: var(--cf-primary-1) !important;
+    --p-iftalabel-focus-color: var(--cf-primary-2) !important;
+    --p-inputtext-background: var(--bg-color) !important;
+    --p-inputtext-border-color: var(--cf-primary-1) !important;
+    --p-inputtext-hover-border-color: var(--cf-primary-1) !important;
+    --p-inputtext-focus-border-color: var(--cf-primary-2) !important;
+    --p-inputtext-color: var(--fg-color) !important;
+    
+}

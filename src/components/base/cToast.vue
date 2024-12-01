@@ -1,5 +1,5 @@
 <template>
-    <Toast position="bottom-right" group="br">
+    <Toast position="top-right" group="tr">
         <template #container="{ message }">
             <div class="p-2">
                 <h2 class="toast-detail">{{ message.detail }}</h2>
