@@ -11,7 +11,8 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         pathName: 'add-chapter',
         meta: true,
     }
-    const materialChaptersMenu: Ref<ChapterForMenu[]> = ref([{ type: 'loading' }, addChapterItem]);
+    const loadingChapterItem = { type: 'loading', meta: true }
+    const materialChaptersMenu: Ref<ChapterForMenu[]> = ref([loadingChapterItem, addChapterItem]);
     const materialChapters: Ref<Chapter[]> = ref([]);
     const loadingGetMenuChapters = ref(true);
     const loadingGetChapter = ref(false);

@@ -177,6 +177,7 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
             route: newSubChapter.route,
         }
         await createSubChapter(correctSubChapter);
+        isShowCreateSubChapter.value = false;
     } catch (err) {
         console.error(err);
         throw err;
@@ -294,7 +295,10 @@ async function requestForEdit(data: ChapterCreate) {
                     fullpath: opennedChapter.value?.fullpath || undefined, 
                     pathName: computePathName(),
                 }
-                return await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
+                const result = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
+                opennedChapter.value = result;
+                isShowEditChapter.value = false;
+                return result;
             }
         }
         else console.log('[requestForEdit] Копии формы для редактирования нет');

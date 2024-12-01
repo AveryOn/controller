@@ -20,7 +20,11 @@
                         aria-label="Custom ProgressSpinner" 
                         />
                     </span>
-                    <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
+                    <span 
+                    v-if="isShowMaterialsIcon(item).show" 
+                    class="text-primary ml-auto" 
+                    :class="isShowMaterialsIcon(item).icon"
+                    />
                 </div>
 
             </template>
@@ -33,9 +37,25 @@ import cIcon from '../base/cIcon.vue';
 import { useRouter } from 'vue-router';
 import { replacePathForMaterials } from '../../utils/strings.utils';
 import { useMainStore } from '../../stores/main.store';
+import { computed } from 'vue';
 
 const router = useRouter();
 const mainStore = useMainStore();
+
+const isShowMaterialsIcon = computed(() => {
+    return (item: any) => {
+        if(item.route === 'materials') {
+            if(item.meta === true) return { show: true, icon: 'xxx' }
+            if(item.items) {
+                let icon = 'pi pi-folder-plus'
+                if(item.items.length > 0) icon = 'pi pi-folder-open';
+                return { show: true, icon };
+            }
+            else return { show: true, icon: 'pi pi-file' }
+        }
+        else return { show: true, icon: 'pi pi-angle-down' }
+    }
+})
 
 // Когда выбираем какой-либо элемент меню
 function selectItem(item: any) {

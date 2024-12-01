@@ -29,7 +29,9 @@ import { mdiSpaceInvaders } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
 import { createChapter, syncMaterials } from '../api/materials.api';
 import { useMaterialsStore } from '../stores/materials.store';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const labelChapter: Ref<string | null> = ref(null);
 const materialStore = useMaterialsStore();
 
@@ -51,6 +53,7 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
         throw err;
     } finally {
         materialStore.loadingCreateChapter = false;
+        router.push({ name: 'materials' });
     }
 }
 </script>
