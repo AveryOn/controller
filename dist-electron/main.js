@@ -4213,7 +4213,7 @@ const FSCONFIG_MENU = {
   format: "json"
 };
 async function prepareMaterialsStore() {
-  console.log("prepareMaterialsStore");
+  console.log("[prepareMaterialsStore] => void");
   return readFile(FSCONFIG).then((data) => {
     return true;
   }).catch(async () => {
@@ -4227,7 +4227,7 @@ async function prepareMaterialsStore() {
   });
 }
 async function prepareMaterialsStoreForMenu() {
-  console.log("prepareMaterialsStoreForMenu");
+  console.log("[prepareMaterialsStoreForMenu] => void");
   return readFile(FSCONFIG_MENU).then((data) => {
     return true;
   }).catch(async () => {
@@ -4241,7 +4241,7 @@ async function prepareMaterialsStoreForMenu() {
   });
 }
 async function createChapter(params) {
-  console.log("createChapter => ", params);
+  console.log("[createChapter] => ", params);
   try {
     const materials = await readFile(FSCONFIG);
     materials.forEach((chapter) => {
@@ -4295,7 +4295,7 @@ async function getChapters(params) {
   }
 }
 async function getOneChapter(params) {
-  console.log("getOneChapter => ", params);
+  console.log("[getOneChapter] => ", params);
   try {
     const materials = await readFile(FSCONFIG);
     if (params.chapterId) {
@@ -4343,13 +4343,12 @@ function findLevel(items, initPath, config) {
 }
 async function createSubChapter(params) {
   var _a;
-  console.log("createSubChapter => ", params);
+  console.log("[createSubChapter] => ", params);
   try {
     if (!params) throw "[createSubChapter]>> INVALID_INPUT_DATA";
     const materials = await readFile(FSCONFIG);
     const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
     if ((chapter == null ? void 0 : chapter.chapterType) === "dir" && chapter.items) {
-      console.log("if-1");
       const newSubChapter = {
         id: Date.now(),
         chapterType: params.chapterType,
@@ -4367,23 +4366,18 @@ async function createSubChapter(params) {
         updatedAt: formatDate()
       };
       const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
-      console.log("|| correctFullPath:", correctFullPath);
       if (correctFullPath.length <= 0) {
-        console.log("if-2");
         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
         if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
         chapter.items.push(newSubChapter);
       } else {
-        console.log("else-1");
         const needLevel = findLevel(chapter.items, correctFullPath);
         if (!needLevel) {
-          console.log("if-3");
           throw "[createSubChapter]>> Нужный уровень найти не удалось";
         }
         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
         if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
         (_a = needLevel.items) == null ? void 0 : _a.push(newSubChapter);
-        console.log("push");
       }
       await writeFile(materials, FSCONFIG);
       return newSubChapter;
@@ -4396,7 +4390,7 @@ async function createSubChapter(params) {
   }
 }
 async function syncMaterialsStores() {
-  console.log("[syncMaterialsStores]");
+  console.log("[syncMaterialsStores] => void");
   function correctChapter(chapter, initPathName) {
     const { icon, iconType, id, label, pathName: pathName2, fullpath, route, items } = chapter;
     return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName2, fullpath, route, items };
@@ -4513,7 +4507,6 @@ async function deleteChapter(params) {
       return "failed";
     }
     await writeFile(materials, FSCONFIG);
-    console.log(materials);
     return "success";
   } catch (err) {
     console.error(err);
@@ -4528,7 +4521,6 @@ function findAndDeleteLevel(items, initPath) {
     const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
     if (selfPath === current) {
       if (initPath.length <= 0) {
-        console.log(chapter);
         return items.filter((ch) => ch.id !== chapter.id);
       } else {
         if (chapter.items && chapter.items.length > 0) {
