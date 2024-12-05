@@ -4566,6 +4566,7 @@ async function createChapterBlock(params) {
     if (!params || !params.pathName || !params.title || params.title.length < 3) {
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
     }
+    const materials = await readFile(FSCONFIG);
     const timestamp = formatDate();
     const newBlock = {
       id: Date.now(),
@@ -4574,6 +4575,12 @@ async function createChapterBlock(params) {
       createdAt: timestamp,
       updatedAt: timestamp
     };
+    if (params.pathName && !params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[createChapterBlock]>> Ключа content не существует!");
+      findedChapter.content.blocks.push(newBlock);
+    }
+    await writeFile(materials, FSCONFIG);
     return newBlock;
   } catch (err) {
     console.error(err);

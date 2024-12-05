@@ -72,10 +72,10 @@ const editorContent = ref('');
 const initEditorContent = ref(null);
 
 const blocks = computed(() => {
-    // if(props.chapter) {
-    //     return props.chapter.content.blocks;
-    // }
-    return [/* {id: 1}, {id: 2}, {id:3} */];
+    if(props.chapter) {
+        return props.chapter.content.blocks;
+    }
+    return [];
 });
 
 const pathName = computed(() => {
@@ -117,8 +117,6 @@ function saveContentBlock() {
 // Запрос на создание нового блока в разделе/подразделе
 async function reqCreateBlockMaterial(data: CreateChapterBlock) {
     try {
-        console.log(props.chapter);
-        
         if(!pathName.value) throw new Error('[reqCreateBlockMaterial]>> Chapter pathName не существует');
         isLoadingCreateBlock.value = true;
         if(!data.title || data.title.length < 3) {
@@ -134,7 +132,6 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
     } finally {
         isLoadingCreateBlock.value = false;
     }
-
 }
 
 </script>

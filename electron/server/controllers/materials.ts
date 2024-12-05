@@ -495,6 +495,7 @@ export async function createChapterBlock(params: CreateChapterBlock) {
         if(!params || !params.pathName || !params.title || params.title.length < 3) {
             throw new Error('[createChapterBlock]>> INVALID_INPUT');
         }
+        const materials: Chapter[] = await readFile(FSCONFIG);
         // Создание нового экземпляра блока
         const timestamp = formatDate();
         const newBlock: ChapterBlock = {
@@ -505,7 +506,14 @@ export async function createChapterBlock(params: CreateChapterBlock) {
             updatedAt: timestamp,
         }
         // Поиск уровня для записи блока в соответствующий раздел/подраздел
-        // const correctPath: string[] = trimPath(params.)
+        // Поиск раздела
+        if(params.pathName && !params.fullpath) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            if(!findedChapter?.content) throw new Error('[createChapterBlock]>> Ключа content не существует!');
+            findedChapter.content.blocks.push(newBlock);
+        }
+        // Запись изменений в БД
+        await writeFile(materials, FSCONFIG);
         return newBlock;
     } catch (err) {
         console.error(err);
