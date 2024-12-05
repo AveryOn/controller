@@ -323,7 +323,6 @@ export async function getOneSubChapter(params: GetSubChapterOneParams): Promise<
     }
 }
 
-
 // Обновить Раздел/Подраздел данными из входных параметров
 function updateChapter(chapter: Chapter | SubChapter, params: EditChapterParams['params']) {
     try {
@@ -511,6 +510,19 @@ export async function createChapterBlock(params: CreateChapterBlock) {
             const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
             if(!findedChapter?.content) throw new Error('[createChapterBlock]>> Ключа content не существует!');
             findedChapter.content.blocks.push(newBlock);
+        }
+        // Поиск подраздела
+        else if(params.pathName && params.fullpath) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            const correctPath: string[] = trimPath(params.fullpath, { split: true }) as string[];
+            if(!findedChapter || !findedChapter.items) throw new Error('[createChapterBlock]>> INTERNAL_ERROR[1]');
+            const subChapter: SubChapter = findLevel(findedChapter.items, correctPath.slice(1)) as SubChapter;
+            if(!subChapter || !subChapter.content) throw new Error('[createChapterBlock]>> INTERNAL_ERROR[2]!');
+            // Добавление нового блока в исходный массив
+            subChapter.content.blocks.push(newBlock);
+        }
+        else {
+            throw new Error('[createChapterBlock]>> INTERNAL_ERROR[3]');
         }
         // Запись изменений в БД
         await writeFile(materials, FSCONFIG);

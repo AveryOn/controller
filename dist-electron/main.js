@@ -4579,6 +4579,15 @@ async function createChapterBlock(params) {
       const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[createChapterBlock]>> Ключа content не существует!");
       findedChapter.content.blocks.push(newBlock);
+    } else if (params.pathName && params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
+      if (!findedChapter || !findedChapter.items) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[1]");
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      if (!subChapter || !subChapter.content) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[2]!");
+      subChapter.content.blocks.push(newBlock);
+    } else {
+      throw new Error("[createChapterBlock]>> INTERNAL_ERROR[3]");
     }
     await writeFile(materials, FSCONFIG);
     return newBlock;
