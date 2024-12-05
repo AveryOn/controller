@@ -4249,9 +4249,9 @@ async function createChapter(params) {
         throw "[createChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
       }
     });
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const timestamp = formatDate();
     const newChapter = {
-      id: (materials.length || 0) + 1,
+      id: Date.now(),
       chapterType: params.chapterType,
       content: {
         blocks: [],
@@ -4349,6 +4349,7 @@ async function createSubChapter(params) {
     const materials = await readFile(FSCONFIG);
     const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
     if ((chapter == null ? void 0 : chapter.chapterType) === "dir" && chapter.items) {
+      const timestamp = formatDate();
       const newSubChapter = {
         id: Date.now(),
         chapterType: params.chapterType,
@@ -4362,8 +4363,8 @@ async function createSubChapter(params) {
         label: params.label,
         route: params.route,
         items: params.chapterType === "dir" ? [] : null,
-        createdAt: formatDate(),
-        updatedAt: formatDate()
+        createdAt: timestamp,
+        updatedAt: timestamp
       };
       const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
       if (correctFullPath.length <= 0) {

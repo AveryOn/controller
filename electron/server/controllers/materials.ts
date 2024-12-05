@@ -81,9 +81,9 @@ export async function createChapter(params: ChapterCreate) {
         });
 
         // Создание нового экзепляра раздела
-        const timestamp = new Date().toISOString();
+        const timestamp = formatDate();
         const newChapter: Chapter = {
-            id: (materials.length || 0) + 1,
+            id: Date.now(),
             chapterType: params.chapterType,
             content: {
                 blocks: [],
@@ -207,6 +207,7 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
         const materials: Chapter[] = await readFile(FSCONFIG);
         const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
         if (chapter?.chapterType === 'dir' && chapter.items) {
+            const timestamp = formatDate();
             const newSubChapter: SubChapter = {
                 id: Date.now(),
                 chapterType: params.chapterType,
@@ -220,8 +221,8 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
                 label: params.label,
                 route: params.route,
                 items: (params.chapterType === 'dir') ? [] : null,
-                createdAt: formatDate(),
-                updatedAt: formatDate(),
+                createdAt: timestamp,
+                updatedAt: timestamp,
             }
             const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
             
