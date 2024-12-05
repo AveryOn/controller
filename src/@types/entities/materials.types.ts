@@ -51,18 +51,16 @@ export interface DeleteSubChapterParams {
     fullpath: string;
 }
 
-export interface ChapterBlock {
-    id: number;
-    title: string;
-    content: string | null;
-    createdAt: string;
-    updatedAt: string;
-} 
-
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string;
-    blocks: Array<ChapterBlock>;
+    blocks: Array<{
+        id: number;
+        title: string;
+        content: string;
+        createdAt: string;
+        updatedAt: string;
+    }>;
 }
 
 // Объект для создания нового блока в разделе
