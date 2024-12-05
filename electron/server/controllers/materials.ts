@@ -1,6 +1,6 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
-import { Chapter, ChapterCreate, ChapterForMenu, CreateChapterBlock, DeleteChapterParams, DeleteResponseMessage, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, ChapterBlock, ChapterCreate, ChapterForMenu, CreateChapterBlock, DeleteChapterParams, DeleteResponseMessage, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 
@@ -492,7 +492,21 @@ export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<
 export async function createChapterBlock(params: CreateChapterBlock) {
     console.log('[createChapterBlock] => ', params);
     try {
-        return params;
+        if(!params || !params.pathName || !params.title || params.title.length < 3) {
+            throw new Error('[createChapterBlock]>> INVALID_INPUT');
+        }
+        // Создание нового экземпляра блока
+        const timestamp = formatDate();
+        const newBlock: ChapterBlock = {
+            id: Date.now(),
+            title: params.title,
+            content: null,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        }
+        // Поиск уровня для записи блока в соответствующий раздел/подраздел
+        // const correctPath: string[] = trimPath(params.)
+        return newBlock;
     } catch (err) {
         console.error(err);
         throw err;

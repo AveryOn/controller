@@ -82,6 +82,9 @@ const pathName = computed(() => {
     if(props.chapter && props.chapter.fullpath) {
         return (trimPath(props.chapter.fullpath, { split: true }) as string[])[0];
     }
+    else if (props.chapter && props.chapter.pathName) {
+        return props.chapter.pathName;
+    }
     else return null;
 })
 
@@ -111,18 +114,18 @@ function saveContentBlock() {
     }
 }
 
+// Запрос на создание нового блока в разделе/подразделе
 async function reqCreateBlockMaterial(data: CreateChapterBlock) {
     try {
         console.log(props.chapter);
         
-        if(!props.chapter?.id) throw new Error('[reqCreateBlockMaterial]>> Chapter ID не существует');
         if(!pathName.value) throw new Error('[reqCreateBlockMaterial]>> Chapter pathName не существует');
         isLoadingCreateBlock.value = true;
         if(!data.title || data.title.length < 3) {
             return void notice.show({ detail: 'Title length must be either greater or equal 3', severity: 'error' });
         }
-        data.chapterId = props.chapter.id;
         data.pathName = pathName.value;
+        if(props.chapter?.fullpath) data.fullpath = props.chapter?.fullpath; 
         const result = await createChapterBlockApi(data);
         console.log(result);
     } catch (err) {

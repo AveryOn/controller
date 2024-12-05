@@ -60,21 +60,23 @@ export interface DeleteSubChapterParams {
 export type DeleteResponseMessage = 'success' | 'failed';
 
 export interface CreateChapterBlock {
-    chapterId: number;
     pathName: string;
+    fullpath?: string;
     title: string;
 }
+
+export interface ChapterBlock {
+    id: number;
+    title: string;
+    content: string | null;
+    createdAt: string;
+    updatedAt: string;
+} 
 
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string | null;
-    blocks: Array<{
-        id: number;
-        title: string;
-        content: string;
-        createdAt: string;
-        updatedAt: string;
-    }>;
+    blocks: Array<ChapterBlock>;
 }
 export type IconType = 'pi' | 'mdi' | 'img';
 export type ChapterType = 'file' | 'dir';

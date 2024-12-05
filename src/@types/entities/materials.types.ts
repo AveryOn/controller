@@ -65,8 +65,8 @@ export interface ChapterContent {
 
 // Объект для создания нового блока в разделе
 export interface CreateChapterBlock {
-    chapterId: number;
     pathName: string;
+    fullpath?: string;
     title: string;
 }
 

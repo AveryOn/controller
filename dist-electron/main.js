@@ -4563,7 +4563,18 @@ async function deleteSubChapter(params) {
 async function createChapterBlock(params) {
   console.log("[createChapterBlock] => ", params);
   try {
-    return params;
+    if (!params || !params.pathName || !params.title || params.title.length < 3) {
+      throw new Error("[createChapterBlock]>> INVALID_INPUT");
+    }
+    const timestamp = formatDate();
+    const newBlock = {
+      id: Date.now(),
+      title: params.title,
+      content: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    return newBlock;
   } catch (err) {
     console.error(err);
     throw err;
