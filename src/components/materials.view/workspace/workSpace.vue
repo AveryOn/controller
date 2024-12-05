@@ -2,6 +2,7 @@
     <div class="materials-workspace gap-2">
         <!-- Форма создания нового блока -->
         <CreateBlockForm 
+        :loading="isLoadingCreateBlock"
         v-model="isActiveCreateForm"
         @submit-form="reqCreateBlockMaterial"
         />
@@ -50,6 +51,7 @@ import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import { createChapterBlockApi } from '../../../api/materials.api';
+import { trimPath } from '../../../utils/strings.utils';
 type ModeEditor = 'new-block' | 'edit-block';
 interface Props {
     chapter: Chapter | null;
@@ -61,6 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
 const notice = useNotices();
 
 const isLoadingSaveContent = ref(false);
+const isLoadingCreateBlock = ref(false);
 const modeEditor: Ref<ModeEditor> = ref('new-block');
 const isActiveTextEditor = ref(false);
 const isActiveCreateForm = ref(false);
@@ -74,6 +77,13 @@ const blocks = computed(() => {
     // }
     return [/* {id: 1}, {id: 2}, {id:3} */];
 });
+
+const pathName = computed(() => {
+    if(props.chapter && props.chapter.fullpath) {
+        return (trimPath(props.chapter.fullpath, { split: true }) as string[])[0];
+    }
+    else return null;
+})
 
 // Включить форму создания нового блока
 function activeCreateForm() {
@@ -102,13 +112,26 @@ function saveContentBlock() {
 }
 
 async function reqCreateBlockMaterial(data: CreateChapterBlock) {
-    if(!data.title || data.title.length < 3) {
-        return void notice.show({ detail: 'Title length must be either greater or equal 3', severity: 'error' });
+    try {
+        console.log(props.chapter);
+        
+        if(!props.chapter?.id) throw new Error('[reqCreateBlockMaterial]>> Chapter ID не существует');
+        if(!pathName.value) throw new Error('[reqCreateBlockMaterial]>> Chapter pathName не существует');
+        isLoadingCreateBlock.value = true;
+        if(!data.title || data.title.length < 3) {
+            return void notice.show({ detail: 'Title length must be either greater or equal 3', severity: 'error' });
+        }
+        data.chapterId = props.chapter.id;
+        data.pathName = pathName.value;
+        const result = await createChapterBlockApi(data);
+        console.log(result);
+    } catch (err) {
+        console.error(err);
+        throw err
+    } finally {
+        isLoadingCreateBlock.value = false;
     }
-    if(!props.chapter?.id) throw new Error('[reqCreateBlockMaterial]>> Chapter ID не существует')
-    data.chapterId = props.chapter.id;
-    const result = await createChapterBlockApi(data);
-    console.log(result);
+
 }
 
 </script>
