@@ -59,6 +59,10 @@ export interface DeleteSubChapterParams {
 
 export type DeleteResponseMessage = 'success' | 'failed';
 
+export interface CreateChapterBlock {
+    title?: string;
+}
+
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string | null;

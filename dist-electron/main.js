@@ -4559,6 +4559,15 @@ async function deleteSubChapter(params) {
     throw err;
   }
 }
+async function createChapterBlock(params) {
+  console.log("[createChapterBlock] => ", params);
+  try {
+    return params;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -4639,6 +4648,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("delete-sub-chapter", async (event, params) => {
     return await deleteSubChapter(params);
+  });
+  ipcMain.handle("create-chapter-block", async (event, params) => {
+    return await createChapterBlock(params);
   });
 });
 export {

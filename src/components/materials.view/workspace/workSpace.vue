@@ -49,6 +49,7 @@ import textEditor from '../base/textEditor.vue';
 import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
+import { createChapterBlockApi } from '../../../api/materials.api';
 type ModeEditor = 'new-block' | 'edit-block';
 interface Props {
     chapter: Chapter | null;
@@ -90,7 +91,7 @@ function saveContentBlock() {
     try {
         isLoadingSaveContent.value = true;
         if (!label.value || !editorContent.value) {
-            return notice.show({ detail: 'Filled All Data!', severity: 'error' });
+            return void notice.show({ detail: 'Filled All Data!', severity: 'error' });
         }
         console.log(label.value, label.value.length);
     } catch (err) {
@@ -100,8 +101,14 @@ function saveContentBlock() {
     }
 }
 
-function reqCreateBlockMaterial(data: CreateChapterBlock) {
-    console.log(data);
+async function reqCreateBlockMaterial(data: CreateChapterBlock) {
+    if(!data.title || data.title.length < 3) {
+        return void notice.show({ detail: 'Title length must be either greater or equal 3', severity: 'error' });
+    }
+    if(!props.chapter?.id) throw new Error('[reqCreateBlockMaterial]>> Chapter ID не существует')
+    data.chapterId = props.chapter.id;
+    const result = await createChapterBlockApi(data);
+    console.log(result);
 }
 
 </script>

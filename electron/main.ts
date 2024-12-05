@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, DeleteChapterParams, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createSubChapter, deleteChapter, deleteSubChapter, editChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
+import type { ChapterCreate, CreateChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
+import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteSubChapter, editChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
 
 const require = createRequire(import.meta.url)
@@ -138,5 +138,10 @@ app.whenReady().then(() => {
     // Удаление подраздела
     ipcMain.handle("delete-sub-chapter", async (event, params: DeleteSubChapterParams) => {
         return await deleteSubChapter(params);
+    });
+
+    // Создание блока для раздела
+    ipcMain.handle("create-chapter-block", async (event, params: CreateChapterBlock) => {
+        return await createChapterBlock(params);
     });
 })

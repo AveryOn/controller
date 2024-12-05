@@ -28,7 +28,7 @@ import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiSpaceInvaders } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
-import { createChapter, syncMaterials } from '../api/materials.api';
+import { createChapter } from '../api/materials.api';
 import { useMaterialsStore } from '../stores/materials.store';
 import { useRouter } from 'vue-router';
 

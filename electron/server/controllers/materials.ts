@@ -1,6 +1,6 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
-import { Chapter, ChapterCreate, ChapterForMenu, DeleteChapterParams, DeleteResponseMessage, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, ChapterCreate, ChapterForMenu, CreateChapterBlock, DeleteChapterParams, DeleteResponseMessage, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 
@@ -480,6 +480,18 @@ export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<
         // Сохранение изменений в БД
         await writeFile(materials, FSCONFIG);
         return 'success';
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+
+// Создание нового блока для раздела
+export async function createChapterBlock(params: CreateChapterBlock) {
+    console.log('[createChapterBlock] => ', params);
+    try {
+        return params;
     } catch (err) {
         console.error(err);
         throw err;
