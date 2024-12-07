@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, CreateChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
+import type { ChapterCreate, CreateChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
 import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
 
@@ -146,7 +146,12 @@ app.whenReady().then(() => {
     });
 
     // Редактирование блока для раздела
-    ipcMain.handle("edit-chapter-block", async (event, params: EditChapterBlock) => {
+    ipcMain.handle("edit-chapter-block", async (event, params: EditChapterBlock & EditChapterBlockTitle) => {
+        return await editChapterBlock(params);
+    });
+
+    // Редактирование заголовка блока для раздела
+    ipcMain.handle("edit-chapter-block-title", async (event, params: EditChapterBlockTitle & EditChapterBlock) => {
         return await editChapterBlock(params);
     });
 })

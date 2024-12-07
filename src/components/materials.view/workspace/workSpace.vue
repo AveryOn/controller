@@ -30,7 +30,7 @@
                     size="small" 
                     placeholder="Label"
                     />
-                    <Button 
+                    <Button
                     class="px-2"
                     icon="pi pi-check" 
                     size="small" 
@@ -44,10 +44,14 @@
                 <AccordionPanel v-for="block in blocks" :key="block.id" :value="block.id">
                     <AccordionHeader>
                         <div class="block-header__title flex align-items-center gap-3">
-                            <h3 v-if="opennedEditTitleBlock !== block.id">{{ block.title }}</h3>
+                            <h3 v-if="opennedEditTitleBlock !== block.id">{{ titleBlock || block.title }}</h3>
                             <InputText 
-                            v-else 
-                            @click.stop 
+                            v-else
+                            id="inputTitleBlock"
+                            ref="inputTitleBlock"
+                            @click.stop.prevent
+                            @keydown.space.stop.prevent="titleBlock+=' '"
+                            @keydown.enter.stop.prevent="() => openEditTileBlock(block.id, block.title)"
                             type="text" 
                             v-model="titleBlock" 
                             placeholder="Title"  
@@ -55,7 +59,7 @@
                             />
                             <Button 
                             :id="`btn-edit-title-${block.id}`"
-                            @click.stop="() => openEditTileBlock(block.id, block.title)" 
+                            @click.stop.prevent="() => openEditTileBlock(block.id, block.title)" 
                             class="py-1"
                             :icon="opennedEditTitleBlock === block.id? 'pi pi-check' : 'pi pi-pencil'" 
                             size="small" 
@@ -99,16 +103,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, onBeforeUnmount, onMounted } from 'vue';
+import { computed, defineProps, nextTick, onBeforeUnmount, onMounted } from 'vue';
 import { Chapter, ChapterBlock, CreateChapterBlock } from '../../../@types/entities/materials.types';
 import editorInBlock from './editorInBlock.vue';
 import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
-import { createChapterBlockApi, editChapterBlockApi } from '../../../api/materials.api';
+import { createChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
+import { title } from 'node:process';
 interface Props {
     chapter: Chapter | null;
 }
@@ -125,7 +130,8 @@ const currentBlockId = ref<null | number>(null);
 const isLoadingSaveContent = ref(false);
 const isLoadingCreateBlock = ref(false);
 const opennedEditTitleBlock = ref<null | number>(null);
-const titleBlock = ref('');
+const inputTitleBlock: Ref<HTMLInputElement | null> = ref(null);
+const titleBlock = ref<string | null>(null);
 const isLoadingEditTitleBlock = ref(false);
 const opennedStateEditor = ref({
     blockId: null as null | number,
@@ -183,7 +189,7 @@ const pathName = computed(() => {
     else if (props.chapter && props.chapter.pathName) {
         return props.chapter.pathName;
     }
-    else return null;
+    else throw new Error('pathName не существует');
 });
 
 // Объект текущего отрытого блока
@@ -211,11 +217,11 @@ function editContentTitle() {
 function openTextEditor() {
     opennedStateEditor.value.blockId = currentBlockId.value;
     opennedStateEditor.value.isActive = true;
-    initEditorContent.value = currentBlock.value.content;
+    initEditorContent.value = currentBlock.value?.content;
 }
 
 // Открыть инпут редактирования block title
-function openEditTileBlock(blockId: number, title: string) {
+async function openEditTileBlock(blockId: number, title: string) {
     // Если клик по кнопке был и значения переменных уже есть значит функция изменяет title блока
     if(opennedEditTitleBlock.value && titleBlock.value) {
         if(title === titleBlock.value) {
@@ -226,14 +232,26 @@ function openEditTileBlock(blockId: number, title: string) {
         else {
             try {
                 isLoadingEditTitleBlock.value = true;
-                console.log('Запрос');
+                console.log('Запрос', currentBlock.value);
+                const result = await editChapterBlockTitleApi({
+                    blockId: currentBlock.value.id,
+                    blockTitle: titleBlock.value,
+                    pathName: pathName.value,
+                    fullpath: props.chapter?.fullpath,
+                });
+                materialStore.materialChapters = result;
+                opennedEditTitleBlock.value = null;
+                // titleBlock.value = null;
             } finally {
                 isLoadingEditTitleBlock.value = false
             }
         }
     } else {
+        if(!currentBlockId.value) currentBlockId.value = blockId;
         opennedEditTitleBlock.value = blockId;
         titleBlock.value = title;
+        await nextTick();
+        document.getElementById('inputTitleBlock')?.focus();
     }
 }
 
@@ -319,26 +337,33 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
 }
 
 // обработка нажатия клавиш
-function controllerKeys(event: KeyboardEvent) {
-    console.log(event);
-    if (event.ctrlKey && ['r', 'R', 'к', 'К'].includes(event.key)) {
+function controllerKeys(e: KeyboardEvent) {
+    const eKey = ['у', 'У','e', 'E'];
+    const rKey = ['r', 'R', 'к', 'К'];
+    if (e.ctrlKey && rKey.includes(e.key)) {
         // event.preventDefault();
     }
-    // Активировать текстовый редактор
-    if (event.ctrlKey && ['у', 'У','e', 'E'].includes(event.key)) {
-        event.preventDefault();
-        openTextEditor();
+    if(e.ctrlKey && e.shiftKey && eKey.includes(e.key)) {
+        openEditTileBlock(currentBlock.value.id, currentBlock.value.title);
+        return e.preventDefault();
     }
+    // Активировать текстовый редактор
+    if (e.ctrlKey && eKey.includes(e.key)) {
+        e.preventDefault();
+        return openTextEditor();
+    }
+
     // Закрыть Закрыть что-либо
-    if (event.key === 'Escape') {
-        event.preventDefault();
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if(opennedEditTitleBlock.value) return void (opennedEditTitleBlock.value = null);
         if(opennedStateEditor.value.isActive) closeTextEditor();
-        else if(currentBlockId.value) currentBlockId.value = null;
+        else if(currentBlockId.value) return currentBlockId.value = null;
     }
     // Ввод
-    if(event.ctrlKey && event.key === 'Enter') {
+    if(e.ctrlKey && e.key === 'Enter') {
         if(opennedStateEditor.value.isActive) {
-            saveContentBlock();
+            return saveContentBlock();
         }
     }
 }

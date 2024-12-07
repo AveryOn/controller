@@ -71,6 +71,13 @@ export interface EditChapterBlock {
     block: ChapterBlock;
 }
 
+export interface EditChapterBlockTitle {
+    pathName: string;
+    fullpath?: string;
+    blockId: number;
+    blockTitle: string;
+}
+
 export interface ChapterBlock {
     id: number;
     title: string;

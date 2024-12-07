@@ -4602,19 +4602,25 @@ function updateBlock(oldBlock, newBlock) {
   oldBlock.title = newBlock.title;
 }
 async function editChapterBlock(params) {
+  var _a;
   console.log("[editChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName || !params.block) {
+    if (!params || !params.pathName) {
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
     }
     const materials = await readFile(FSCONFIG);
+    const blockId = ((_a = params == null ? void 0 : params.block) == null ? void 0 : _a.id) || (params == null ? void 0 : params.blockId);
     const timestamp = formatDate();
     if (params.pathName && !params.fullpath) {
       const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
-      const findedBlock = findedChapter.content.blocks.find((block) => block.id === params.block.id);
+      const findedBlock = findedChapter.content.blocks.find((block) => block.id === blockId);
       if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
-      updateBlock(findedBlock, params.block);
+      if (!params.blockTitle) {
+        updateBlock(findedBlock, params.block);
+      } else {
+        findedBlock.title = params.blockTitle;
+      }
       findedChapter.updatedAt = timestamp;
       findedBlock.updatedAt = timestamp;
     } else if (params.pathName && params.fullpath) {
@@ -4623,9 +4629,13 @@ async function editChapterBlock(params) {
       if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
       const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
-      const findedBlock = subChapter.content.blocks.find((block) => block.id === params.block.id);
+      const findedBlock = subChapter.content.blocks.find((block) => block.id === blockId);
       if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
-      updateBlock(findedBlock, params.block);
+      if (!params.blockTitle) {
+        updateBlock(findedBlock, params.block);
+      } else {
+        findedBlock.title = params.blockTitle;
+      }
       findedChapter.updatedAt = timestamp;
       findedBlock.updatedAt = timestamp;
     } else {
@@ -4723,6 +4733,9 @@ app.whenReady().then(() => {
     return await createChapterBlock(params);
   });
   ipcMain.handle("edit-chapter-block", async (event, params) => {
+    return await editChapterBlock(params);
+  });
+  ipcMain.handle("edit-chapter-block-title", async (event, params) => {
     return await editChapterBlock(params);
   });
 });

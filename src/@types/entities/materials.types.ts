@@ -78,6 +78,13 @@ export interface EditChapterBlock {
     block: ChapterBlock;
 }
 
+export interface EditChapterBlockTitle {
+    pathName: string;
+    fullpath?: string;
+    blockId: number;
+    blockTitle: string;
+}
+
 export type IconMode = 'img' | 'sym' | 'svg' | string;
 export type IconType = 'pi' | 'mdi' | 'img';
 export type ChapterType = 'file' | 'dir' | string;
