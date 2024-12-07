@@ -70,7 +70,7 @@
                             <!-- Menu -->
                             <Menubar class="w-full flex justify-content-end px-4 py-0 sticky top-0 z-5" :model="blockHeaderItems">
                                 <template #item="{ item, props }">
-                                    <a class="menu-bar-item" v-bind="props.action">
+                                    <a class="menu-bar-item" @click="() => handlerMenuItem(item, block)" v-bind="props.action">
                                         <i :class="item.icon"></i>
                                         <span>{{ item.label }}</span>
                                     </a>
@@ -80,14 +80,15 @@
                             <editorInBlock 
                             v-if="isShowTextEditor(block)"
                             @update:content="(content) => editorContent = content"
-                            @save:content="saveContentBlock"
+                            @save:content="() => saveContentBlock(block)"
+                            @close="closeTextEditor"
+                            :closable="true"
                             :editor-styles="{ height: '100%', width: '100%' }"
                             :initial-value="initEditorContent"
                             :loading="isLoadingSaveContent"
                             />
                             <!-- CONTENT -->
-                            <div v-else>
-                                CONTENT
+                            <div class="ql-editor px-5 py-3" v-else v-html="blockContent(block.content)">
                             </div>
                         </div>
                     </AccordionContent>
@@ -99,13 +100,15 @@
 
 <script setup lang="ts">
 import { computed, defineProps } from 'vue';
-import { Chapter, CreateChapterBlock } from '../../../@types/entities/materials.types';
+import { Chapter, ChapterBlock, CreateChapterBlock } from '../../../@types/entities/materials.types';
 import editorInBlock from './editorInBlock.vue';
 import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
-import { createChapterBlockApi } from '../../../api/materials.api';
+import { createChapterBlockApi, editChapterBlockApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
+import { useMaterialsStore } from '../../../stores/materials.store';
+import { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem';
 interface Props {
     chapter: Chapter | null;
 }
@@ -114,6 +117,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const notice = useNotices();
+const materialStore = useMaterialsStore();
 
 const currentBlockId = ref<null | number>(null); 
 const isLoadingSaveContent = ref(false);
@@ -128,14 +132,13 @@ const opennedStateEditor = ref({
 const isActiveCreateForm = ref(false);
 const contentTitle = ref('');
 const isLoadingEditContentTitle = ref(false);
-const editorContent = ref('');
-const initEditorContent = ref(null);
+const editorContent: Ref<null | string> = ref(null);
+const initEditorContent: Ref<string | null> = ref<string | null>(null);
 const blockHeaderItems = ref([
     {
         label: 'Edit',
         icon: 'pi pi-pencil',
         iconType: 'pi',
-        command: (e: any) => chooseBlockForEdit(e)
     },
     {
         label: 'Delete',
@@ -144,16 +147,19 @@ const blockHeaderItems = ref([
     },
 ])
 
+// Вычислить актуальный контент для блока
+const blockContent = computed(() => {
+    return (content: string | null) => {
+        if(!editorContent.value) return content;
+        else return editorContent.value;
+    }
+})
+
 const blocks = computed(() => {
-    // if(props.chapter) {
-    //     return props.chapter.content.blocks;
-    // }
-    return [
-        { id: 6, content: 'Hello 1', title: 'Title 1' },
-        { id: 7, content: 'Hello 2', title: 'Title 2' },
-        { id: 8, content: 'Hello 3', title: 'Title 3' },
-        { id: 9, content: 'Hello 4', title: 'Title 4' },
-    ];
+    if(props.chapter) {
+        return props.chapter.content.blocks;
+    }
+    return [];
 });
 
 // Видимость инпута для label блока
@@ -165,8 +171,9 @@ const isShowTextEditor = computed(() => {
     return (block: any) => {
         return opennedStateEditor.value.isActive === true && opennedStateEditor.value.blockId === block.id;
     }
-})
+});
 
+// Вычисление pathName для операций с сервером
 const pathName = computed(() => {
     if(props.chapter && props.chapter.fullpath) {
         return (trimPath(props.chapter.fullpath, { split: true }) as string[])[0];
@@ -213,12 +220,35 @@ function openEditTileBlock(blockId: number, title: string) {
     }
 }
 
+// Закрыть текстовый редактор
+function closeTextEditor() {
+    initEditorContent.value = null;
+    // editorContent.value = null;
+    opennedEditTitleBlock.value = null;
+    opennedStateEditor.value = {
+        blockId: null,
+        isActive: false,
+    }
+}
+
+function handlerMenuItem(item: MenuItem, block: ChapterBlock) {
+    // Выбор режима Редактирование блока
+    if(item.label === 'Edit') {
+        chooseBlockForEdit(block);
+    }
+    console.log(item, block);
+}
 // Выбрать блок для редактирования контента
-function chooseBlockForEdit({ item }: { item: any }) {
+function chooseBlockForEdit(block: ChapterBlock) {
+    opennedStateEditor.value.blockId = block.id;
+    initEditorContent.value = blockContent.value(block.content);
+    opennedStateEditor.value.isActive = true;
+}
+
+// Выбрать блок для удаления
+function chooseBlockForDelete() {
     opennedStateEditor.value.blockId = currentBlockId.value;
     opennedStateEditor.value.isActive = true;
-    console.log(opennedStateEditor.value);
-    
 }
 
 // Включить форму создания нового блока
@@ -227,17 +257,26 @@ function activeCreateForm() {
 }
 
 // Сохранить контент для текущего блока
-function saveContentBlock() {
+async function saveContentBlock(block: ChapterBlock) {
     try {
         isLoadingSaveContent.value = true;
+        if(!pathName.value) throw new Error('[saveContentBlock]>> pathName не существует');
         if (!editorContent.value) {
             return void notice.show({ detail: 'Filled All Data!', severity: 'error' });
         }
-        console.log(contentTitle.value, contentTitle.value.length);
+        // Запрос на сохранение контента
+        const updBlock: ChapterBlock = { ...block, content: editorContent.value };
+        const result = await editChapterBlockApi({ 
+            block: updBlock, 
+            pathName: pathName.value,
+            fullpath: props.chapter?.fullpath,
+        });
+        materialStore.materialChapters = result;
     } catch (err) {
         throw err
     } finally {
         isLoadingSaveContent.value = false;
+        closeTextEditor();
     }
 }
 
@@ -251,8 +290,8 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
         }
         data.pathName = pathName.value;
         if(props.chapter?.fullpath) data.fullpath = props.chapter?.fullpath; 
-        const result = await createChapterBlockApi(data);
-        console.log(result);
+        await createChapterBlockApi(data);
+        
     } catch (err) {
         console.error(err);
         throw err

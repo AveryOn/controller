@@ -1,5 +1,13 @@
 <template>
     <div class="editor-wrapper gap-2">
+        <Button 
+        v-if="props.closable"
+        class="editor-close-btn" 
+        icon="pi pi-times" 
+        severity="secondary"
+        @click="emit('close')"
+        size="small"
+        />
         <textEditor
         :initial-value="props.initialValue"
         @update:content="(content: string) => emit('update:content', content)"
@@ -20,6 +28,7 @@ import textEditor from '../../base/textEditor.vue';
 
 interface Props {
     loading?: boolean;
+    closable?: boolean;
     initialValue: string | null;
     editorStyles: {
         width?: string;
@@ -29,10 +38,12 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     initialValue: null,
     loading: false,
+    closable: false,
 });
 const emit = defineEmits<{
     (e: 'update:content', content: string): void;
     (e: 'save:content'): void;
+    (e: 'close'): void;
 }>();
 
 </script>
@@ -46,6 +57,11 @@ const emit = defineEmits<{
     display: flex;
     flex-direction: column;
     background-color: var(--bg-color);
+}
+.editor-close-btn {
+    position: absolute;
+    right: 1rem;
+    top: .6rem;
 }
 .save-btn {
     margin-left: auto;

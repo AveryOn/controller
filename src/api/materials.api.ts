@@ -1,4 +1,4 @@
-import type { Chapter, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterParams, DeleteSubChapterParams, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
+import type { Chapter, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
 import { useMaterialsStore } from "../stores/materials.store";
 
 const TIMEOUT = 1003;
@@ -148,6 +148,21 @@ export async function createChapterBlockApi(params: CreateChapterBlock) {
         setTimeout(async () => {
             try {
                 const result = await window.electron.createChapterBlock(params);
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
+}
+
+// Редактирование блока для раздела
+export async function editChapterBlockApi(params: EditChapterBlock): Promise<Chapter[]> {
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(async () => {
+            try {
+                const result = await window.electron.editChapterBlock(params);
                 resolve(result);
             } catch (err) {
                 reject(err);

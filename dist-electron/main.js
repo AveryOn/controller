@@ -4596,6 +4596,48 @@ async function createChapterBlock(params) {
     throw err;
   }
 }
+function updateBlock(oldBlock, newBlock) {
+  if (!oldBlock || !newBlock) throw new Error("[editChapterBlock]>>[updateBlock]>> INVALID_INPUT");
+  oldBlock.content = newBlock.content;
+  oldBlock.title = newBlock.title;
+}
+async function editChapterBlock(params) {
+  console.log("[editChapterBlock] => ", params);
+  try {
+    if (!params || !params.pathName || !params.block) {
+      throw new Error("[editChapterBlock]>> INVALID_INPUT");
+    }
+    const materials = await readFile(FSCONFIG);
+    const timestamp = formatDate();
+    if (params.pathName && !params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
+      const findedBlock = findedChapter.content.blocks.find((block) => block.id === params.block.id);
+      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
+      updateBlock(findedBlock, params.block);
+      findedChapter.updatedAt = timestamp;
+      findedBlock.updatedAt = timestamp;
+    } else if (params.pathName && params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
+      if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
+      const findedBlock = subChapter.content.blocks.find((block) => block.id === params.block.id);
+      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
+      updateBlock(findedBlock, params.block);
+      findedChapter.updatedAt = timestamp;
+      findedBlock.updatedAt = timestamp;
+    } else {
+      throw new Error("[editChapterBlock]>> INTERNAL_ERROR[3]");
+    }
+    await writeFile(materials, FSCONFIG);
+    return materials;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -4679,6 +4721,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("create-chapter-block", async (event, params) => {
     return await createChapterBlock(params);
+  });
+  ipcMain.handle("edit-chapter-block", async (event, params) => {
+    return await editChapterBlock(params);
   });
 });
 export {

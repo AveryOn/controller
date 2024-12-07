@@ -65,6 +65,12 @@ export interface CreateChapterBlock {
     title: string;
 }
 
+export interface EditChapterBlock {
+    pathName: string;
+    fullpath?: string;
+    block: ChapterBlock;
+}
+
 export interface ChapterBlock {
     id: number;
     title: string;
