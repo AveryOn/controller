@@ -30,7 +30,11 @@
                 </a>
             </template>
         </Menubar>
-        <workSpace :chapter="opennedChapter"/>
+        <workSpace 
+        :chapter="opennedChapter" 
+        :is-show-create-block="isShowCreateBlock" 
+        @update:is-show-create-block="(state) => isShowCreateBlock = state"
+        />
     </div>
 </template>
 
@@ -55,6 +59,7 @@ const emit = defineEmits<{
     (e: 'quit'): void;
 }>();
 
+const isShowCreateBlock = ref(false);
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
@@ -63,7 +68,8 @@ const items = ref([
     {
         label: 'New Block',
         icon: 'pi pi-plus',
-        iconType: 'pi'
+        iconType: 'pi',
+        command: newBlock,
     },
     {
         label: 'Add SubChapter',
@@ -124,6 +130,10 @@ function computePathNameForEdit() {
     }
 }
 
+// Вызов окна для создания нового блока
+function newBlock() {
+    isShowCreateBlock.value = true;
+}
 // Вызов окна для создания нового подраздела 
 function addNewSubChapter() {
     closeAllWins();

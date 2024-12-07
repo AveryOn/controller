@@ -4,6 +4,7 @@
         <CreateBlockForm 
         :loading="isLoadingCreateBlock"
         v-model="isActiveCreateForm"
+        @update:model-value="(state) => emit('update:isShowCreateBlock', state)"
         @submit-form="reqCreateBlockMaterial"
         />
         <!-- Если блоков нет -->
@@ -70,7 +71,6 @@
                     </AccordionHeader>
                     <AccordionContent>
                         <div class="block-content-wrapper">
-             
                             <!-- Menu -->
                             <Menubar class="w-full flex justify-content-end px-4 py-0 sticky top-0 z-5" :model="blockHeaderItems">
                                 <template #item="{ item, props }">
@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, nextTick, onBeforeUnmount, onMounted } from 'vue';
+import { computed, defineProps, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
 import { Chapter, ChapterBlock, CreateChapterBlock } from '../../../@types/entities/materials.types';
 import editorInBlock from './editorInBlock.vue';
 import { ref, type Ref } from 'vue';
@@ -113,13 +113,17 @@ import { createChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } 
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
-import { title } from 'node:process';
+
 interface Props {
     chapter: Chapter | null;
+    isShowCreateBlock?: boolean;
 }
 const props = withDefaults(defineProps<Props>(), {
-
+    isShowCreateBlock: false,
 });
+const emit = defineEmits<{
+    (e: 'update:isShowCreateBlock', value: boolean): void;
+}>()
 
 const notice = useNotices();
 const materialStore = useMaterialsStore();
@@ -198,6 +202,10 @@ const currentBlock = computed(() => {
     if(!block) throw new Error('currentBlock не существует');
     if(editorContent.value) block.content = editorContent.value;
     return block;
+});
+
+watch(() => props.isShowCreateBlock, (newVal) => {
+    isActiveCreateForm.value = newVal;
 });
 
 // Изменить заголовок content chapter
