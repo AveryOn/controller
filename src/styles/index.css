@@ -3,8 +3,51 @@
 @import url(./components/index.css);
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: var(--font);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: var(--font);
+}
+
+/* Стили для всего скроллбара */
+::-webkit-scrollbar {
+    width: 12px;
+    /* Ширина вертикального скроллбара */
+    height: 12px;
+    /* Высота горизонтального скроллбара */
+}
+
+/* Стили для ползунка скроллбара */
+::-webkit-scrollbar-thumb {
+    background-color: #a092a6;
+    /* Цвет ползунка */
+    border-radius: 6px;
+    /* Скругление углов */
+    border: 3px solid #f1f1f1;
+    /* Ободок вокруг ползунка */
+}
+
+/* Стили для ползунка при наведении */
+::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+    /* Цвет ползунка при наведении */
+}
+
+/* Стили для фона скроллбара */
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    /* Цвет фона скроллбара */
+    border-radius: 6px;
+    /* Скругление углов */
+}
+
+/* Стили для фона скроллбара при наведении */
+::-webkit-scrollbar-track:hover {
+    background: #ddd;
+    /* Цвет фона при наведении */
+}
+
+/* Стили для фона уголка (необязательное) */
+::-webkit-scrollbar-corner {
+    background: #ddd;
 }

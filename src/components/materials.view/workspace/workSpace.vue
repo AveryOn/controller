@@ -20,11 +20,53 @@
         </div>
  
         <div class="wrapper-blocks px-4 py-2" v-show="blocks.length > 0">
+            <div class="wrapper-block__header w-6 mx-auto flex align-items-center justify-content-center">
+                <h2 v-if="props.chapter?.content?.title">{{ props.chapter?.content?.title }}</h2>
+                <span v-else class="flex gap-2">
+                    <InputText 
+                    class="" 
+                    id="label" 
+                    v-model="contentTitle" 
+                    size="small" 
+                    placeholder="Label"
+                    />
+                    <Button 
+                    class="px-2"
+                    icon="pi pi-check" 
+                    size="small" 
+                    severity="secondary"
+                    :loading="isLoadingEditContentTitle"
+                    @click="editContentTitle"
+                    />
+                </span>
+            </div>
             <Accordion :value="0" @tab-open="({ index }) => currentBlockId = index">
                 <AccordionPanel v-for="block in blocks" :key="block.id" :value="block.id">
-                    <AccordionHeader>{{ block.title }}</AccordionHeader>
+                    <AccordionHeader>
+                        <div class="block-header__title flex align-items-center gap-3">
+                            <h3 v-if="opennedEditTitleBlock !== block.id">{{ block.title }}</h3>
+                            <InputText 
+                            v-else 
+                            @click.stop 
+                            type="text" 
+                            v-model="titleBlock" 
+                            placeholder="Title"  
+                            size="small"
+                            />
+                            <Button 
+                            :id="`btn-edit-title-${block.id}`"
+                            @click.stop="() => openEditTileBlock(block.id, block.title)" 
+                            class="py-1"
+                            :icon="opennedEditTitleBlock === block.id? 'pi pi-check' : 'pi pi-pencil'" 
+                            size="small" 
+                            :loading="opennedEditTitleBlock === block.id && isLoadingEditTitleBlock"
+                            severity="secondary"
+                            />
+                        </div>
+                    </AccordionHeader>
                     <AccordionContent>
                         <div class="block-content-wrapper">
+             
                             <!-- Menu -->
                             <Menubar class="w-full flex justify-content-end px-4 py-0 sticky top-0 z-5" :model="blockHeaderItems">
                                 <template #item="{ item, props }">
@@ -34,10 +76,7 @@
                                     </a>
                                 </template>
                             </Menubar>
-                            <IftaLabel class="w-5 mt-2 mb-2 mx-auto" v-show="isShowInputBlockTitle(block)">
-                                <InputText class="w-full" id="label" v-model="label" />
-                                <label for="label">Label</label>
-                            </IftaLabel>
+                        
                             <editorInBlock 
                             v-if="isShowTextEditor(block)"
                             @update:content="(content) => editorContent = content"
@@ -79,12 +118,16 @@ const notice = useNotices();
 const currentBlockId = ref<null | number>(null); 
 const isLoadingSaveContent = ref(false);
 const isLoadingCreateBlock = ref(false);
+const opennedEditTitleBlock = ref<null | number>(null);
+const titleBlock = ref('');
+const isLoadingEditTitleBlock = ref(false);
 const opennedStateEditor = ref({
     blockId: null as null | number,
     isActive: false,
-})
+});
 const isActiveCreateForm = ref(false);
-const label = ref('');
+const contentTitle = ref('');
+const isLoadingEditContentTitle = ref(false);
 const editorContent = ref('');
 const initEditorContent = ref(null);
 const blockHeaderItems = ref([
@@ -115,9 +158,7 @@ const blocks = computed(() => {
 
 // Видимость инпута для label блока
 const isShowInputBlockTitle = computed(() => {
-    return (block: any) => {
-        return !block.label && opennedStateEditor.value.isActive;
-    }
+    return opennedStateEditor.value.isActive === true;
 });
 
 const isShowTextEditor = computed(() => {
@@ -134,7 +175,43 @@ const pathName = computed(() => {
         return props.chapter.pathName;
     }
     else return null;
-})
+});
+
+// Изменить заголовок content chapter
+function editContentTitle() {
+    if(contentTitle.value) {
+        // запрос на изменение title
+        try {
+            isLoadingEditContentTitle.value = true;
+            console.log('Запрос');
+        } finally {
+            isLoadingEditContentTitle.value = false;
+        }
+    }
+}
+
+// Открыть инпут редактирования block title
+function openEditTileBlock(blockId: number, title: string) {
+    // Если клик по кнопке был и значения переменных уже есть значит функция изменяет title блока
+    if(opennedEditTitleBlock.value && titleBlock.value) {
+        if(title === titleBlock.value) {
+            opennedEditTitleBlock.value = null;
+            return void (titleBlock.value = '');
+        }
+        // Запрос на изменение title у блок
+        else {
+            try {
+                isLoadingEditTitleBlock.value = true;
+                console.log('Запрос');
+            } finally {
+                isLoadingEditTitleBlock.value = false
+            }
+        }
+    } else {
+        opennedEditTitleBlock.value = blockId;
+        titleBlock.value = title;
+    }
+}
 
 // Выбрать блок для редактирования контента
 function chooseBlockForEdit({ item }: { item: any }) {
@@ -153,10 +230,10 @@ function activeCreateForm() {
 function saveContentBlock() {
     try {
         isLoadingSaveContent.value = true;
-        if (!label.value || !editorContent.value) {
+        if (!editorContent.value) {
             return void notice.show({ detail: 'Filled All Data!', severity: 'error' });
         }
-        console.log(label.value, label.value.length);
+        console.log(contentTitle.value, contentTitle.value.length);
     } catch (err) {
         throw err
     } finally {
@@ -217,17 +294,10 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
     flex-direction: column;
     gap: 1rem;
 }
-.data-block {
-    width: 100%;
-    height: 600px;
-    flex: 0 0 auto;
-    border: 1px solid red; 
-}
 .block-content-wrapper {
     width: 100%;
     height: 800px;
     overflow: auto;
-    padding: 0 0 2rem 0;
     color: var(--fg-color);
     background-color: var(--materials-chapter-block-bg);
 }

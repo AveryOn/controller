@@ -1,0 +1,8 @@
+
+:root {
+    --p-button-secondary-background: rgba(232, 232, 232, 0.676) !important;
+    --p-button-secondary-hover-background: rgb(181, 180, 180) !important;
+    --p-button-secondary-border-color: rgb(188, 188, 188) !important;
+    --p-button-secondary-hover-border-color: rgb(176, 175, 175) !important;
+    --p-button-secondary-color: rgb(88, 88, 88) !important;
+}

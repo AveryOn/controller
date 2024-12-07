@@ -41,15 +41,14 @@ const emit = defineEmits<{
 .editor-wrapper {
     position: relative;
     width: 100%;
-    height: 100%;
+    height: 95%;
+    overflow: auto;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-color);
-    color: black !important;
 }
 .save-btn {
-    position: absolute;
+    margin-left: auto;
     right: 2rem;
-    bottom: 1rem;
 }
 </style>
