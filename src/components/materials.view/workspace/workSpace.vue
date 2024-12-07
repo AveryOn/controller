@@ -1,5 +1,5 @@
 <template>
-    <div class="materials-workspace gap-2">
+    <div ref="workspaceDiv" class="materials-workspace gap-2">
         <!-- Форма создания нового блока -->
         <CreateBlockForm 
         :loading="isLoadingCreateBlock"
@@ -40,7 +40,7 @@
                     />
                 </span>
             </div>
-            <Accordion :value="0" @tab-open="({ index }) => currentBlockId = index">
+            <Accordion :value="currentBlockId"  @tab-open="({ index }) => currentBlockId = index">
                 <AccordionPanel v-for="block in blocks" :key="block.id" :value="block.id">
                     <AccordionHeader>
                         <div class="block-header__title flex align-items-center gap-3">
@@ -80,7 +80,7 @@
                             <editorInBlock 
                             v-if="isShowTextEditor(block)"
                             @update:content="(content) => editorContent = content"
-                            @save:content="() => saveContentBlock(block)"
+                            @save:content="saveContentBlock"
                             @close="closeTextEditor"
                             :closable="true"
                             :editor-styles="{ height: '100%', width: '100%' }"
@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps } from 'vue';
+import { computed, defineProps, onBeforeUnmount, onMounted } from 'vue';
 import { Chapter, ChapterBlock, CreateChapterBlock } from '../../../@types/entities/materials.types';
 import editorInBlock from './editorInBlock.vue';
 import { ref, type Ref } from 'vue';
@@ -108,7 +108,7 @@ import CreateBlockForm from './createBlockForm.vue';
 import { createChapterBlockApi, editChapterBlockApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
-import { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem';
+import { MenuItem } from 'primevue/menuitem';
 interface Props {
     chapter: Chapter | null;
 }
@@ -119,7 +119,9 @@ const props = withDefaults(defineProps<Props>(), {
 const notice = useNotices();
 const materialStore = useMaterialsStore();
 
+const workspaceDiv: Ref<null | HTMLDivElement> = ref(null);
 const currentBlockId = ref<null | number>(null); 
+
 const isLoadingSaveContent = ref(false);
 const isLoadingCreateBlock = ref(false);
 const opennedEditTitleBlock = ref<null | number>(null);
@@ -184,6 +186,14 @@ const pathName = computed(() => {
     else return null;
 });
 
+// Объект текущего отрытого блока
+const currentBlock = computed(() => {
+    const block = blocks.value.find((block) => block.id === currentBlockId.value);
+    if(!block) throw new Error('currentBlock не существует');
+    if(editorContent.value) block.content = editorContent.value;
+    return block;
+});
+
 // Изменить заголовок content chapter
 function editContentTitle() {
     if(contentTitle.value) {
@@ -195,6 +205,13 @@ function editContentTitle() {
             isLoadingEditContentTitle.value = false;
         }
     }
+}
+
+// Активировать текстовый редактор
+function openTextEditor() {
+    opennedStateEditor.value.blockId = currentBlockId.value;
+    opennedStateEditor.value.isActive = true;
+    initEditorContent.value = currentBlock.value.content;
 }
 
 // Открыть инпут редактирования block title
@@ -257,15 +274,16 @@ function activeCreateForm() {
 }
 
 // Сохранить контент для текущего блока
-async function saveContentBlock(block: ChapterBlock) {
+async function saveContentBlock() {
     try {
         isLoadingSaveContent.value = true;
         if(!pathName.value) throw new Error('[saveContentBlock]>> pathName не существует');
+        if(!currentBlock.value) throw new Error('[saveContentBlock]>> currentBlock не существует');
         if (!editorContent.value) {
             return void notice.show({ detail: 'Filled All Data!', severity: 'error' });
         }
         // Запрос на сохранение контента
-        const updBlock: ChapterBlock = { ...block, content: editorContent.value };
+        const updBlock: ChapterBlock = { ...currentBlock.value, content: editorContent.value };
         const result = await editChapterBlockApi({ 
             block: updBlock, 
             pathName: pathName.value,
@@ -300,6 +318,38 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
     }
 }
 
+// обработка нажатия клавиш
+function controllerKeys(event: KeyboardEvent) {
+    console.log(event);
+    if (event.ctrlKey && ['r', 'R', 'к', 'К'].includes(event.key)) {
+        // event.preventDefault();
+    }
+    // Активировать текстовый редактор
+    if (event.ctrlKey && ['у', 'У','e', 'E'].includes(event.key)) {
+        event.preventDefault();
+        openTextEditor();
+    }
+    // Закрыть Закрыть что-либо
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        if(opennedStateEditor.value.isActive) closeTextEditor();
+        else if(currentBlockId.value) currentBlockId.value = null;
+    }
+    // Ввод
+    if(event.ctrlKey && event.key === 'Enter') {
+        if(opennedStateEditor.value.isActive) {
+            saveContentBlock();
+        }
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('keydown', controllerKeys)
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', controllerKeys);
+})
 </script>
 
 <style scoped>

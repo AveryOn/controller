@@ -15,8 +15,9 @@
         :show-save="false"
         />
         <Button
-        class="save-btn px-4" 
-        label="Save" 
+        class="save-btn px-1" 
+        icon="pi pi-check"
+        size="small"
         @click="emit('save:content')" 
         :loading="props.loading"
         />
@@ -64,7 +65,9 @@ const emit = defineEmits<{
     top: .6rem;
 }
 .save-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
     margin-left: auto;
-    right: 2rem;
 }
 </style>
