@@ -11,7 +11,7 @@
             <div class="form-body px-6 py-5">
                 <div class="w-full flex flex-column gap-1">
                     <label for="block-title-inp">Block Title</label>
-                    <InputText id="block-title-inp" v-model="blockTitle" />
+                    <InputText @keyup.enter="submitForm" id="block-title-inp" v-model="blockTitle" />
                     <Message size="small" severity="secondary" variant="simple">Enter a new block title.</Message>
                 </div>
                 <Button 
@@ -51,8 +51,6 @@ const emit = defineEmits<{
 function submitForm() {
     emit('submitForm', { title: blockTitle.value });
 }
-
-
 </script>
 
 <style scoped>

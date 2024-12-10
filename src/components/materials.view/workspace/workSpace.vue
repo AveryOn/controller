@@ -353,6 +353,8 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
         data.pathName = pathName.value;
         if(props.chapter?.fullpath) data.fullpath! = props.chapter?.fullpath; 
         await createChapterBlockApi(data);
+        isActiveCreateForm.value = false;
+        window.location.reload();
     } catch (err) {
         console.error(err);
         throw err;
@@ -374,7 +376,8 @@ async function reqDeleteBlockMaterial() {
             fullpath: fullpath,
         }
         const result = await deleteChapterBlockApi(params);
-        console.log(result);
+        isAcitiveDeleteForm.value = false;
+        window.location.reload();
     } catch (err) {
         console.error(err);
         throw err;
