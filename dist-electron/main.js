@@ -4648,6 +4648,36 @@ async function editChapterBlock(params) {
     throw err;
   }
 }
+async function deleteChapterBlock(params) {
+  console.log("[deleteChapterBlock] => ", params);
+  try {
+    if (!params || !params.pathName) {
+      throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
+    }
+    const materials = await readFile(FSCONFIG);
+    if (params.pathName && !params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[deleteChapterBlock]>> Ключа content не существует!");
+      findedChapter.content.blocks = findedChapter.content.blocks.filter((block) => block.id !== params.blockId);
+      await writeFile(materials, FSCONFIG);
+      return findedChapter;
+    } else if (params.pathName && params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
+      if (!findedChapter || !findedChapter.items) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[1]");
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      if (!subChapter || !subChapter.content) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[2]!");
+      subChapter.content.blocks = subChapter.content.blocks.filter((block) => block.id !== params.blockId);
+      await writeFile(materials, FSCONFIG);
+      return subChapter;
+    } else {
+      throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[3]");
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -4737,6 +4767,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("edit-chapter-block-title", async (event, params) => {
     return await editChapterBlock(params);
+  });
+  ipcMain.handle("delete-chapter-block", async (event, params) => {
+    return await deleteChapterBlock(params);
   });
 });
 export {

@@ -11,7 +11,7 @@
         <deleteBlockForm 
         :loading="isLoadingDeleteBlock"
         v-model="isAcitiveDeleteForm"
-        @delete="() => console.log('DELETE')"
+        @delete="reqDeleteBlockMaterial"
         />
         <!-- Если блоков нет -->
         <div v-if="blocks.length <= 0" class="if-not-blocks gap-3">
@@ -109,13 +109,13 @@
 
 <script setup lang="ts">
 import { computed, defineProps, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
-import { Chapter, ChapterBlock, CreateChapterBlock } from '../../../@types/entities/materials.types';
+import { Chapter, ChapterBlock, CreateChapterBlock, DeleteChapterBlock } from '../../../@types/entities/materials.types';
 import editorInBlock from './editorInBlock.vue';
 import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
-import { createChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } from '../../../api/materials.api';
+import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
@@ -149,7 +149,7 @@ const opennedStateEditor = ref({
     blockId: null as null | number,
     isActive: false,
 });
-const opennedBlockForEdit = ref({
+const opennedBlockForDelete = ref({
     blockId: null as null | number,
 });
 const isActiveCreateForm = ref(false);
@@ -308,7 +308,7 @@ function chooseBlockForEdit(block: ChapterBlock) {
 
 // Выбрать блок для удаления
 function chooseBlockForDelete(block: ChapterBlock) {
-    opennedBlockForEdit.value.blockId = block.id;
+    opennedBlockForDelete.value.blockId = block.id;
     isAcitiveDeleteForm.value = true;
 }
 
@@ -364,8 +364,17 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
 // Запрос на удаление блока
 async function reqDeleteBlockMaterial() {
     try {
+        if(!opennedBlockForDelete.value.blockId) throw new Error('opennedBlockForDelete is empty');
         isLoadingDeleteBlock.value = true;
         // Запрос..
+        const fullpath = props.chapter?.fullpath; 
+        const params: DeleteChapterBlock = {
+            blockId: opennedBlockForDelete.value.blockId,
+            pathName: pathName.value,
+            fullpath: fullpath,
+        }
+        const result = await deleteChapterBlockApi(params);
+        console.log(result);
     } catch (err) {
         console.error(err);
         throw err;
@@ -396,7 +405,7 @@ function controllerKeys(e: KeyboardEvent) {
     if (e.key === 'Escape') {
         e.preventDefault();
         if(isAcitiveDeleteForm.value) {
-            opennedBlockForEdit.value.blockId = null;
+            opennedBlockForDelete.value.blockId = null;
             return void (isAcitiveDeleteForm.value = false);
         }
         if(opennedEditTitleBlock.value) return void (opennedEditTitleBlock.value = null);
