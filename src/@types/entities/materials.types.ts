@@ -85,6 +85,12 @@ export interface EditChapterBlockTitle {
     blockTitle: string;
 }
 
+export interface DeleteChapterBlock {
+    pathName: string;
+    fullpath?: string;
+    blockId: number;
+}
+
 export type IconMode = 'img' | 'sym' | 'svg' | string;
 export type IconType = 'pi' | 'mdi' | 'img';
 export type ChapterType = 'file' | 'dir' | string;

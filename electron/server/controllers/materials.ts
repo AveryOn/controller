@@ -5,6 +5,7 @@ import { Chapter,
     ChapterCreate, 
     ChapterForMenu, 
     CreateChapterBlock, 
+    DeleteChapterBlock, 
     DeleteChapterParams, 
     DeleteResponseMessage, 
     DeleteSubChapterParams, 
@@ -612,3 +613,13 @@ export async function editChapterBlock(params: EditChapterBlock & EditChapterBlo
         throw err;
     }
 }
+
+// Удаление блока из раздела
+export async function deleteChapterBlock(params: DeleteChapterBlock) {
+    try {
+        
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+} 

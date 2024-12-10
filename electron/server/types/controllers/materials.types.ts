@@ -65,6 +65,11 @@ export interface CreateChapterBlock {
     title: string;
 }
 
+export interface DeleteChapterBlock {
+    pathName: string;
+    fullpath?: string;
+    blockId: number;
+}
 export interface EditChapterBlock {
     pathName: string;
     fullpath?: string;

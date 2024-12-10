@@ -7,6 +7,12 @@
         @update:model-value="(state) => emit('update:isShowCreateBlock', state)"
         @submit-form="reqCreateBlockMaterial"
         />
+        <!-- Форма удаления блока -->
+        <deleteBlockForm 
+        :loading="isLoadingDeleteBlock"
+        v-model="isAcitiveDeleteForm"
+        @delete="() => console.log('DELETE')"
+        />
         <!-- Если блоков нет -->
         <div v-if="blocks.length <= 0" class="if-not-blocks gap-3">
             <h2 class="if-not-blocks__note">Empty</h2>
@@ -25,7 +31,6 @@
                 <h2 v-if="props.chapter?.content?.title">{{ props.chapter?.content?.title }}</h2>
                 <span v-else class="flex gap-2">
                     <InputText 
-                    class="" 
                     id="label" 
                     v-model="contentTitle" 
                     size="small" 
@@ -109,6 +114,7 @@ import editorInBlock from './editorInBlock.vue';
 import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
+import deleteBlockForm from './deleteBlockForm.vue';
 import { createChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
@@ -134,6 +140,7 @@ const currentBlockId = ref<null | number>(null);
 
 const isLoadingSaveContent = ref(false);
 const isLoadingCreateBlock = ref(false);
+const isLoadingDeleteBlock = ref(false);
 const opennedEditTitleBlock = ref<null | number>(null);
 const inputTitleBlock: Ref<HTMLInputElement | null> = ref(null);
 const titleBlock = ref<string | null>(null);
@@ -142,7 +149,11 @@ const opennedStateEditor = ref({
     blockId: null as null | number,
     isActive: false,
 });
+const opennedBlockForEdit = ref({
+    blockId: null as null | number,
+});
 const isActiveCreateForm = ref(false);
+const isAcitiveDeleteForm = ref(false);
 const contentTitle = ref('');
 const isLoadingEditContentTitle = ref(false);
 const editorContent: Ref<null | string> = ref(null);
@@ -284,7 +295,9 @@ function handlerMenuItem(item: MenuItem, block: ChapterBlock) {
     if(item.label === 'Edit') {
         chooseBlockForEdit(block);
     }
-    console.log(item, block);
+    if(item.label === 'Delete') {
+        chooseBlockForDelete(block);
+    }
 }
 // Выбрать блок для редактирования контента
 function chooseBlockForEdit(block: ChapterBlock) {
@@ -294,9 +307,9 @@ function chooseBlockForEdit(block: ChapterBlock) {
 }
 
 // Выбрать блок для удаления
-function chooseBlockForDelete() {
-    opennedStateEditor.value.blockId = currentBlockId.value;
-    opennedStateEditor.value.isActive = true;
+function chooseBlockForDelete(block: ChapterBlock) {
+    opennedBlockForEdit.value.blockId = block.id;
+    isAcitiveDeleteForm.value = true;
 }
 
 // Включить форму создания нового блока
@@ -342,9 +355,23 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
         await createChapterBlockApi(data);
     } catch (err) {
         console.error(err);
-        throw err
+        throw err;
     } finally {
         isLoadingCreateBlock.value = false;
+    }
+}
+
+// Запрос на удаление блока
+async function reqDeleteBlockMaterial() {
+    try {
+        isLoadingDeleteBlock.value = true;
+        // Запрос..
+    } catch (err) {
+        console.error(err);
+        throw err;
+    } 
+    finally {
+        isLoadingDeleteBlock.value = false;
     }
 }
 
@@ -368,6 +395,10 @@ function controllerKeys(e: KeyboardEvent) {
     // Закрыть Закрыть что-либо
     if (e.key === 'Escape') {
         e.preventDefault();
+        if(isAcitiveDeleteForm.value) {
+            opennedBlockForEdit.value.blockId = null;
+            return void (isAcitiveDeleteForm.value = false);
+        }
         if(opennedEditTitleBlock.value) return void (opennedEditTitleBlock.value = null);
         if(opennedStateEditor.value.isActive) closeTextEditor();
         else if(currentBlockId.value) return currentBlockId.value = null;
