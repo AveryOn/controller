@@ -32,7 +32,6 @@
 import { ref } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
 import { defineEmits, defineProps } from 'vue';
-import { CreateChapterBlock } from '../../../@types/entities/materials.types';
 
 interface Props {
     modelValue?: boolean;
@@ -46,7 +45,7 @@ const blockTitle = ref('');
 
 const emit = defineEmits<{
     (e: 'update:modelValue', visible: boolean): void;
-    (e: 'submitForm', data: CreateChapterBlock): void;
+    (e: 'submitForm', data: { title: string }): void;
 }>();
 
 function submitForm() {

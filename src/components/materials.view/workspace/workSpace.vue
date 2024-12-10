@@ -42,17 +42,17 @@
                 </span>
             </div>
             <Accordion :value="currentBlockId"  @tab-open="({ index }) => currentBlockId = index">
-                <AccordionPanel v-for="block in blocks" :key="block.id" :value="block.id">
+                <AccordionPanel v-for="block in sortedBlocks" :key="block.id" :value="block.id">
                     <AccordionHeader>
                         <div class="block-header__title flex align-items-center gap-3">
-                            <h3 v-if="opennedEditTitleBlock !== block.id">{{ titleBlock || block.title }}</h3>
+                            <h3 v-if="opennedEditTitleBlock !== block.id">{{ block.title }}</h3>
                             <InputText 
                             v-else
                             id="inputTitleBlock"
                             ref="inputTitleBlock"
                             @click.stop.prevent
                             @keydown.space.stop.prevent="titleBlock+=' '"
-                            @keydown.enter.stop.prevent="() => openEditTileBlock(block.id, block.title)"
+                            @keydown.enter.stop.prevent="() => openEditTileBlock(block.id, block.title, block)"
                             type="text" 
                             v-model="titleBlock" 
                             placeholder="Title"  
@@ -60,7 +60,7 @@
                             />
                             <Button 
                             :id="`btn-edit-title-${block.id}`"
-                            @click.stop.prevent="() => openEditTileBlock(block.id, block.title)" 
+                            @click.stop.prevent="() => openEditTileBlock(block.id, block.title, block)" 
                             class="py-1"
                             :icon="opennedEditTitleBlock === block.id? 'pi pi-check' : 'pi pi-pencil'" 
                             size="small" 
@@ -113,6 +113,7 @@ import { createChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } 
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
+import { sortedMerge } from '../../../utils/structures';
 
 interface Props {
     chapter: Chapter | null;
@@ -174,6 +175,10 @@ const blocks = computed(() => {
     return [];
 });
 
+const sortedBlocks = computed(() => {
+    return sortedMerge(blocks.value, 'updatedAt', 'least');
+});
+
 // Видимость инпута для label блока
 const isShowInputBlockTitle = computed(() => {
     return opennedStateEditor.value.isActive === true;
@@ -229,7 +234,7 @@ function openTextEditor() {
 }
 
 // Открыть инпут редактирования block title
-async function openEditTileBlock(blockId: number, title: string) {
+async function openEditTileBlock(blockId: number, title: string, block?: ChapterBlock) {
     // Если клик по кнопке был и значения переменных уже есть значит функция изменяет title блока
     if(opennedEditTitleBlock.value && titleBlock.value) {
         if(title === titleBlock.value) {
@@ -240,7 +245,6 @@ async function openEditTileBlock(blockId: number, title: string) {
         else {
             try {
                 isLoadingEditTitleBlock.value = true;
-                console.log('Запрос', currentBlock.value);
                 const result = await editChapterBlockTitleApi({
                     blockId: currentBlock.value.id,
                     blockTitle: titleBlock.value,
@@ -249,7 +253,8 @@ async function openEditTileBlock(blockId: number, title: string) {
                 });
                 materialStore.materialChapters = result;
                 opennedEditTitleBlock.value = null;
-                // titleBlock.value = null;
+                if(block) block.title = titleBlock.value;
+                titleBlock.value = null;
             } finally {
                 isLoadingEditTitleBlock.value = false
             }
@@ -333,9 +338,8 @@ async function reqCreateBlockMaterial(data: CreateChapterBlock) {
             return void notice.show({ detail: 'Title length must be either greater or equal 3', severity: 'error' });
         }
         data.pathName = pathName.value;
-        if(props.chapter?.fullpath) data.fullpath = props.chapter?.fullpath; 
+        if(props.chapter?.fullpath) data.fullpath! = props.chapter?.fullpath; 
         await createChapterBlockApi(data);
-        
     } catch (err) {
         console.error(err);
         throw err
@@ -377,7 +381,7 @@ function controllerKeys(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-    window.addEventListener('keydown', controllerKeys)
+    window.addEventListener('keydown', controllerKeys);
 });
 
 onBeforeUnmount(() => {
