@@ -4,6 +4,7 @@
             <svg-icon class="head-icon" type="mdi" :path="mdiSpaceInvaders" :size="18"></svg-icon>
             <span class="flex head-label">Materials {{ openChapterName }}</span> 
             <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate" style="height: 2px"></ProgressBar>
+            <svg-icon class="close-btn" type="mdi" :path="mdiCloseBoxOutline" :size="18" @click="toDefaultPage"></svg-icon>
         </header>
         <div class="materials-main">
             <addChapter 
@@ -26,7 +27,7 @@ import { computed, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 import SvgIcon from '@jamescoyle/vue-icon';
-import { mdiSpaceInvaders } from '@mdi/js';
+import { mdiSpaceInvaders, mdiCloseBoxOutline } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
 import { createChapter } from '../api/materials.api';
 import { useMaterialsStore } from '../stores/materials.store';
@@ -57,6 +58,12 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
         router.push({ name: 'materials' });
     }
 }
+
+// Переход на default 
+function toDefaultPage() {
+    localStorage.removeItem('current_route');
+    router.push({ name: 'default' });
+}
 </script>
 
 <style scoped>
@@ -80,6 +87,24 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
     background-color: var(--materials-header-bg);
     color: var(--materials-header-fg);
     font-weight: bolder;
+}
+.close-btn {
+    position: absolute;
+    right: 1rem;
+    top: 0;
+    background-color: rgba(0,0,0,0);
+    outline: rgba(0,0,0,0);
+    color: var(--materials-header-fg);
+    font-weight: 600;
+    padding: 0;
+    height: max-content;
+    width: max-content;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+.close-btn:hover {
+    transition: color 0.3s ease;
+    color: var(--materials-header-fg);
 }
 .progress-bar {
     width: 100%;
