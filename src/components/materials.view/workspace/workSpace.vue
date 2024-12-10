@@ -333,6 +333,7 @@ async function saveContentBlock() {
             pathName: pathName.value,
             fullpath: props.chapter?.fullpath,
         });
+        editorContent.value = null;
         materialStore.materialChapters = result;
     } catch (err) {
         throw err
