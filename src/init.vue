@@ -13,14 +13,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onBeforeMount, onMounted, ref } from 'vue';
 import cToast from './components/base/cToast.vue';
 import { useMainStore } from './stores/main.store';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const mainStore = useMainStore();
 const appTitle = document.getElementById('app-title') as HTMLTitleElement;
 const isGlobalLoading = ref(true);
+interface CurrentRoute {
+    name: string;
+    query: any;
+    params: any;
+}
 
+onBeforeMount(() => {
+    const currentRoute: CurrentRoute = JSON.parse(localStorage.getItem('current_route')!);
+    if(currentRoute) {
+        router.push({name: currentRoute.name, query: currentRoute.query, params: currentRoute.params});
+    }
+});
 onMounted(() => {
     setTimeout(() => {
         isGlobalLoading.value = false;
@@ -49,5 +62,6 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 999999 !important;
 } 
 </style>

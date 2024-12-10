@@ -29,7 +29,7 @@ export const useMainStore = defineStore('mainStore', () => {
             {
                 label: 'Materials',
                 icon: 'pi pi-book',
-                route: 'materials',
+                // route: 'materials',
                 command: materialStore.getMaterialsMenu,
                 items: materialStore.materialChaptersMenu
             },

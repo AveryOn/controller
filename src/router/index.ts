@@ -28,6 +28,7 @@ const router = createRouter({
                         {
                             path: '/materials/:chapter?',
                             name: 'materials',
+                            meta: { private: true },
                             component: MaterialsView,
                         }
                     ]
@@ -57,6 +58,11 @@ router.beforeEach((to, from, next) => {
         if (to.name === 'login') {
             return next({ name: 'main' });
         }
+        localStorage.setItem('current_route', JSON.stringify({ 
+            name: to.name, 
+            params: to.params, 
+            query: to.query 
+        }));
         next();
     }
 });
