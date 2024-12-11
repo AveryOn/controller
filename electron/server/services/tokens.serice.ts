@@ -34,9 +34,9 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenData>
     try {
         if(!token) throw new Error('[verifyAccessToken]>> INVALID_INPUT');
         const payload: AccessTokenData = JSON.parse(await decryptJsonData(token, KEY));
-        // if(payload.expiresAt < Date.now()) {
-        //     throw new Error('[verifyAccessToken]>> EXPIRES_LIFE_TOKEN');
-        // }
+        if(payload.expires <= Date.now()) {
+            throw new Error('[verifyAccessToken]>> EXPIRES_LIFE_TOKEN');
+        }
         return payload;
     } catch (err) {
         console.error(err);

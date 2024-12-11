@@ -112,7 +112,7 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
             const token = await createAccessToken({ 
                 id: readyUser.id, 
                 username: readyUser.username 
-            }, { h: 1, m: 35, s: 14 });
+            }, { m: 1, s: 20 });
             return {
                 token: token,
                 user: readyUser,
