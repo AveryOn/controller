@@ -13,6 +13,7 @@
             <!-- Label -->
             <InputText 
             v-if="computeVisible['label']"
+            @keyup.enter="send"
             class="w-full" 
             type="text"
             v-model="form.label" 
