@@ -7,19 +7,20 @@ const R = 8;        // Параметр блока
 const P = 1;        // Параметр параллельности
 
 // Хеширование с помощью scrypt
-export async function encrypt(input: string): Promise<{ hash: string, salt: string }> {
+export async function encrypt(input: string): Promise<string> {
     if(!input) throw new Error('input - обязательный аргумент');
     if(typeof input !== 'string') throw new Error('input - должен быть типа string');
     return new Promise((resolve, reject) => {
         try {
             // Генерация соль
-            const salt = crypto.randomBytes(16).toString('hex');  // Соль — случайная строка, которая добавляется к паролю
-            crypto.scrypt(input, salt, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
+            const SALT = crypto.randomBytes(16).toString('hex');  // Соль — случайная строка, которая добавляется к паролю
+            crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
                 if (err) {
                     throw err;
                 }
                 // Вывод хеша и соли
-                resolve({ hash: derivedKey.toString('hex'), salt: salt });
+                const readyHash = SALT + derivedKey.toString('hex');
+                resolve(readyHash);
             });
         } catch (err) {
             reject(err);
@@ -28,17 +29,19 @@ export async function encrypt(input: string): Promise<{ hash: string, salt: stri
 }
 
 // Верификация строки
-export async function verify(input: string, salt: string, hash: string): Promise<boolean> {
+export async function verify(input: string, hash: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        if(!input || !salt || !hash) throw new Error('input, salt, hash - обязательные аргмуенты');
-        if(typeof input !== 'string' || typeof salt !== 'string' || typeof hash !== 'string') {
-            throw new Error('аргументы input, salt, hash должны быть типа string');
+        if(!input || !hash) throw new Error('input, hash - обязательные аргмуенты');
+        if(typeof input !== 'string' || typeof hash !== 'string') {
+            throw new Error('аргументы input, hash должны быть типа string');
         }
         try {
-            crypto.scrypt(input, salt, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
+            const SALT = hash.slice(0, 32);
+            const readyHash = hash.slice(32);
+            crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
                 if (err) throw err;
                 // Проверка совпадения хешей
-                if (derivedKey.toString('hex') === hash) {
+                if (derivedKey.toString('hex') === readyHash) {
                     resolve(true);
                 } else {
                     resolve(false);

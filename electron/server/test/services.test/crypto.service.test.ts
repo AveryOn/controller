@@ -15,27 +15,27 @@ describe('[Service: crypto]', () => {
         test('encrypt -> на вход строка', async () => {
             const result = await encrypt('simple_text');
             expect(result).not.toBeNull();
-            expect(typeof result === 'object').toBeTruthy();
+            expect(typeof result === 'string').toBeTruthy();
         });
     });
 
     // Тестирование функции verify
     describe('Function: { verify }', () => {
         test('verify -> нет данных на вход', async () => {
-            await expect(verify()).rejects.toThrowError(/^input, salt, hash - обязательные аргмуенты$/);
+            await expect(verify()).rejects.toThrowError(/^input, hash - обязательные аргмуенты$/);
         });
         test('verify -> для input передано число', async () => {
-            await expect(verify(123)).rejects.toThrowError(/^input, salt, hash - обязательные аргмуенты$/);
+            await expect(verify(123)).rejects.toThrowError(/^input, hash - обязательные аргмуенты$/);
         });
         test('verify -> input: number, salt: string, hash: string', async () => {
-            await expect(verify(123, 'text', 'text')).rejects.toThrowError(/^аргументы input, salt, hash должны быть типа string$/);
+            await expect(verify(123, 'text', 'text')).rejects.toThrowError(/^аргументы input, hash должны быть типа string$/);
         });
         test('verify -> все аргументы строки', async () => {
             expect(await verify('text', 'text', 'text')).toBe(false);
         });
         test('verify -> все аргументы верные', async () => {
-            const { hash, salt } = await encrypt('sample');
-            expect(await verify('sample', salt, hash)).toBe(true);
+            const hash = await encrypt('sample');
+            expect(await verify('sample', hash)).toBe(true);
         });
     });
 
