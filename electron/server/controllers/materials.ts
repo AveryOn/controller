@@ -1,6 +1,23 @@
 import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
-import { Chapter, ChapterBlock, ChapterCreate, ChapterForMenu, CreateChapterBlock, DeleteChapterParams, DeleteResponseMessage, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapter, SubChapterCreate } from "../types/controllers/materials.types";
+import { Chapter, 
+    ChapterBlock, 
+    ChapterCreate, 
+    ChapterForMenu, 
+    CreateChapterBlock, 
+    DeleteChapterBlock, 
+    DeleteChapterParams, 
+    DeleteResponseMessage, 
+    DeleteSubChapterParams, 
+    EditChapterBlock, 
+    EditChapterBlockTitle, 
+    EditChapterParams, 
+    GetChapterOneParams, 
+    GetChaptersConfig, 
+    GetSubChapterOneParams, 
+    SubChapter, 
+    SubChapterCreate 
+} from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 
@@ -532,3 +549,108 @@ export async function createChapterBlock(params: CreateChapterBlock) {
         throw err;
     }
 }
+
+// Обновление данных блока раздела
+function updateBlock(oldBlock: ChapterBlock, newBlock: ChapterBlock) {
+    if(!oldBlock || !newBlock) throw new Error('[editChapterBlock]>>[updateBlock]>> INVALID_INPUT');
+    oldBlock.content = newBlock.content;
+    oldBlock.title = newBlock.title;
+}
+// Редактирование нового блока для раздела
+export async function editChapterBlock(params: EditChapterBlock & EditChapterBlockTitle) {
+    console.log('[editChapterBlock] => ', params);
+    try {
+        if(!params || !params.pathName) {
+            throw new Error('[editChapterBlock]>> INVALID_INPUT');
+        }
+        const materials: Chapter[] = await readFile(FSCONFIG);
+        const blockId = params?.block?.id || params?.blockId;
+        const timestamp = formatDate();
+        // Поиск уровня для записи блока в соответствующий раздел/подраздел
+        // Поиск раздела
+        if(params.pathName && !params.fullpath) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            if(!findedChapter?.content) throw new Error('[editChapterBlock]>> Ключа content не существует!');
+            // Поиск нужного блока
+            const findedBlock = findedChapter.content.blocks.find((block: ChapterBlock) => block.id === blockId);
+            if(!findedBlock) throw new Error('[editChapterBlock]>> NOT_FOUND_RECORD[1]');
+            if(!params.blockTitle) {
+                updateBlock(findedBlock, params.block); // обновление исходного объекта новыми данными, сохраняя ссылки
+            } else {
+                findedBlock.title = params.blockTitle;
+            }
+            // Обновление временных меток
+            findedChapter.updatedAt = timestamp;
+            findedBlock.updatedAt = timestamp;
+        }
+        // Поиск подраздела
+        else if(params.pathName && params.fullpath) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            const correctPath: string[] = trimPath(params.fullpath, { split: true }) as string[];
+            if(!findedChapter || !findedChapter.items) throw new Error('[editChapterBlock]>> INTERNAL_ERROR[1]');
+            const subChapter: SubChapter = findLevel(findedChapter.items, correctPath.slice(1)) as SubChapter;
+            if(!subChapter || !subChapter.content) throw new Error('[editChapterBlock]>> INTERNAL_ERROR[2]!');
+            // Поиск нужного блока
+            const findedBlock = subChapter.content.blocks.find((block: ChapterBlock) => block.id === blockId);
+            if(!findedBlock) throw new Error('[editChapterBlock]>> NOT_FOUND_RECORD[2]');
+            if(!params.blockTitle) {
+                updateBlock(findedBlock, params.block); // обновление исходного объекта новыми данными, сохраняя ссылки
+            } else {
+                findedBlock.title = params.blockTitle;
+            }
+            // Обновление временных меток
+            findedChapter.updatedAt = timestamp;
+            findedBlock.updatedAt = timestamp;
+        }
+        else {
+            throw new Error('[editChapterBlock]>> INTERNAL_ERROR[3]');
+        }
+        // Запись изменений в БД
+        await writeFile(materials, FSCONFIG);
+        return materials;
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Удаление блока из раздела
+export async function deleteChapterBlock(params: DeleteChapterBlock): Promise<Chapter | SubChapter> {
+    console.log('[deleteChapterBlock] => ', params);
+    try {
+        if(!params || !params.pathName) {
+            throw new Error('[deleteChapterBlock]>> INVALID_INPUT');
+        }
+        const materials: Chapter[] = await readFile(FSCONFIG);
+        // Поиск уровня для удаления блока из раздела/подраздела
+        // Поиск раздела
+        if(params.pathName && !params.fullpath) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            if(!findedChapter?.content) throw new Error('[deleteChapterBlock]>> Ключа content не существует!');
+            // Удаление блока
+            findedChapter.content.blocks = findedChapter.content.blocks.filter((block: ChapterBlock) => block.id !== params.blockId);
+            // Запись изменений в БД
+            await writeFile(materials, FSCONFIG);
+            return findedChapter
+        }
+        // Поиск подраздела
+        else if(params.pathName && params.fullpath) {
+            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+            const correctPath: string[] = trimPath(params.fullpath, { split: true }) as string[];
+            if(!findedChapter || !findedChapter.items) throw new Error('[deleteChapterBlock]>> INTERNAL_ERROR[1]');
+            const subChapter: SubChapter = findLevel(findedChapter.items, correctPath.slice(1)) as SubChapter;
+            if(!subChapter || !subChapter.content) throw new Error('[deleteChapterBlock]>> INTERNAL_ERROR[2]!');
+            // Удаление блока
+            subChapter.content.blocks = subChapter.content.blocks.filter((block: ChapterBlock) => block.id !== params.blockId);
+            // Запись изменений в БД
+            await writeFile(materials, FSCONFIG);
+            return subChapter;
+        }
+        else {
+            throw new Error('[deleteChapterBlock]>> INTERNAL_ERROR[3]');
+        }
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+} 

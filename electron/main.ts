@@ -4,9 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, CreateChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteSubChapter, editChapter, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
-import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
+import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
+import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -18,6 +17,7 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+
 
 let win: BrowserWindow | null
 
@@ -68,9 +68,8 @@ app.on('activate', () => {
     }
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     createWindow();
-
     // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
 
     // Обработчики IPC
@@ -143,5 +142,20 @@ app.whenReady().then(() => {
     // Создание блока для раздела
     ipcMain.handle("create-chapter-block", async (event, params: CreateChapterBlock) => {
         return await createChapterBlock(params);
+    });
+
+    // Редактирование блока для раздела
+    ipcMain.handle("edit-chapter-block", async (event, params: EditChapterBlock & EditChapterBlockTitle) => {
+        return await editChapterBlock(params);
+    });
+
+    // Редактирование заголовка блока для раздела
+    ipcMain.handle("edit-chapter-block-title", async (event, params: EditChapterBlockTitle & EditChapterBlock) => {
+        return await editChapterBlock(params);
+    });
+
+    // Удаление блока из раздела
+    ipcMain.handle("delete-chapter-block", async (event, params: DeleteChapterBlock) => {
+        return await deleteChapterBlock(params);
     });
 })

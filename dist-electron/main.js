@@ -5,37 +5,40 @@ import path$1 from "node:path";
 import path from "path";
 import fs from "fs/promises";
 import crypto from "crypto";
-const keylen = 64;
+const KEYLEN = 64;
 const N = 16384;
-const r = 8;
-const p = 1;
+const R = 8;
+const P = 1;
 async function encrypt(input) {
   if (!input) throw new Error("input - обязательный аргумент");
   if (typeof input !== "string") throw new Error("input - должен быть типа string");
   return new Promise((resolve, reject) => {
     try {
-      const salt = crypto.randomBytes(16).toString("hex");
-      crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+      const SALT = crypto.randomBytes(16).toString("hex");
+      crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
         if (err) {
           throw err;
         }
-        resolve({ hash: derivedKey.toString("hex"), salt });
+        const readyHash = SALT + derivedKey.toString("hex");
+        resolve(readyHash);
       });
     } catch (err) {
       reject(err);
     }
   });
 }
-async function verify(input, salt, hash) {
+async function verify(input, hash) {
   return new Promise((resolve, reject) => {
-    if (!input || !salt || !hash) throw new Error("input, salt, hash - обязательные аргмуенты");
-    if (typeof input !== "string" || typeof salt !== "string" || typeof hash !== "string") {
-      throw new Error("аргументы input, salt, hash должны быть типа string");
+    if (!input || !hash) throw new Error("input, hash - обязательные аргмуенты");
+    if (typeof input !== "string" || typeof hash !== "string") {
+      throw new Error("аргументы input, hash должны быть типа string");
     }
     try {
-      crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+      const SALT = hash.slice(0, 32);
+      const readyHash = hash.slice(32);
+      crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
         if (err) throw err;
-        if (derivedKey.toString("hex") === hash) {
+        if (derivedKey.toString("hex") === readyHash) {
           resolve(true);
         } else {
           resolve(false);
@@ -45,6 +48,53 @@ async function verify(input, salt, hash) {
       reject(err);
     }
   });
+}
+async function encryptJsonData(data, signature) {
+  if (!data) throw new Error("[Services.encryptJsonData]>> NOT_DATA");
+  return new Promise((resolve, reject) => {
+    try {
+      const ALG = "aes-256-cbc";
+      const SALT = crypto.randomBytes(16).toString("hex");
+      const KEY2 = crypto.scryptSync(signature, SALT, 32);
+      const IV = crypto.randomBytes(16);
+      let readyData = null;
+      if (data && typeof data === "object") {
+        readyData = JSON.stringify(data);
+      } else {
+        readyData = String(data);
+      }
+      const cipher = crypto.createCipheriv(ALG, KEY2, IV);
+      let encryptedData = cipher.update(readyData, "utf8", "hex");
+      readyData = null;
+      encryptedData += cipher.final("hex");
+      resolve(IV.toString("hex") + encryptedData + SALT);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+function prepareExpireTime(expires) {
+  let ready = 0;
+  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
+  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
+  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
+  ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  ready += 1e3 * 60 * Math.max(expires.m, 1);
+  ready += 1e3 * Math.max(expires.s, 1);
+  ready += Date.now();
+  return ready;
+}
+const KEY = "61dbbc0d980e1795d52e3e63b2adae4a3dfa438c0cb0e83a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+async function createAccessToken(payload, expires) {
+  try {
+    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
+    const expiresStamp = prepareExpireTime(expires);
+    const token2 = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
+    return token2;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
 const USER_FILENAME = "users.json";
 async function writeUsersDataFs(data) {
@@ -96,12 +146,11 @@ async function createUser(params) {
         throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
       }
     });
-    const { hash, salt } = await encrypt(params.password);
+    const hash = await encrypt(params.password);
     const newUser = {
       id: users.length + 1,
       username: params.username,
       password: hash,
-      hash_salt: salt,
       avatar: null
     };
     users.push(newUser);
@@ -120,15 +169,19 @@ async function loginUser(params) {
     if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
     }
-    const isVerifyPassword = await verify(params.password, findedUser.hash_salt, findedUser.password).catch((err) => {
-      console.log("ERROR", err);
+    const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
+      console.log("[loginUser]>> INTERNAL_ERROR", err);
     });
     if (isVerifyPassword === true) {
       const readyUser = { ...findedUser };
-      Reflect.deleteProperty(readyUser, "password");
       Reflect.deleteProperty(readyUser, "hash_salt");
+      Reflect.deleteProperty(readyUser, "password");
+      const token2 = await createAccessToken({
+        id: readyUser.id,
+        username: readyUser.username
+      }, { h: 1, m: 35, s: 14 });
       return {
-        token: "tested_hash_token_type_jwt",
+        token: token2,
         user: readyUser
       };
     } else {
@@ -147,11 +200,10 @@ async function updatePassword(params) {
     if (!findedUser) {
       throw "[updatePassword]>> NOT_EXISTS_RECORD";
     }
-    if (!await verify(params.oldPassword, findedUser.hash_salt, findedUser.password)) {
+    if (!await verify(params.oldPassword, findedUser.password)) {
       throw "[updatePassword]>> INVALID_CREDENTIALS";
     }
-    const { hash, salt } = await encrypt(params.newPassword);
-    findedUser.hash_salt = salt;
+    const hash = await encrypt(params.newPassword);
     findedUser.password = hash;
     users = users.map((user) => {
       if (user.id === findedUser.id) {
@@ -4596,6 +4648,88 @@ async function createChapterBlock(params) {
     throw err;
   }
 }
+function updateBlock(oldBlock, newBlock) {
+  if (!oldBlock || !newBlock) throw new Error("[editChapterBlock]>>[updateBlock]>> INVALID_INPUT");
+  oldBlock.content = newBlock.content;
+  oldBlock.title = newBlock.title;
+}
+async function editChapterBlock(params) {
+  var _a;
+  console.log("[editChapterBlock] => ", params);
+  try {
+    if (!params || !params.pathName) {
+      throw new Error("[editChapterBlock]>> INVALID_INPUT");
+    }
+    const materials = await readFile(FSCONFIG);
+    const blockId = ((_a = params == null ? void 0 : params.block) == null ? void 0 : _a.id) || (params == null ? void 0 : params.blockId);
+    const timestamp = formatDate();
+    if (params.pathName && !params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
+      const findedBlock = findedChapter.content.blocks.find((block) => block.id === blockId);
+      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
+      if (!params.blockTitle) {
+        updateBlock(findedBlock, params.block);
+      } else {
+        findedBlock.title = params.blockTitle;
+      }
+      findedChapter.updatedAt = timestamp;
+      findedBlock.updatedAt = timestamp;
+    } else if (params.pathName && params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
+      if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
+      const findedBlock = subChapter.content.blocks.find((block) => block.id === blockId);
+      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
+      if (!params.blockTitle) {
+        updateBlock(findedBlock, params.block);
+      } else {
+        findedBlock.title = params.blockTitle;
+      }
+      findedChapter.updatedAt = timestamp;
+      findedBlock.updatedAt = timestamp;
+    } else {
+      throw new Error("[editChapterBlock]>> INTERNAL_ERROR[3]");
+    }
+    await writeFile(materials, FSCONFIG);
+    return materials;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function deleteChapterBlock(params) {
+  console.log("[deleteChapterBlock] => ", params);
+  try {
+    if (!params || !params.pathName) {
+      throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
+    }
+    const materials = await readFile(FSCONFIG);
+    if (params.pathName && !params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[deleteChapterBlock]>> Ключа content не существует!");
+      findedChapter.content.blocks = findedChapter.content.blocks.filter((block) => block.id !== params.blockId);
+      await writeFile(materials, FSCONFIG);
+      return findedChapter;
+    } else if (params.pathName && params.fullpath) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
+      if (!findedChapter || !findedChapter.items) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[1]");
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      if (!subChapter || !subChapter.content) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[2]!");
+      subChapter.content.blocks = subChapter.content.blocks.filter((block) => block.id !== params.blockId);
+      await writeFile(materials, FSCONFIG);
+      return subChapter;
+    } else {
+      throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[3]");
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$1.join(__dirname, "..");
@@ -4636,7 +4770,7 @@ app.on("activate", () => {
     createWindow();
   }
 });
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
   ipcMain.handle("get-users", async (event, config) => {
     return await getUsers(config);
@@ -4679,6 +4813,15 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("create-chapter-block", async (event, params) => {
     return await createChapterBlock(params);
+  });
+  ipcMain.handle("edit-chapter-block", async (event, params) => {
+    return await editChapterBlock(params);
+  });
+  ipcMain.handle("edit-chapter-block-title", async (event, params) => {
+    return await editChapterBlock(params);
+  });
+  ipcMain.handle("delete-chapter-block", async (event, params) => {
+    return await deleteChapterBlock(params);
   });
 });
 export {

@@ -87,6 +87,7 @@ function selectItem(item: any) {
     background-color: rgba(0,0,0,0);
     display: flex;
     align-items: center;
+    user-select: none;
 }
 .item-icon {
     color: var(--cf-primary-2);

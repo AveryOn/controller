@@ -15,27 +15,27 @@ describe('[Service: crypto]', () => {
         test('encrypt -> на вход строка', async () => {
             const result = await encrypt('simple_text');
             expect(result).not.toBeNull();
-            expect(typeof result === 'object').toBeTruthy();
+            expect(typeof result === 'string').toBeTruthy();
         });
     });
 
     // Тестирование функции verify
     describe('Function: { verify }', () => {
         test('verify -> нет данных на вход', async () => {
-            await expect(verify()).rejects.toThrowError(/^input, salt, hash - обязательные аргмуенты$/);
+            await expect(verify()).rejects.toThrowError(/^input, hash - обязательные аргмуенты$/);
         });
         test('verify -> для input передано число', async () => {
-            await expect(verify(123)).rejects.toThrowError(/^input, salt, hash - обязательные аргмуенты$/);
+            await expect(verify(123)).rejects.toThrowError(/^input, hash - обязательные аргмуенты$/);
         });
         test('verify -> input: number, salt: string, hash: string', async () => {
-            await expect(verify(123, 'text', 'text')).rejects.toThrowError(/^аргументы input, salt, hash должны быть типа string$/);
+            await expect(verify(123, 'text', 'text')).rejects.toThrowError(/^аргументы input, hash должны быть типа string$/);
         });
         test('verify -> все аргументы строки', async () => {
             expect(await verify('text', 'text', 'text')).toBe(false);
         });
         test('verify -> все аргументы верные', async () => {
-            const { hash, salt } = await encrypt('sample');
-            expect(await verify('sample', salt, hash)).toBe(true);
+            const hash = await encrypt('sample');
+            expect(await verify('sample', hash)).toBe(true);
         });
     });
 
@@ -54,24 +54,24 @@ describe('[Service: crypto]', () => {
             const result = await encryptJsonData({ key: 'text' }, 'signature');
             // result ~ 9582dd17ff79b8794acc500bed3d1356026aa1bfa5b08eb636164bac37666b2f
             expect(typeof result === 'string').toBeTruthy();
-            expect(result.length).toBe(64);
+            expect(result.length).toBe(96);
         });
         test('encryptJsonData -> для data число', async () => {
             const result = await encryptJsonData(123, 'signature');
             // result ~ 9582dd17ff79b8794acc500bed3d1356026aa1bfa5b08eb636164bac37666b2f
             expect(typeof result === 'string').toBeTruthy();
-            expect(result.length).toBe(64);
+            expect(result.length).toBe(96);
         });
         test('encryptJsonData -> для data boolean', async () => {
             const result = await encryptJsonData(true, 'signature');
             // result ~ 9582dd17ff79b8794acc500bed3d1356026aa1bfa5b08eb636164bac37666b2f
             expect(typeof result === 'string').toBeTruthy();
-            expect(result.length).toBe(64);
+            expect(result.length).toBe(96);
         });
         test('encryptJsonData -> для data Array', async () => {
             const result = await encryptJsonData(['abc', 123, {}, [], false, null, undefined], 'signature');
             expect(typeof result === 'string').toBeTruthy();
-            expect(result.length).toBe(128);
+            expect(result.length).toBe(160);
         });
     });
     // Тестирование функции decryptJsonData
@@ -128,7 +128,7 @@ describe('[Service: crypto]', () => {
             const result = '477e36e7d8bde431991da854bf937c4cbc01ce0bee888bde1a946a416dcf9fc3'
             await expect(decryptJsonData(result, 'signature'))
                 .rejects
-                .toThrowError("error:1C800064:Provider routines::bad decrypt");
+                .toThrowError("error:1C80006B:Provider routines::wrong final block length");
         });
     });
 });

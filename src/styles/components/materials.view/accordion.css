@@ -1,0 +1,19 @@
+
+:root {
+    --p-accordion-panel-border-color: var(--cf-primary-2) !important;
+    --p-accordion-header-background: var(--materials-chapter-block-bg) !important; 
+    --p-accordion-header-hover-background: var(--cf-primary-1) !important;
+    --p-accordion-header-active-background: var(--cf-primary-1) !important;
+    --p-accordion-header-active-hover-background: var(--cf-primary-2) !important;
+    --p-accordion-header-active-hover-background: var(--cf-primary-2) !important;
+    --p-accordion-header-active-hover-color: white !important;
+    --p-accordion-header-active-color: white !important;
+    --p-accordion-header-border-color: var(--cf-primary-2) !important;
+    --p-accordion-header-border-radius: 0rem !important;
+    --p-accordion-header-first-top-border-radius: 0rem !important;
+    --p-accordion-header-last-bottom-border-radius: 0rem !important;
+    --p-accordion-header-padding: 0.5rem 1rem !important;
+    --p-accordion-content-border-color: var(--cf-primary-2) !important;
+    --p-accordion-content-background: var(--bg-color) !important;
+    --p-accordion-content-padding: 0 !important;
+}

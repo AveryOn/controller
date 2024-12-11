@@ -30,14 +30,18 @@
                 </a>
             </template>
         </Menubar>
-        <workSpace :chapter="opennedChapter"/>
+        <workSpace 
+        :chapter="opennedChapter" 
+        :is-show-create-block="isShowCreateBlock" 
+        @update:is-show-create-block="(state) => isShowCreateBlock = state"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeRouteUpdate } from 'vue-router';
+import { NavigationGuardNext, onBeforeRouteUpdate } from 'vue-router';
 import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter } from '../../api/materials.api';
-import { computed, type ComputedRef, ref, type Ref } from 'vue';
+import { computed, type ComputedRef, onBeforeMount, onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiTabPlus } from '@mdi/js';
@@ -55,6 +59,7 @@ const emit = defineEmits<{
     (e: 'quit'): void;
 }>();
 
+const isShowCreateBlock = ref(false);
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
@@ -63,7 +68,8 @@ const items = ref([
     {
         label: 'New Block',
         icon: 'pi pi-plus',
-        iconType: 'pi'
+        iconType: 'pi',
+        command: newBlock,
     },
     {
         label: 'Add SubChapter',
@@ -124,6 +130,11 @@ function computePathNameForEdit() {
     }
 }
 
+// Вызов окна для создания нового блока
+function newBlock() {
+    closeAllWins();
+    isShowCreateBlock.value = true;
+}
 // Вызов окна для создания нового подраздела 
 function addNewSubChapter() {
     closeAllWins();
@@ -174,6 +185,7 @@ function closeAllWins () {
     isShowCreateSubChapter.value = false;
     isShowDeleteChapter.value = false;
     isShowEditChapter.value = false;
+    isShowCreateBlock.value = false;
 }
 
 // Сброс локального состояния компонента (e.g для перехода на другой маршрут)
@@ -325,34 +337,67 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
     }
 }
 
+async function initPageData(
+    nextChapter?: string,
+    prevChapter?: string,
+    nextSubChapter?: string,
+    prevSubChapter?: string,
+    next?: NavigationGuardNext
+) {
+    try {
+        // Запрос на получение данных раздела в случае его выбора
+        if(nextChapter !== 'add-chapter') {
+            if(nextChapter && nextChapter !== prevChapter) {
+                await requestGetOneChapter(nextChapter);
+            }
+            // Если происходит выход из просмотра разделов и подразделов
+            else if(!nextChapter) emit('quit');
+            // В случае смены подраздела при активном разделе
+            if(nextSubChapter && nextChapter && nextSubChapter !== prevSubChapter) {
+                await requestGetOneSubChapter(nextChapter, nextSubChapter);
+            } 
+            else {
+                // Если маршрут перешел с подраздела на раздел
+                if(nextChapter && prevChapter === nextChapter && !nextSubChapter) {
+                    await requestGetOneChapter(nextChapter)
+                }
+            }
+            if(next) return void next();
+        } else {
+            emit('openChapter', 'Add New Chapter');
+        }
+        if(next) next(); 
+    } catch (err) {
+        console.error('initPageData', err);
+        throw err;
+    }
+}
+
+function controllKey(e: KeyboardEvent) {
+    if(e.key === 'Escape') {
+        closeAllWins();
+    }
+}
+onMounted(() => {
+    window.addEventListener('keydown', controllKey);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', controllKey);
+})
+
+
 onBeforeRouteUpdate( async (to, from, next) => {
     resetState();
-    // Запрос на получение данных раздела в случае его выбора
     const prevChapter = from.params['chapter'] as string;
     const nextChapter = to.params['chapter'] as string;
     const nextSubChapter = to.query['subChapter'] as string | undefined;
     const prevSubChapter = from.query['subChapter'] as string | undefined;
-    if(nextChapter !== 'add-chapter') {
-        if(nextChapter && nextChapter !== prevChapter) {
-            await requestGetOneChapter(nextChapter);
-        }
-        // Если происходит выход из просмотра разделов и подразделов
-        else if(!nextChapter) emit('quit');
-        // В случае смены подраздела при активном разделе
-        if(nextSubChapter && nextSubChapter !== prevSubChapter) {
-            await requestGetOneSubChapter(nextChapter, nextSubChapter);
-        } 
-        else {
-            // Если маршрут перешел с подраздела на раздел
-            if(prevChapter === nextChapter && !nextSubChapter) {
-                await requestGetOneChapter(nextChapter)
-            }
-        }
-        return void next();
-    } else {
-        emit('openChapter', 'Add New Chapter');
-    }
-    next();
+    await initPageData(nextChapter, prevChapter, nextSubChapter, prevSubChapter, next);
+});
+
+onBeforeMount(async () => {
+    const currentRoute: any = JSON.parse(localStorage.getItem('current_route')!);
+    await initPageData(currentRoute.params['chapter'], undefined, currentRoute.query['subChapter'], undefined, undefined);
 });
 
 

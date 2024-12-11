@@ -1,25 +1,26 @@
 import crypto from 'crypto';
 
 // Параметры для scrypt
-const keylen = 64;  // Длина ключа (хеша)
+const KEYLEN = 64;  // Длина ключа (хеша)
 const N = 16384;    // Число итераций (можно увеличивать для усиления безопасности)
-const r = 8;        // Параметр блока
-const p = 1;        // Параметр параллельности
+const R = 8;        // Параметр блока
+const P = 1;        // Параметр параллельности
 
 // Хеширование с помощью scrypt
-export async function encrypt(input: string): Promise<{ hash: string, salt: string }> {
+export async function encrypt(input: string): Promise<string> {
     if(!input) throw new Error('input - обязательный аргумент');
     if(typeof input !== 'string') throw new Error('input - должен быть типа string');
     return new Promise((resolve, reject) => {
         try {
             // Генерация соль
-            const salt = crypto.randomBytes(16).toString('hex');  // Соль — случайная строка, которая добавляется к паролю
-            crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+            const SALT = crypto.randomBytes(16).toString('hex');  // Соль — случайная строка, которая добавляется к паролю
+            crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
                 if (err) {
                     throw err;
                 }
                 // Вывод хеша и соли
-                resolve({ hash: derivedKey.toString('hex'), salt: salt });
+                const readyHash = SALT + derivedKey.toString('hex');
+                resolve(readyHash);
             });
         } catch (err) {
             reject(err);
@@ -28,17 +29,19 @@ export async function encrypt(input: string): Promise<{ hash: string, salt: stri
 }
 
 // Верификация строки
-export async function verify(input: string, salt: string, hash: string): Promise<boolean> {
+export async function verify(input: string, hash: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        if(!input || !salt || !hash) throw new Error('input, salt, hash - обязательные аргмуенты');
-        if(typeof input !== 'string' || typeof salt !== 'string' || typeof hash !== 'string') {
-            throw new Error('аргументы input, salt, hash должны быть типа string');
+        if(!input || !hash) throw new Error('input, hash - обязательные аргмуенты');
+        if(typeof input !== 'string' || typeof hash !== 'string') {
+            throw new Error('аргументы input, hash должны быть типа string');
         }
         try {
-            crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+            const SALT = hash.slice(0, 32);
+            const readyHash = hash.slice(32);
+            crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
                 if (err) throw err;
                 // Проверка совпадения хешей
-                if (derivedKey.toString('hex') === hash) {
+                if (derivedKey.toString('hex') === readyHash) {
                     resolve(true);
                 } else {
                     resolve(false);
@@ -58,9 +61,10 @@ export async function encryptJsonData<T>(data: T, signature: string): Promise<st
     if(!signature || typeof signature !== 'string') throw new Error('[Services.encryptJsonData]>> INVALID_SIGNATURE');
     return new Promise((resolve, reject) => {
         try {
-            const ALG = 'aes-256-cbc';                               // Алгоритм шифрования
-            const KEY = crypto.scryptSync(signature, 'salt_NOT_SECURE', 32);    // Создаем ключ из пароля
-            const IV = crypto.randomBytes(16);                       // Генерация случайного IV
+            const ALG = 'aes-256-cbc';                                  // Алгоритм шифрования
+            const SALT = crypto.randomBytes(16).toString('hex');        // Рандомная соль
+            const KEY = crypto.scryptSync(signature, SALT, 32);         // Создаем ключ из пароля
+            const IV = crypto.randomBytes(16);                          // Генерация случайного вектора
             // Подготовка данных
             let readyData: string | null = null;
             if(data && typeof data === 'object') {
@@ -74,7 +78,7 @@ export async function encryptJsonData<T>(data: T, signature: string): Promise<st
             let encryptedData = cipher.update(readyData!, 'utf8', 'hex');
             readyData = null;
             encryptedData += cipher.final('hex');
-            resolve(IV.toString('hex') + encryptedData);
+            resolve(IV.toString('hex') + encryptedData + SALT);
         } catch (err) {
             reject(err);
         }
@@ -87,14 +91,13 @@ export async function decryptJsonData(data: string, signature: string): Promise<
     if(!signature || typeof signature !== 'string') throw new Error('[Services.decryptJsonData]>> INVALID_SIGNATURE');
     return new Promise((resolve, reject) => {
         try {
-            const ALG = 'aes-256-cbc';                               // Алгоритм шифрования
-            const KEY = crypto.scryptSync(signature, 'salt_NOT_SECURE', 32);    // Создаем ключ из пароля
-            const IV = Buffer.from(data.slice(0, 32), 'hex');
+            const ALG = 'aes-256-cbc';                                  // Алгоритм шифрования
+            const SALT = data.slice(data.length - 32);                  // Рандомная соль
+            const KEY = crypto.scryptSync(signature, SALT, 32);         // Создаем ключ из пароля
+            const IV = Buffer.from(data.slice(0, 32), 'hex');           // Генерация случайного вектора
             if(IV.length < 16) throw new Error('[Services.decryptJsonData]>> INVALID_INIT_VECTOR');
-            console.log();
-            
             // Подготовка данных
-            let readyData: string | null = data.slice(32);
+            let readyData: string | null = data.slice(32, data.length - 32);
             // Расшифровка данных
             const decipher = crypto.createDecipheriv(ALG, KEY, IV);
             let decryptedData = decipher.update(readyData!, 'hex', 'utf8');
