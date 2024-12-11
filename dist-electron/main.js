@@ -49,6 +49,53 @@ async function verify(input, hash) {
     }
   });
 }
+async function encryptJsonData(data, signature) {
+  if (!data) throw new Error("[Services.encryptJsonData]>> NOT_DATA");
+  return new Promise((resolve, reject) => {
+    try {
+      const ALG = "aes-256-cbc";
+      const SALT = crypto.randomBytes(16).toString("hex");
+      const KEY2 = crypto.scryptSync(signature, SALT, 32);
+      const IV = crypto.randomBytes(16);
+      let readyData = null;
+      if (data && typeof data === "object") {
+        readyData = JSON.stringify(data);
+      } else {
+        readyData = String(data);
+      }
+      const cipher = crypto.createCipheriv(ALG, KEY2, IV);
+      let encryptedData = cipher.update(readyData, "utf8", "hex");
+      readyData = null;
+      encryptedData += cipher.final("hex");
+      resolve(IV.toString("hex") + encryptedData + SALT);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+function prepareExpireTime(expires) {
+  let ready = 0;
+  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
+  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
+  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
+  ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  ready += 1e3 * 60 * Math.max(expires.m, 1);
+  ready += 1e3 * Math.max(expires.s, 1);
+  ready += Date.now();
+  return ready;
+}
+const KEY = "61dbbc0d980e1795d52e3e63b2adae4a3dfa438c0cb0e83a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+async function createAccessToken(payload, expires) {
+  try {
+    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
+    const expiresStamp = prepareExpireTime(expires);
+    const token2 = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
+    return token2;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 const USER_FILENAME = "users.json";
 async function writeUsersDataFs(data) {
   try {
@@ -129,8 +176,12 @@ async function loginUser(params) {
       const readyUser = { ...findedUser };
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
+      const token2 = await createAccessToken({
+        id: readyUser.id,
+        username: readyUser.username
+      }, { h: 1, m: 35, s: 14 });
       return {
-        token: "tested_hash_token_type_jwt",
+        token: token2,
         user: readyUser
       };
     } else {
@@ -4719,7 +4770,7 @@ app.on("activate", () => {
     createWindow();
   }
 });
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
   ipcMain.handle("get-users", async (event, config) => {
     return await getUsers(config);

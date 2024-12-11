@@ -6,8 +6,6 @@ import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } fr
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
 import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
-import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
-import crypto from 'crypto'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -19,6 +17,7 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+
 
 let win: BrowserWindow | null
 
@@ -69,9 +68,8 @@ app.on('activate', () => {
     }
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     createWindow();
-
     // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
 
     // Обработчики IPC

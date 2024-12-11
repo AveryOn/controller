@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
+import { createAccessToken } from '../services/tokens.serice';
 
 const USER_FILENAME = 'users.json';
 
@@ -107,8 +108,13 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
             const readyUser = { ...findedUser };
             Reflect.deleteProperty(readyUser, 'hash_salt');
             Reflect.deleteProperty(readyUser, 'password');
+            // Формируем токен доступа
+            const token = await createAccessToken({ 
+                id: readyUser.id, 
+                username: readyUser.username 
+            }, { h: 1, m: 35, s: 14 });
             return {
-                token: 'tested_hash_token_type_jwt',
+                token: token,
                 user: readyUser,
             } as LoginResponse;
         }
