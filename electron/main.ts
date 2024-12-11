@@ -7,6 +7,7 @@ import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParam
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
 import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
 import { decryptJsonData, encryptJsonData } from './server/services/crypto.service'
+import crypto from 'crypto'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

@@ -58,9 +58,10 @@ export async function encryptJsonData<T>(data: T, signature: string): Promise<st
     if(!signature || typeof signature !== 'string') throw new Error('[Services.encryptJsonData]>> INVALID_SIGNATURE');
     return new Promise((resolve, reject) => {
         try {
-            const ALG = 'aes-256-cbc';                               // Алгоритм шифрования
-            const KEY = crypto.scryptSync(signature, 'salt_NOT_SECURE', 32);    // Создаем ключ из пароля
-            const IV = crypto.randomBytes(16);                       // Генерация случайного IV
+            const ALG = 'aes-256-cbc';                                  // Алгоритм шифрования
+            const SALT = crypto.randomBytes(16).toString('hex');        // Рандомная соль
+            const KEY = crypto.scryptSync(signature, SALT, 32);         // Создаем ключ из пароля
+            const IV = crypto.randomBytes(16);                          // Генерация случайного вектора
             // Подготовка данных
             let readyData: string | null = null;
             if(data && typeof data === 'object') {
@@ -74,7 +75,7 @@ export async function encryptJsonData<T>(data: T, signature: string): Promise<st
             let encryptedData = cipher.update(readyData!, 'utf8', 'hex');
             readyData = null;
             encryptedData += cipher.final('hex');
-            resolve(IV.toString('hex') + encryptedData);
+            resolve(IV.toString('hex') + encryptedData + SALT);
         } catch (err) {
             reject(err);
         }
@@ -87,14 +88,13 @@ export async function decryptJsonData(data: string, signature: string): Promise<
     if(!signature || typeof signature !== 'string') throw new Error('[Services.decryptJsonData]>> INVALID_SIGNATURE');
     return new Promise((resolve, reject) => {
         try {
-            const ALG = 'aes-256-cbc';                               // Алгоритм шифрования
-            const KEY = crypto.scryptSync(signature, 'salt_NOT_SECURE', 32);    // Создаем ключ из пароля
-            const IV = Buffer.from(data.slice(0, 32), 'hex');
+            const ALG = 'aes-256-cbc';                                  // Алгоритм шифрования
+            const SALT = data.slice(data.length - 32);                  // Рандомная соль
+            const KEY = crypto.scryptSync(signature, SALT, 32);         // Создаем ключ из пароля
+            const IV = Buffer.from(data.slice(0, 32), 'hex');           // Генерация случайного вектора
             if(IV.length < 16) throw new Error('[Services.decryptJsonData]>> INVALID_INIT_VECTOR');
-            console.log();
-            
             // Подготовка данных
-            let readyData: string | null = data.slice(32);
+            let readyData: string | null = data.slice(32, data.length - 32);
             // Расшифровка данных
             const decipher = crypto.createDecipheriv(ALG, KEY, IV);
             let decryptedData = decipher.update(readyData!, 'hex', 'utf8');
