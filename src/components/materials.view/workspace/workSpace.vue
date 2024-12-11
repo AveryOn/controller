@@ -392,6 +392,7 @@ async function reqDeleteBlockMaterial() {
 function controllerKeys(e: KeyboardEvent) {
     const eKey = ['у', 'У','e', 'E'];
     const rKey = ['r', 'R', 'к', 'К'];
+    const nKey = ['n', 'N', 'т', 'Т',]
     if (e.ctrlKey && rKey.includes(e.key)) {
         // event.preventDefault();
     }
@@ -404,10 +405,12 @@ function controllerKeys(e: KeyboardEvent) {
         e.preventDefault();
         return openTextEditor();
     }
-
     // Закрыть Закрыть что-либо
     if (e.key === 'Escape') {
         e.preventDefault();
+        if(isActiveCreateForm.value) {
+            return void (isActiveCreateForm.value = false);
+        }
         if(isAcitiveDeleteForm.value) {
             opennedBlockForDelete.value.blockId = null;
             return void (isAcitiveDeleteForm.value = false);
@@ -415,6 +418,10 @@ function controllerKeys(e: KeyboardEvent) {
         if(opennedEditTitleBlock.value) return void (opennedEditTitleBlock.value = null);
         if(opennedStateEditor.value.isActive) closeTextEditor();
         else if(currentBlockId.value) return currentBlockId.value = null;
+    }
+    // Ctrl + N
+    if(e.ctrlKey && nKey.includes(e.key)) {
+        isActiveCreateForm.value = true;
     }
     // Ввод
     if(e.ctrlKey && e.key === 'Enter') {

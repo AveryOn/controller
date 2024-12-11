@@ -29,9 +29,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, type Ref, ref } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
-import { defineEmits, defineProps } from 'vue';
+import { defineEmits, defineProps, watch } from 'vue';
 
 interface Props {
     modelValue?: boolean;
@@ -51,6 +51,13 @@ const emit = defineEmits<{
 function submitForm() {
     emit('submitForm', { title: blockTitle.value });
 }
+
+watch(() => props.modelValue, async (newVal) => {
+    await nextTick();
+    const inp: HTMLInputElement | null = document.getElementById('block-title-inp') as HTMLInputElement;
+    if(newVal) inp?.focus();
+});
+
 </script>
 
 <style scoped>
