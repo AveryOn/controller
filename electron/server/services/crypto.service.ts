@@ -1,10 +1,10 @@
 import crypto from 'crypto';
 
 // Параметры для scrypt
-const keylen = 64;  // Длина ключа (хеша)
+const KEYLEN = 64;  // Длина ключа (хеша)
 const N = 16384;    // Число итераций (можно увеличивать для усиления безопасности)
-const r = 8;        // Параметр блока
-const p = 1;        // Параметр параллельности
+const R = 8;        // Параметр блока
+const P = 1;        // Параметр параллельности
 
 // Хеширование с помощью scrypt
 export async function encrypt(input: string): Promise<{ hash: string, salt: string }> {
@@ -14,7 +14,7 @@ export async function encrypt(input: string): Promise<{ hash: string, salt: stri
         try {
             // Генерация соль
             const salt = crypto.randomBytes(16).toString('hex');  // Соль — случайная строка, которая добавляется к паролю
-            crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+            crypto.scrypt(input, salt, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
                 if (err) {
                     throw err;
                 }
@@ -35,7 +35,7 @@ export async function verify(input: string, salt: string, hash: string): Promise
             throw new Error('аргументы input, salt, hash должны быть типа string');
         }
         try {
-            crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+            crypto.scrypt(input, salt, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
                 if (err) throw err;
                 // Проверка совпадения хешей
                 if (derivedKey.toString('hex') === hash) {
