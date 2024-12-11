@@ -1,5 +1,13 @@
 <template>
-    <form class="add-chapter-form" @submit.prevent>
+    <form 
+    class="add-chapter-form" 
+    @submit.prevent
+    >
+        <selectIconDialog 
+        v-model="isActiveSelectIconDialog"
+        @select="(iconPath) => selectIcon(iconPath)"
+        :is-modal="true"
+        />
         <h2 class="mb-2">{{ props.title }}</h2>
         <div class="w-9 mt-3 flex flex-column gap-2">
             <!-- Label -->
@@ -25,10 +33,25 @@
             placeholder="Path name" 
             size="small"
             />
+            <!-- ICON SELECT -->
+            <span class="mt-2 font-bold">Select Icon</span>
+            <div class="form-action-select-icon flex align-items-center gap-3 w-full">
+                <Button 
+                severity="secondary" 
+                outlined 
+                label="Select" 
+                size="small" 
+                @click="isActiveSelectIconDialog = true"
+                />
+                <span>Selected:</span>
+                <span class="selected-icon-bg" :class="form.symbol? 'selected' : 'notselected'">
+                    <svg-icon type="mdi" :path="form.symbol"></svg-icon>
+                </span>
+            </div>
             <!-- ICON TYPE -->
-            <span v-if="computeVisible['iconType']" class="mt-2 font-bold">Icon Type</span>
+            <!-- <span v-if="false && computeVisible['iconType']" class="mt-2 font-bold">Icon Type</span>
             <Select 
-            v-if="computeVisible['iconType']"
+            v-if="false && computeVisible['iconType']"
             size="small"
             v-model="form.iconType" 
             :options="iconsTypes" 
@@ -37,9 +60,9 @@
             option-value="value" 
             placeholder="Icon Type" 
             class="w-full" 
-            />
+            /> -->
             <!-- Symbol / Icon -->
-            <div class="w-full flex gap-2 align-items-start">
+            <div v-if="false" class="w-full flex gap-2 align-items-start">
                 <!-- ICON MODE -->
                 <Select 
                 v-model="modeIcon" 
@@ -136,9 +159,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, type Ref, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, type Ref, ref, watch } from 'vue';
 import type { ChapterCreate, ChapterTypes, CreateChapterForm, IconTypes, ModesIcon,  } from '../../@types/entities/materials.types';
 import useNotices from '../../composables/notices';
+import selectIconDialog from '../base/dialogs/selectIconDialog.vue';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiBackupRestore } from '@mdi/js';
 
@@ -164,6 +188,7 @@ const emit = defineEmits<{
 
 const notices = useNotices();
 
+const isActiveSelectIconDialog = ref(false);
 const isLoadingForm = ref(false);
 const src = ref<any>(null);
 const modeIcon = ref('svg');
@@ -211,7 +236,12 @@ const computeVisible = computed(() => {
 const loading = computed(() => {
     if(typeof props.loading !== 'undefined') return props.loading;
     else return isLoadingForm.value;
-})
+});
+
+function selectIcon(path: string) {
+    form.value.symbol = path;
+    isActiveSelectIconDialog.value = false;
+}
 
 // Установка префикса pi
 function correctSymbol() {
@@ -228,7 +258,7 @@ function cleanForm() {
         label: '',
         pathName: '',
         symbol: '',
-        iconType: 'pi',
+        iconType: 'mdi',
         iconImg: null,
         type: 'file',
     }
@@ -300,8 +330,9 @@ const filledInitForm = (newData: CreateChapterForm | null | undefined) => {
         form.value = { ...newData };
         // Корректировка имени иконки для типа pi
         if(form.value.iconType === 'pi') {
-            const symbolChunks = form.value.symbol.trim().split(' ')
-            if(symbolChunks.length > 1) form.value.symbol = symbolChunks.slice(1).join('');
+            form.value.iconType = 'mdi';
+            // const symbolChunks = form.value.symbol.trim().split(' ')
+            // if(symbolChunks.length > 1) form.value.symbol = symbolChunks.slice(1).join('');
         }
         // Корректировка типа иконки
         modeIcon.value = mapIconTypesModes[newData.iconType] as keyof typeof mapIconTypesModes;
@@ -309,10 +340,20 @@ const filledInitForm = (newData: CreateChapterForm | null | undefined) => {
     else cleanForm();
 }
 
+function controllKey(e: KeyboardEvent) {
+    if(e.key === 'Escape') {
+        if(isActiveSelectIconDialog.value) isActiveSelectIconDialog.value = false;
+    }
+}
+
 onMounted(() => {
     // Установка по данных формы по умолчанию, если они пришли в пропсах
     watch(() => props.initFormData, (newData) => filledInitForm(newData))
     filledInitForm(props.initFormData);
+    window.addEventListener('keydown', controllKey);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', controllKey);
 })
 
 </script>
@@ -339,5 +380,18 @@ onMounted(() => {
 .img {
     object-fit: cover;
     border-radius: var(--rounded);
+}
+.selected-icon-bg {
+
+    padding: 0.3rem;
+    border-radius: 5px;
+}
+.selected-icon-bg.selected {
+    border: 2px solid rgb(78, 229, 131);
+    background-color: rgba(78, 229, 131, 0.235);
+}
+.selected-icon-bg.notselected {
+    border: 2px solid rgb(221, 180, 104);
+    background-color: rgba(221, 180, 104, 0.235);
 }
 </style>

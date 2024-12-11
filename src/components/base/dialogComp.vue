@@ -23,6 +23,11 @@
                 <slot name="default"></slot>
             </div>
         </template>
+        <template #footer>
+            <div class="dialog-footer">
+                <slot name="footer"></slot>
+            </div>
+        </template>
     <!-- <template #container>
             Content
         </template> -->
@@ -81,6 +86,11 @@ function close() {
     height: max-content;
     max-height: 70vh;
     overflow: hidden;
-
+}
+.dialog-footer {
+    padding: 0 !important;
+    width: 100% !important;
+    height: max-content;
+    max-height: 20rem;
 }
 </style>
