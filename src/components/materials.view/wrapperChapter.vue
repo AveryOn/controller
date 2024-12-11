@@ -39,9 +39,9 @@
 </template>
 
 <script setup lang="ts">
-import { NavigationGuardNext, onBeforeRouteUpdate, RouteLocationNormalizedGeneric } from 'vue-router';
+import { NavigationGuardNext, onBeforeRouteUpdate } from 'vue-router';
 import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter } from '../../api/materials.api';
-import { computed, type ComputedRef, onBeforeMount, ref, type Ref } from 'vue';
+import { computed, type ComputedRef, onBeforeMount, onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiTabPlus } from '@mdi/js';
@@ -132,6 +132,7 @@ function computePathNameForEdit() {
 
 // Вызов окна для создания нового блока
 function newBlock() {
+    closeAllWins();
     isShowCreateBlock.value = true;
 }
 // Вызов окна для создания нового подраздела 
@@ -184,6 +185,7 @@ function closeAllWins () {
     isShowCreateSubChapter.value = false;
     isShowDeleteChapter.value = false;
     isShowEditChapter.value = false;
+    isShowCreateBlock.value = false;
 }
 
 // Сброс локального состояния компонента (e.g для перехода на другой маршрут)
@@ -370,6 +372,19 @@ async function initPageData(
         throw err;
     }
 }
+
+function controllKey(e: KeyboardEvent) {
+    if(e.key === 'Escape') {
+        closeAllWins();
+    }
+}
+onMounted(() => {
+    window.addEventListener('keydown', controllKey);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', controllKey);
+})
+
 
 onBeforeRouteUpdate( async (to, from, next) => {
     resetState();
