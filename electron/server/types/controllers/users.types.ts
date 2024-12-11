@@ -32,6 +32,5 @@ export interface User {
     id: number;
     username: string;
     password: string;
-    hash_salt: string;
     avatar?: undefined | null | string;
 }

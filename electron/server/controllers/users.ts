@@ -70,12 +70,11 @@ export async function createUser(params: CreateUserParams) {
             }
         });
         // Если проверка прошла успешно, то создаем нового пользователя
-        const { hash, salt } = await encrypt(params.password);
+        const hash = await encrypt(params.password);
         const newUser: User = {
             id: users.length + 1,
             username: params.username,
             password: hash,
-            hash_salt: salt,
             avatar: null,
         }
         users.push(newUser);
@@ -100,14 +99,14 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
             throw '[loginUser]>> NOT_EXISTS_RECORD';
         }
         // Проверка пароля
-        const isVerifyPassword = await verify(params.password, findedUser.hash_salt, findedUser.password).catch((err) => {
-            console.log('ERROR', err);
+        const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
+            console.log('[loginUser]>> INTERNAL_ERROR', err);
         });
         // Если пароль верный то выписываем токен
         if (isVerifyPassword === true) {
             const readyUser = { ...findedUser };
-            Reflect.deleteProperty(readyUser, 'password');
             Reflect.deleteProperty(readyUser, 'hash_salt');
+            Reflect.deleteProperty(readyUser, 'password');
             return {
                 token: 'tested_hash_token_type_jwt',
                 user: readyUser,
@@ -135,12 +134,11 @@ export async function updatePassword(params: UpdatePasswordParams): Promise<bool
             throw '[updatePassword]>> NOT_EXISTS_RECORD';
         }
         // Проверка паролей
-        if(!await verify(params.oldPassword, findedUser.hash_salt, findedUser.password)) {
+        if(!await verify(params.oldPassword, findedUser.password)) {
             throw '[updatePassword]>> INVALID_CREDENTIALS';
         }
         // Хеширование нового пароля
-        const { hash, salt } = await encrypt(params.newPassword);
-        findedUser.hash_salt = salt;
+        const hash = await encrypt(params.newPassword);
         findedUser.password = hash;
         // Обновление записи пользователя в БД
         users = users.map((user: User) => {

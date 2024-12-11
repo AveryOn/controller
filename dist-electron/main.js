@@ -5,37 +5,40 @@ import path$1 from "node:path";
 import path from "path";
 import fs from "fs/promises";
 import crypto from "crypto";
-const keylen = 64;
+const KEYLEN = 64;
 const N = 16384;
-const r = 8;
-const p = 1;
+const R = 8;
+const P = 1;
 async function encrypt(input) {
   if (!input) throw new Error("input - обязательный аргумент");
   if (typeof input !== "string") throw new Error("input - должен быть типа string");
   return new Promise((resolve, reject) => {
     try {
-      const salt = crypto.randomBytes(16).toString("hex");
-      crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+      const SALT = crypto.randomBytes(16).toString("hex");
+      crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
         if (err) {
           throw err;
         }
-        resolve({ hash: derivedKey.toString("hex"), salt });
+        const readyHash = SALT + derivedKey.toString("hex");
+        resolve(readyHash);
       });
     } catch (err) {
       reject(err);
     }
   });
 }
-async function verify(input, salt, hash) {
+async function verify(input, hash) {
   return new Promise((resolve, reject) => {
-    if (!input || !salt || !hash) throw new Error("input, salt, hash - обязательные аргмуенты");
-    if (typeof input !== "string" || typeof salt !== "string" || typeof hash !== "string") {
-      throw new Error("аргументы input, salt, hash должны быть типа string");
+    if (!input || !hash) throw new Error("input, hash - обязательные аргмуенты");
+    if (typeof input !== "string" || typeof hash !== "string") {
+      throw new Error("аргументы input, hash должны быть типа string");
     }
     try {
-      crypto.scrypt(input, salt, keylen, { N, r, p }, (err, derivedKey) => {
+      const SALT = hash.slice(0, 32);
+      const readyHash = hash.slice(32);
+      crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
         if (err) throw err;
-        if (derivedKey.toString("hex") === hash) {
+        if (derivedKey.toString("hex") === readyHash) {
           resolve(true);
         } else {
           resolve(false);
@@ -96,12 +99,11 @@ async function createUser(params) {
         throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
       }
     });
-    const { hash, salt } = await encrypt(params.password);
+    const hash = await encrypt(params.password);
     const newUser = {
       id: users.length + 1,
       username: params.username,
       password: hash,
-      hash_salt: salt,
       avatar: null
     };
     users.push(newUser);
@@ -120,13 +122,13 @@ async function loginUser(params) {
     if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
     }
-    const isVerifyPassword = await verify(params.password, findedUser.hash_salt, findedUser.password).catch((err) => {
-      console.log("ERROR", err);
+    const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
+      console.log("[loginUser]>> INTERNAL_ERROR", err);
     });
     if (isVerifyPassword === true) {
       const readyUser = { ...findedUser };
-      Reflect.deleteProperty(readyUser, "password");
       Reflect.deleteProperty(readyUser, "hash_salt");
+      Reflect.deleteProperty(readyUser, "password");
       return {
         token: "tested_hash_token_type_jwt",
         user: readyUser
@@ -147,11 +149,10 @@ async function updatePassword(params) {
     if (!findedUser) {
       throw "[updatePassword]>> NOT_EXISTS_RECORD";
     }
-    if (!await verify(params.oldPassword, findedUser.hash_salt, findedUser.password)) {
+    if (!await verify(params.oldPassword, findedUser.password)) {
       throw "[updatePassword]>> INVALID_CREDENTIALS";
     }
-    const { hash, salt } = await encrypt(params.newPassword);
-    findedUser.hash_salt = salt;
+    const hash = await encrypt(params.newPassword);
     findedUser.password = hash;
     users = users.map((user) => {
       if (user.id === findedUser.id) {
