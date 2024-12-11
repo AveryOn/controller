@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, type Ref, ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
 import { defineEmits, defineProps, watch } from 'vue';
 
