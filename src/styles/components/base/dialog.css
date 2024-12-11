@@ -7,4 +7,5 @@
     --p-dialog-shadow: var(--shadow-2) !important;
     --p-dialog-header-padding: 0rem !important;
     --p-dialog-content-padding: 0rem !important;
+    --p-dialog-footer-padding: 0rem !important;
 }

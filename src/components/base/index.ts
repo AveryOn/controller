@@ -13,6 +13,11 @@ import Dialog from 'primevue/dialog';
 import ProgressBar from 'primevue/progressbar';
 import IftaLabel from 'primevue/iftalabel';
 import Message from "primevue/message";
+import Accordion from 'primevue/accordion';
+import AccordionPanel from 'primevue/accordionpanel';
+import AccordionHeader from 'primevue/accordionheader';
+import AccordionContent from 'primevue/accordioncontent';
+
 
 buttonComp.name = 'cButton';
 
@@ -32,4 +37,8 @@ export default [
     ProgressBar,
     IftaLabel,
     Message,
+    Accordion,
+    AccordionPanel,
+    AccordionHeader,
+    AccordionContent,
 ] as any[];

@@ -51,23 +51,44 @@ export interface DeleteSubChapterParams {
     fullpath: string;
 }
 
+export interface ChapterBlock {
+    id: number;
+    title: string;
+    content: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 // Контент для каждого раздела и подраздела
 export interface ChapterContent {
     title: string;
-    blocks: Array<{
-        id: number;
-        title: string;
-        content: string;
-        createdAt: string;
-        updatedAt: string;
-    }>;
+    blocks: Array<ChapterBlock>;
 }
 
 // Объект для создания нового блока в разделе
 export interface CreateChapterBlock {
-    pathName: string;
+    pathName?: string;
     fullpath?: string;
     title: string;
+}
+
+export interface EditChapterBlock {
+    pathName: string;
+    fullpath?: string;
+    block: ChapterBlock;
+}
+
+export interface EditChapterBlockTitle {
+    pathName: string;
+    fullpath?: string;
+    blockId: number;
+    blockTitle: string;
+}
+
+export interface DeleteChapterBlock {
+    pathName: string;
+    fullpath?: string;
+    blockId: number;
 }
 
 export type IconMode = 'img' | 'sym' | 'svg' | string;

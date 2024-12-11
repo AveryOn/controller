@@ -11,7 +11,7 @@
             <div class="form-body px-6 py-5">
                 <div class="w-full flex flex-column gap-1">
                     <label for="block-title-inp">Block Title</label>
-                    <InputText id="block-title-inp" v-model="blockTitle" />
+                    <InputText @keyup.enter="submitForm" id="block-title-inp" v-model="blockTitle" />
                     <Message size="small" severity="secondary" variant="simple">Enter a new block title.</Message>
                 </div>
                 <Button 
@@ -29,10 +29,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
-import { defineEmits, defineProps } from 'vue';
-import { CreateChapterBlock } from '../../../@types/entities/materials.types';
+import { defineEmits, defineProps, watch } from 'vue';
 
 interface Props {
     modelValue?: boolean;
@@ -46,13 +45,18 @@ const blockTitle = ref('');
 
 const emit = defineEmits<{
     (e: 'update:modelValue', visible: boolean): void;
-    (e: 'submitForm', data: CreateChapterBlock): void;
+    (e: 'submitForm', data: { title: string }): void;
 }>();
 
 function submitForm() {
     emit('submitForm', { title: blockTitle.value });
 }
 
+watch(() => props.modelValue, async (newVal) => {
+    await nextTick();
+    const inp: HTMLInputElement | null = document.getElementById('block-title-inp') as HTMLInputElement;
+    if(newVal) inp?.focus();
+});
 
 </script>
 
