@@ -1,10 +1,387 @@
+import require$$0 from "fs";
+import path$1 from "path";
+import require$$2 from "os";
+import crypto$1 from "crypto";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import path$1 from "node:path";
-import path from "path";
-import fs from "fs/promises";
-import crypto from "crypto";
+import path$2 from "node:path";
+import fs$1 from "fs/promises";
+var main$1 = { exports: {} };
+const name = "dotenv";
+const version$1 = "16.4.7";
+const description = "Loads environment variables from .env file";
+const main = "lib/main.js";
+const types = "lib/main.d.ts";
+const exports = {
+  ".": {
+    types: "./lib/main.d.ts",
+    require: "./lib/main.js",
+    "default": "./lib/main.js"
+  },
+  "./config": "./config.js",
+  "./config.js": "./config.js",
+  "./lib/env-options": "./lib/env-options.js",
+  "./lib/env-options.js": "./lib/env-options.js",
+  "./lib/cli-options": "./lib/cli-options.js",
+  "./lib/cli-options.js": "./lib/cli-options.js",
+  "./package.json": "./package.json"
+};
+const scripts = {
+  "dts-check": "tsc --project tests/types/tsconfig.json",
+  lint: "standard",
+  pretest: "npm run lint && npm run dts-check",
+  test: "tap run --allow-empty-coverage --disable-coverage --timeout=60000",
+  "test:coverage": "tap run --show-full-coverage --timeout=60000 --coverage-report=lcov",
+  prerelease: "npm test",
+  release: "standard-version"
+};
+const repository = {
+  type: "git",
+  url: "git://github.com/motdotla/dotenv.git"
+};
+const funding = "https://dotenvx.com";
+const keywords = [
+  "dotenv",
+  "env",
+  ".env",
+  "environment",
+  "variables",
+  "config",
+  "settings"
+];
+const readmeFilename = "README.md";
+const license = "BSD-2-Clause";
+const devDependencies = {
+  "@types/node": "^18.11.3",
+  decache: "^4.6.2",
+  sinon: "^14.0.1",
+  standard: "^17.0.0",
+  "standard-version": "^9.5.0",
+  tap: "^19.2.0",
+  typescript: "^4.8.4"
+};
+const engines = {
+  node: ">=12"
+};
+const browser = {
+  fs: false
+};
+const require$$4 = {
+  name,
+  version: version$1,
+  description,
+  main,
+  types,
+  exports,
+  scripts,
+  repository,
+  funding,
+  keywords,
+  readmeFilename,
+  license,
+  devDependencies,
+  engines,
+  browser
+};
+const fs = require$$0;
+const path = path$1;
+const os = require$$2;
+const crypto = crypto$1;
+const packageJson = require$$4;
+const version = packageJson.version;
+const LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
+function parse(src) {
+  const obj = {};
+  let lines = src.toString();
+  lines = lines.replace(/\r\n?/mg, "\n");
+  let match;
+  while ((match = LINE.exec(lines)) != null) {
+    const key = match[1];
+    let value = match[2] || "";
+    value = value.trim();
+    const maybeQuote = value[0];
+    value = value.replace(/^(['"`])([\s\S]*)\1$/mg, "$2");
+    if (maybeQuote === '"') {
+      value = value.replace(/\\n/g, "\n");
+      value = value.replace(/\\r/g, "\r");
+    }
+    obj[key] = value;
+  }
+  return obj;
+}
+function _parseVault(options2) {
+  const vaultPath = _vaultPath(options2);
+  const result = DotenvModule.configDotenv({ path: vaultPath });
+  if (!result.parsed) {
+    const err = new Error(`MISSING_DATA: Cannot parse ${vaultPath} for an unknown reason`);
+    err.code = "MISSING_DATA";
+    throw err;
+  }
+  const keys2 = _dotenvKey(options2).split(",");
+  const length = keys2.length;
+  let decrypted;
+  for (let i = 0; i < length; i++) {
+    try {
+      const key = keys2[i].trim();
+      const attrs = _instructions(result, key);
+      decrypted = DotenvModule.decrypt(attrs.ciphertext, attrs.key);
+      break;
+    } catch (error) {
+      if (i + 1 >= length) {
+        throw error;
+      }
+    }
+  }
+  return DotenvModule.parse(decrypted);
+}
+function _log(message) {
+  console.log(`[dotenv@${version}][INFO] ${message}`);
+}
+function _warn(message) {
+  console.log(`[dotenv@${version}][WARN] ${message}`);
+}
+function _debug(message) {
+  console.log(`[dotenv@${version}][DEBUG] ${message}`);
+}
+function _dotenvKey(options2) {
+  if (options2 && options2.DOTENV_KEY && options2.DOTENV_KEY.length > 0) {
+    return options2.DOTENV_KEY;
+  }
+  if (process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0) {
+    return process.env.DOTENV_KEY;
+  }
+  return "";
+}
+function _instructions(result, dotenvKey) {
+  let uri;
+  try {
+    uri = new URL(dotenvKey);
+  } catch (error) {
+    if (error.code === "ERR_INVALID_URL") {
+      const err = new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenvx.com/vault/.env.vault?environment=development");
+      err.code = "INVALID_DOTENV_KEY";
+      throw err;
+    }
+    throw error;
+  }
+  const key = uri.password;
+  if (!key) {
+    const err = new Error("INVALID_DOTENV_KEY: Missing key part");
+    err.code = "INVALID_DOTENV_KEY";
+    throw err;
+  }
+  const environment = uri.searchParams.get("environment");
+  if (!environment) {
+    const err = new Error("INVALID_DOTENV_KEY: Missing environment part");
+    err.code = "INVALID_DOTENV_KEY";
+    throw err;
+  }
+  const environmentKey = `DOTENV_VAULT_${environment.toUpperCase()}`;
+  const ciphertext = result.parsed[environmentKey];
+  if (!ciphertext) {
+    const err = new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${environmentKey} in your .env.vault file.`);
+    err.code = "NOT_FOUND_DOTENV_ENVIRONMENT";
+    throw err;
+  }
+  return { ciphertext, key };
+}
+function _vaultPath(options2) {
+  let possibleVaultPath = null;
+  if (options2 && options2.path && options2.path.length > 0) {
+    if (Array.isArray(options2.path)) {
+      for (const filepath of options2.path) {
+        if (fs.existsSync(filepath)) {
+          possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
+        }
+      }
+    } else {
+      possibleVaultPath = options2.path.endsWith(".vault") ? options2.path : `${options2.path}.vault`;
+    }
+  } else {
+    possibleVaultPath = path.resolve(process.cwd(), ".env.vault");
+  }
+  if (fs.existsSync(possibleVaultPath)) {
+    return possibleVaultPath;
+  }
+  return null;
+}
+function _resolveHome(envPath) {
+  return envPath[0] === "~" ? path.join(os.homedir(), envPath.slice(1)) : envPath;
+}
+function _configVault(options2) {
+  _log("Loading env from encrypted .env.vault");
+  const parsed = DotenvModule._parseVault(options2);
+  let processEnv = process.env;
+  if (options2 && options2.processEnv != null) {
+    processEnv = options2.processEnv;
+  }
+  DotenvModule.populate(processEnv, parsed, options2);
+  return { parsed };
+}
+function configDotenv(options2) {
+  const dotenvPath = path.resolve(process.cwd(), ".env");
+  let encoding = "utf8";
+  const debug = Boolean(options2 && options2.debug);
+  if (options2 && options2.encoding) {
+    encoding = options2.encoding;
+  } else {
+    if (debug) {
+      _debug("No encoding is specified. UTF-8 is used by default");
+    }
+  }
+  let optionPaths = [dotenvPath];
+  if (options2 && options2.path) {
+    if (!Array.isArray(options2.path)) {
+      optionPaths = [_resolveHome(options2.path)];
+    } else {
+      optionPaths = [];
+      for (const filepath of options2.path) {
+        optionPaths.push(_resolveHome(filepath));
+      }
+    }
+  }
+  let lastError;
+  const parsedAll = {};
+  for (const path2 of optionPaths) {
+    try {
+      const parsed = DotenvModule.parse(fs.readFileSync(path2, { encoding }));
+      DotenvModule.populate(parsedAll, parsed, options2);
+    } catch (e) {
+      if (debug) {
+        _debug(`Failed to load ${path2} ${e.message}`);
+      }
+      lastError = e;
+    }
+  }
+  let processEnv = process.env;
+  if (options2 && options2.processEnv != null) {
+    processEnv = options2.processEnv;
+  }
+  DotenvModule.populate(processEnv, parsedAll, options2);
+  if (lastError) {
+    return { parsed: parsedAll, error: lastError };
+  } else {
+    return { parsed: parsedAll };
+  }
+}
+function config(options2) {
+  if (_dotenvKey(options2).length === 0) {
+    return DotenvModule.configDotenv(options2);
+  }
+  const vaultPath = _vaultPath(options2);
+  if (!vaultPath) {
+    _warn(`You set DOTENV_KEY but you are missing a .env.vault file at ${vaultPath}. Did you forget to build it?`);
+    return DotenvModule.configDotenv(options2);
+  }
+  return DotenvModule._configVault(options2);
+}
+function decrypt(encrypted, keyStr) {
+  const key = Buffer.from(keyStr.slice(-64), "hex");
+  let ciphertext = Buffer.from(encrypted, "base64");
+  const nonce = ciphertext.subarray(0, 12);
+  const authTag = ciphertext.subarray(-16);
+  ciphertext = ciphertext.subarray(12, -16);
+  try {
+    const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
+    aesgcm.setAuthTag(authTag);
+    return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
+  } catch (error) {
+    const isRange = error instanceof RangeError;
+    const invalidKeyLength = error.message === "Invalid key length";
+    const decryptionFailed = error.message === "Unsupported state or unable to authenticate data";
+    if (isRange || invalidKeyLength) {
+      const err = new Error("INVALID_DOTENV_KEY: It must be 64 characters long (or more)");
+      err.code = "INVALID_DOTENV_KEY";
+      throw err;
+    } else if (decryptionFailed) {
+      const err = new Error("DECRYPTION_FAILED: Please check your DOTENV_KEY");
+      err.code = "DECRYPTION_FAILED";
+      throw err;
+    } else {
+      throw error;
+    }
+  }
+}
+function populate(processEnv, parsed, options2 = {}) {
+  const debug = Boolean(options2 && options2.debug);
+  const override = Boolean(options2 && options2.override);
+  if (typeof parsed !== "object") {
+    const err = new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
+    err.code = "OBJECT_REQUIRED";
+    throw err;
+  }
+  for (const key of Object.keys(parsed)) {
+    if (Object.prototype.hasOwnProperty.call(processEnv, key)) {
+      if (override === true) {
+        processEnv[key] = parsed[key];
+      }
+      if (debug) {
+        if (override === true) {
+          _debug(`"${key}" is already defined and WAS overwritten`);
+        } else {
+          _debug(`"${key}" is already defined and was NOT overwritten`);
+        }
+      }
+    } else {
+      processEnv[key] = parsed[key];
+    }
+  }
+}
+const DotenvModule = {
+  configDotenv,
+  _configVault,
+  _parseVault,
+  config,
+  decrypt,
+  parse,
+  populate
+};
+main$1.exports.configDotenv = DotenvModule.configDotenv;
+main$1.exports._configVault = DotenvModule._configVault;
+main$1.exports._parseVault = DotenvModule._parseVault;
+main$1.exports.config = DotenvModule.config;
+main$1.exports.decrypt = DotenvModule.decrypt;
+main$1.exports.parse = DotenvModule.parse;
+main$1.exports.populate = DotenvModule.populate;
+main$1.exports = DotenvModule;
+var mainExports = main$1.exports;
+const options = {};
+if (process.env.DOTENV_CONFIG_ENCODING != null) {
+  options.encoding = process.env.DOTENV_CONFIG_ENCODING;
+}
+if (process.env.DOTENV_CONFIG_PATH != null) {
+  options.path = process.env.DOTENV_CONFIG_PATH;
+}
+if (process.env.DOTENV_CONFIG_DEBUG != null) {
+  options.debug = process.env.DOTENV_CONFIG_DEBUG;
+}
+if (process.env.DOTENV_CONFIG_OVERRIDE != null) {
+  options.override = process.env.DOTENV_CONFIG_OVERRIDE;
+}
+if (process.env.DOTENV_CONFIG_DOTENV_KEY != null) {
+  options.DOTENV_KEY = process.env.DOTENV_CONFIG_DOTENV_KEY;
+}
+var envOptions = options;
+const re = /^dotenv_config_(encoding|path|debug|override|DOTENV_KEY)=(.+)$/;
+var cliOptions = function optionMatcher(args) {
+  return args.reduce(function(acc, cur) {
+    const matches = cur.match(re);
+    if (matches) {
+      acc[matches[1]] = matches[2];
+    }
+    return acc;
+  }, {});
+};
+(function() {
+  mainExports.config(
+    Object.assign(
+      {},
+      envOptions,
+      cliOptions(process.argv)
+    )
+  );
+})();
 const KEYLEN = 64;
 const N = 16384;
 const R = 8;
@@ -14,8 +391,8 @@ async function encrypt(input) {
   if (typeof input !== "string") throw new Error("input - должен быть типа string");
   return new Promise((resolve, reject) => {
     try {
-      const SALT = crypto.randomBytes(16).toString("hex");
-      crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
+      const SALT = crypto$1.randomBytes(16).toString("hex");
+      crypto$1.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
         if (err) {
           throw err;
         }
@@ -36,7 +413,7 @@ async function verify(input, hash) {
     try {
       const SALT = hash.slice(0, 32);
       const readyHash = hash.slice(32);
-      crypto.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
+      crypto$1.scrypt(input, SALT, KEYLEN, { N, r: R, p: P }, (err, derivedKey) => {
         if (err) throw err;
         if (derivedKey.toString("hex") === readyHash) {
           resolve(true);
@@ -54,16 +431,16 @@ async function encryptJsonData(data, signature) {
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
-      const SALT = crypto.randomBytes(16).toString("hex");
-      const KEY2 = crypto.scryptSync(signature, SALT, 32);
-      const IV = crypto.randomBytes(16);
+      const SALT = crypto$1.randomBytes(16).toString("hex");
+      const KEY2 = crypto$1.scryptSync(signature, SALT, 32);
+      const IV = crypto$1.randomBytes(16);
       let readyData = null;
       if (data && typeof data === "object") {
         readyData = JSON.stringify(data);
       } else {
         readyData = String(data);
       }
-      const cipher = crypto.createCipheriv(ALG, KEY2, IV);
+      const cipher = crypto$1.createCipheriv(ALG, KEY2, IV);
       let encryptedData = cipher.update(readyData, "utf8", "hex");
       readyData = null;
       encryptedData += cipher.final("hex");
@@ -78,7 +455,7 @@ function prepareExpireTime(expires) {
   if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
   if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
   if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
-  ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
   ready += 1e3 * 60 * Math.max(expires.m, 1);
   ready += 1e3 * Math.max(expires.s, 1);
   ready += Date.now();
@@ -100,8 +477,8 @@ const USER_FILENAME = "users.json";
 async function writeUsersDataFs(data) {
   try {
     const userDataDir = app.getPath("userData");
-    const filePath = path.join(userDataDir, USER_FILENAME);
-    return void await fs.writeFile(filePath, JSON.stringify(data), { encoding: "utf-8" });
+    const filePath = path$1.join(userDataDir, USER_FILENAME);
+    return void await fs$1.writeFile(filePath, JSON.stringify(data), { encoding: "utf-8" });
   } catch (err) {
     console.error(err);
     throw err;
@@ -109,12 +486,12 @@ async function writeUsersDataFs(data) {
 }
 async function prepareUsersStore() {
   const userDataDir = app.getPath("userData");
-  const filePath = path.join(userDataDir, USER_FILENAME);
-  return fs.readFile(filePath, { encoding: "utf-8" }).then((data) => {
+  const filePath = path$1.join(userDataDir, USER_FILENAME);
+  return fs$1.readFile(filePath, { encoding: "utf-8" }).then((data) => {
     return true;
   }).catch(async () => {
     try {
-      await fs.writeFile(filePath, JSON.stringify([]), { encoding: "utf-8" });
+      await fs$1.writeFile(filePath, JSON.stringify([]), { encoding: "utf-8" });
       return true;
     } catch (err) {
       console.error("WRITE FILE", err);
@@ -122,14 +499,14 @@ async function prepareUsersStore() {
     }
   });
 }
-async function getUsers(config) {
+async function getUsers(config2) {
   try {
     const userDataDir = app.getPath("userData");
-    const filePath = path.join(userDataDir, USER_FILENAME);
-    const users = JSON.parse(await fs.readFile(filePath, { encoding: "utf-8" }));
-    if (config && config.page && config.perPage) {
-      const right = config.perPage * config.page;
-      const left = right - config.perPage;
+    const filePath = path$1.join(userDataDir, USER_FILENAME);
+    const users = JSON.parse(await fs$1.readFile(filePath, { encoding: "utf-8" }));
+    if (config2 && config2.page && config2.perPage) {
+      const right = config2.perPage * config2.page;
+      const left = right - config2.perPage;
       return users.slice(left, right);
     } else return users;
   } catch (err) {
@@ -179,7 +556,7 @@ async function loginUser(params) {
       const token2 = await createAccessToken({
         id: readyUser.id,
         username: readyUser.username
-      }, { h: 1, m: 35, s: 14 });
+      }, { m: 1, s: 20 });
       return {
         token: token2,
         user: readyUser
@@ -218,32 +595,32 @@ async function updatePassword(params) {
     throw err;
   }
 }
-async function writeFile(data, config) {
+async function writeFile(data, config2) {
   try {
-    const userDataDir = app.getPath(config.directory);
-    const filePath = path.join(userDataDir, config.filename);
-    const correctData = config.format === "json" ? JSON.stringify(data) : data;
-    return void await fs.writeFile(filePath, correctData, { encoding: config.encoding || "utf-8" });
+    const userDataDir = app.getPath(config2.directory);
+    const filePath = path$1.join(userDataDir, config2.filename);
+    const correctData = config2.format === "json" ? JSON.stringify(data) : data;
+    return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-async function readFile(config) {
+async function readFile(config2) {
   try {
-    const userDataDir = app.getPath(config.directory);
-    const filePath = path.join(userDataDir, config.filename);
-    const data = await fs.readFile(filePath, { encoding: config.encoding || "utf-8" });
-    return config.format === "json" ? JSON.parse(data) : data;
+    const userDataDir = app.getPath(config2.directory);
+    const filePath = path$1.join(userDataDir, config2.filename);
+    const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
+    return config2.format === "json" ? JSON.parse(data) : data;
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-function trimPath(fullpath, config) {
+function trimPath(fullpath, config2) {
   const symbols = ` !"#$%&'()*+,-./:;<=>?@[\\]^_\`{|}~	
 \r\v\f`;
-  const separator = (config == null ? void 0 : config.separator) || "/";
+  const separator = (config2 == null ? void 0 : config2.separator) || "/";
   let pathChunks = fullpath.split(separator);
   let correctFullPath;
   if (pathChunks.at(-1) === "") fullpath = fullpath.slice(0, -1);
@@ -251,7 +628,7 @@ function trimPath(fullpath, config) {
   else if (pathChunks[0] === "") correctFullPath = fullpath.slice(1);
   else correctFullPath = fullpath;
   pathChunks = void 0;
-  if ((config == null ? void 0 : config.split) === true) {
+  if ((config2 == null ? void 0 : config2.split) === true) {
     return correctFullPath.split(separator);
   }
   return correctFullPath;
@@ -435,9 +812,9 @@ function copyConfig(to2, from2) {
   }
   return to2;
 }
-function Moment(config) {
-  copyConfig(this, config);
-  this._d = new Date(config._d != null ? config._d.getTime() : NaN);
+function Moment(config2) {
+  copyConfig(this, config2);
+  this._d = new Date(config2._d != null ? config2._d.getTime() : NaN);
   if (!this.isValid()) {
     this._d = /* @__PURE__ */ new Date(NaN);
   }
@@ -487,13 +864,13 @@ function deprecate(msg, fn) {
   }, fn);
 }
 var deprecations = {};
-function deprecateSimple(name, msg) {
+function deprecateSimple(name2, msg) {
   if (hooks.deprecationHandler != null) {
-    hooks.deprecationHandler(name, msg);
+    hooks.deprecationHandler(name2, msg);
   }
-  if (!deprecations[name]) {
+  if (!deprecations[name2]) {
     warn(msg);
-    deprecations[name] = true;
+    deprecations[name2] = true;
   }
 }
 hooks.suppressDeprecationWarnings = false;
@@ -501,11 +878,11 @@ hooks.deprecationHandler = null;
 function isFunction(input) {
   return typeof Function !== "undefined" && input instanceof Function || Object.prototype.toString.call(input) === "[object Function]";
 }
-function set(config) {
+function set(config2) {
   var prop, i;
-  for (i in config) {
-    if (hasOwnProp(config, i)) {
-      prop = config[i];
+  for (i in config2) {
+    if (hasOwnProp(config2, i)) {
+      prop = config2[i];
       if (isFunction(prop)) {
         this[i] = prop;
       } else {
@@ -513,7 +890,7 @@ function set(config) {
       }
     }
   }
-  this._config = config;
+  this._config = config2;
   this._dayOfMonthOrdinalParseLenient = new RegExp(
     (this._dayOfMonthOrdinalParse.source || this._ordinalParse.source) + "|" + /\d{1,2}/.source
   );
@@ -540,9 +917,9 @@ function mergeConfigs(parentConfig, childConfig) {
   }
   return res;
 }
-function Locale(config) {
-  if (config != null) {
-    this.set(config);
+function Locale(config2) {
+  if (config2 != null) {
+    this.set(config2);
   }
 }
 var keys;
@@ -804,11 +1181,11 @@ function addRegexToken(token2, regex, strictRegex) {
     return isStrict && strictRegex ? strictRegex : regex;
   };
 }
-function getParseRegexForToken(token2, config) {
+function getParseRegexForToken(token2, config2) {
   if (!hasOwnProp(regexes, token2)) {
     return new RegExp(unescapeFormat(token2));
   }
-  return regexes[token2](config._strict, config._locale);
+  return regexes[token2](config2._strict, config2._locale);
 }
 function unescapeFormat(s) {
   return regexEscape(
@@ -854,14 +1231,14 @@ function addParseToken(token2, callback) {
   }
 }
 function addWeekParseToken(token2, callback) {
-  addParseToken(token2, function(input, array, config, token3) {
-    config._w = config._w || {};
-    callback(input, config._w, config, token3);
+  addParseToken(token2, function(input, array, config2, token3) {
+    config2._w = config2._w || {};
+    callback(input, config2._w, config2, token3);
   });
 }
-function addTimeToArrayFromToken(token2, input, config) {
+function addTimeToArrayFromToken(token2, input, config2) {
   if (input != null && hasOwnProp(tokens, token2)) {
-    tokens[token2](input, config._a, config, token2);
+    tokens[token2](input, config2._a, config2, token2);
   }
 }
 function isLeapYear(year) {
@@ -1036,12 +1413,12 @@ addRegexToken("MMMM", function(isStrict, locale2) {
 addParseToken(["M", "MM"], function(input, array) {
   array[MONTH] = toInt(input) - 1;
 });
-addParseToken(["MMM", "MMMM"], function(input, array, config, token2) {
-  var month = config._locale.monthsParse(input, token2, config._strict);
+addParseToken(["MMM", "MMMM"], function(input, array, config2, token2) {
+  var month = config2._locale.monthsParse(input, token2, config2._strict);
   if (month != null) {
     array[MONTH] = month;
   } else {
-    getParsingFlags(config).invalidMonth = input;
+    getParsingFlags(config2).invalidMonth = input;
   }
 });
 var defaultLocaleMonths = "January_February_March_April_May_June_July_August_September_October_November_December".split(
@@ -1304,7 +1681,7 @@ addRegexToken("W", match1to2, match1to2NoLeadingZero);
 addRegexToken("WW", match1to2, match2);
 addWeekParseToken(
   ["w", "ww", "W", "WW"],
-  function(input, week, config, token2) {
+  function(input, week, config2, token2) {
     week[token2.substr(0, 1)] = toInt(input);
   }
 );
@@ -1355,15 +1732,15 @@ addRegexToken("ddd", function(isStrict, locale2) {
 addRegexToken("dddd", function(isStrict, locale2) {
   return locale2.weekdaysRegex(isStrict);
 });
-addWeekParseToken(["dd", "ddd", "dddd"], function(input, week, config, token2) {
-  var weekday = config._locale.weekdaysParse(input, token2, config._strict);
+addWeekParseToken(["dd", "ddd", "dddd"], function(input, week, config2, token2) {
+  var weekday = config2._locale.weekdaysParse(input, token2, config2._strict);
   if (weekday != null) {
     week.d = weekday;
   } else {
-    getParsingFlags(config).invalidWeekday = input;
+    getParsingFlags(config2).invalidWeekday = input;
   }
 });
-addWeekParseToken(["d", "e", "E"], function(input, week, config, token2) {
+addWeekParseToken(["d", "e", "E"], function(input, week, config2, token2) {
   week[token2] = toInt(input);
 });
 function parseWeekday(input, locale2) {
@@ -1674,37 +2051,37 @@ addRegexToken("hmmss", match5to6);
 addRegexToken("Hmm", match3to4);
 addRegexToken("Hmmss", match5to6);
 addParseToken(["H", "HH"], HOUR);
-addParseToken(["k", "kk"], function(input, array, config) {
+addParseToken(["k", "kk"], function(input, array, config2) {
   var kInput = toInt(input);
   array[HOUR] = kInput === 24 ? 0 : kInput;
 });
-addParseToken(["a", "A"], function(input, array, config) {
-  config._isPm = config._locale.isPM(input);
-  config._meridiem = input;
+addParseToken(["a", "A"], function(input, array, config2) {
+  config2._isPm = config2._locale.isPM(input);
+  config2._meridiem = input;
 });
-addParseToken(["h", "hh"], function(input, array, config) {
+addParseToken(["h", "hh"], function(input, array, config2) {
   array[HOUR] = toInt(input);
-  getParsingFlags(config).bigHour = true;
+  getParsingFlags(config2).bigHour = true;
 });
-addParseToken("hmm", function(input, array, config) {
+addParseToken("hmm", function(input, array, config2) {
   var pos = input.length - 2;
   array[HOUR] = toInt(input.substr(0, pos));
   array[MINUTE] = toInt(input.substr(pos));
-  getParsingFlags(config).bigHour = true;
+  getParsingFlags(config2).bigHour = true;
 });
-addParseToken("hmmss", function(input, array, config) {
+addParseToken("hmmss", function(input, array, config2) {
   var pos1 = input.length - 4, pos2 = input.length - 2;
   array[HOUR] = toInt(input.substr(0, pos1));
   array[MINUTE] = toInt(input.substr(pos1, 2));
   array[SECOND] = toInt(input.substr(pos2));
-  getParsingFlags(config).bigHour = true;
+  getParsingFlags(config2).bigHour = true;
 });
-addParseToken("Hmm", function(input, array, config) {
+addParseToken("Hmm", function(input, array, config2) {
   var pos = input.length - 2;
   array[HOUR] = toInt(input.substr(0, pos));
   array[MINUTE] = toInt(input.substr(pos));
 });
-addParseToken("Hmmss", function(input, array, config) {
+addParseToken("Hmmss", function(input, array, config2) {
   var pos1 = input.length - 4, pos2 = input.length - 2;
   array[HOUR] = toInt(input.substr(0, pos1));
   array[MINUTE] = toInt(input.substr(pos1, 2));
@@ -1770,22 +2147,22 @@ function chooseLocale(names) {
   }
   return globalLocale;
 }
-function isLocaleNameSane(name) {
-  return !!(name && name.match("^[^/\\\\]*$"));
+function isLocaleNameSane(name2) {
+  return !!(name2 && name2.match("^[^/\\\\]*$"));
 }
-function loadLocale(name) {
+function loadLocale(name2) {
   var oldLocale = null, aliasedRequire;
-  if (locales[name] === void 0 && typeof module !== "undefined" && module && module.exports && isLocaleNameSane(name)) {
+  if (locales[name2] === void 0 && typeof module !== "undefined" && module && module.exports && isLocaleNameSane(name2)) {
     try {
       oldLocale = globalLocale._abbr;
       aliasedRequire = require;
-      aliasedRequire("./locale/" + name);
+      aliasedRequire("./locale/" + name2);
       getSetGlobalLocale(oldLocale);
     } catch (e) {
-      locales[name] = null;
+      locales[name2] = null;
     }
   }
-  return locales[name];
+  return locales[name2];
 }
 function getSetGlobalLocale(key, values) {
   var data;
@@ -1807,80 +2184,80 @@ function getSetGlobalLocale(key, values) {
   }
   return globalLocale._abbr;
 }
-function defineLocale(name, config) {
-  if (config !== null) {
+function defineLocale(name2, config2) {
+  if (config2 !== null) {
     var locale2, parentConfig = baseConfig;
-    config.abbr = name;
-    if (locales[name] != null) {
+    config2.abbr = name2;
+    if (locales[name2] != null) {
       deprecateSimple(
         "defineLocaleOverride",
         "use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."
       );
-      parentConfig = locales[name]._config;
-    } else if (config.parentLocale != null) {
-      if (locales[config.parentLocale] != null) {
-        parentConfig = locales[config.parentLocale]._config;
+      parentConfig = locales[name2]._config;
+    } else if (config2.parentLocale != null) {
+      if (locales[config2.parentLocale] != null) {
+        parentConfig = locales[config2.parentLocale]._config;
       } else {
-        locale2 = loadLocale(config.parentLocale);
+        locale2 = loadLocale(config2.parentLocale);
         if (locale2 != null) {
           parentConfig = locale2._config;
         } else {
-          if (!localeFamilies[config.parentLocale]) {
-            localeFamilies[config.parentLocale] = [];
+          if (!localeFamilies[config2.parentLocale]) {
+            localeFamilies[config2.parentLocale] = [];
           }
-          localeFamilies[config.parentLocale].push({
-            name,
-            config
+          localeFamilies[config2.parentLocale].push({
+            name: name2,
+            config: config2
           });
           return null;
         }
       }
     }
-    locales[name] = new Locale(mergeConfigs(parentConfig, config));
-    if (localeFamilies[name]) {
-      localeFamilies[name].forEach(function(x) {
+    locales[name2] = new Locale(mergeConfigs(parentConfig, config2));
+    if (localeFamilies[name2]) {
+      localeFamilies[name2].forEach(function(x) {
         defineLocale(x.name, x.config);
       });
     }
-    getSetGlobalLocale(name);
-    return locales[name];
+    getSetGlobalLocale(name2);
+    return locales[name2];
   } else {
-    delete locales[name];
+    delete locales[name2];
     return null;
   }
 }
-function updateLocale(name, config) {
-  if (config != null) {
+function updateLocale(name2, config2) {
+  if (config2 != null) {
     var locale2, tmpLocale, parentConfig = baseConfig;
-    if (locales[name] != null && locales[name].parentLocale != null) {
-      locales[name].set(mergeConfigs(locales[name]._config, config));
+    if (locales[name2] != null && locales[name2].parentLocale != null) {
+      locales[name2].set(mergeConfigs(locales[name2]._config, config2));
     } else {
-      tmpLocale = loadLocale(name);
+      tmpLocale = loadLocale(name2);
       if (tmpLocale != null) {
         parentConfig = tmpLocale._config;
       }
-      config = mergeConfigs(parentConfig, config);
+      config2 = mergeConfigs(parentConfig, config2);
       if (tmpLocale == null) {
-        config.abbr = name;
+        config2.abbr = name2;
       }
-      locale2 = new Locale(config);
-      locale2.parentLocale = locales[name];
-      locales[name] = locale2;
+      locale2 = new Locale(config2);
+      locale2.parentLocale = locales[name2];
+      locales[name2] = locale2;
     }
-    getSetGlobalLocale(name);
+    getSetGlobalLocale(name2);
   } else {
-    if (locales[name] != null) {
-      if (locales[name].parentLocale != null) {
-        locales[name] = locales[name].parentLocale;
-        if (name === getSetGlobalLocale()) {
-          getSetGlobalLocale(name);
+    if (locales[name2] != null) {
+      if (locales[name2].parentLocale != null) {
+        locales[name2] = locales[name2].parentLocale;
+        if (name2 === getSetGlobalLocale()) {
+          getSetGlobalLocale(name2);
         }
-      } else if (locales[name] != null) {
-        delete locales[name];
+      } else if (locales[name2] != null) {
+        delete locales[name2];
       }
     }
   }
-  return locales[name];
+  return locales[name2];
 }
 function getLocale(key) {
   var locale2;
@@ -1955,10 +2332,10 @@ var extendedIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\
   PDT: -7 * 60,
   PST: -8 * 60
 };
-function configFromISO(config) {
-  var i, l, string = config._i, match = extendedIsoRegex.exec(string) || basicIsoRegex.exec(string), allowTime, dateFormat, timeFormat, tzFormat, isoDatesLen = isoDates.length, isoTimesLen = isoTimes.length;
+function configFromISO(config2) {
+  var i, l, string = config2._i, match = extendedIsoRegex.exec(string) || basicIsoRegex.exec(string), allowTime, dateFormat, timeFormat, tzFormat, isoDatesLen = isoDates.length, isoTimesLen = isoTimes.length;
   if (match) {
-    getParsingFlags(config).iso = true;
+    getParsingFlags(config2).iso = true;
     for (i = 0, l = isoDatesLen; i < l; i++) {
       if (isoDates[i][1].exec(match[1])) {
         dateFormat = isoDates[i][0];
@@ -1967,7 +2344,7 @@ function configFromISO(config) {
       }
     }
     if (dateFormat == null) {
-      config._isValid = false;
+      config2._isValid = false;
       return;
     }
     if (match[3]) {
@@ -1978,26 +2355,26 @@ function configFromISO(config) {
         }
       }
       if (timeFormat == null) {
-        config._isValid = false;
+        config2._isValid = false;
         return;
       }
     }
     if (!allowTime && timeFormat != null) {
-      config._isValid = false;
+      config2._isValid = false;
       return;
     }
     if (match[4]) {
       if (tzRegex.exec(match[4])) {
         tzFormat = "Z";
       } else {
-        config._isValid = false;
+        config2._isValid = false;
         return;
       }
     }
-    config._f = dateFormat + (timeFormat || "") + (tzFormat || "");
-    configFromStringAndFormat(config);
+    config2._f = dateFormat + (timeFormat || "") + (tzFormat || "");
+    configFromStringAndFormat(config2);
   } else {
-    config._isValid = false;
+    config2._isValid = false;
   }
 }
 function extractFromRFC2822Strings(yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr) {
@@ -2025,7 +2402,7 @@ function untruncateYear(yearStr) {
 function preprocessRFC2822(s) {
   return s.replace(/\([^()]*\)|[\n\t]/g, " ").replace(/(\s\s+)/g, " ").replace(/^\s\s*/, "").replace(/\s\s*$/, "");
 }
-function checkWeekday(weekdayStr, parsedInput, config) {
+function checkWeekday(weekdayStr, parsedInput, config2) {
   if (weekdayStr) {
     var weekdayProvided = defaultLocaleWeekdaysShort.indexOf(weekdayStr), weekdayActual = new Date(
       parsedInput[0],
@@ -2033,8 +2410,8 @@ function checkWeekday(weekdayStr, parsedInput, config) {
       parsedInput[2]
     ).getDay();
     if (weekdayProvided !== weekdayActual) {
-      getParsingFlags(config).weekdayMismatch = true;
-      config._isValid = false;
+      getParsingFlags(config2).weekdayMismatch = true;
+      config2._isValid = false;
       return false;
     }
   }
@@ -2050,8 +2427,8 @@ function calculateOffset(obsOffset, militaryOffset, numOffset) {
     return h * 60 + m;
   }
 }
-function configFromRFC2822(config) {
-  var match = rfc2822.exec(preprocessRFC2822(config._i)), parsedArray;
+function configFromRFC2822(config2) {
+  var match = rfc2822.exec(preprocessRFC2822(config2._i)), parsedArray;
   if (match) {
     parsedArray = extractFromRFC2822Strings(
       match[4],
@@ -2061,46 +2438,46 @@ function configFromRFC2822(config) {
       match[6],
       match[7]
     );
-    if (!checkWeekday(match[1], parsedArray, config)) {
+    if (!checkWeekday(match[1], parsedArray, config2)) {
       return;
     }
-    config._a = parsedArray;
-    config._tzm = calculateOffset(match[8], match[9], match[10]);
-    config._d = createUTCDate.apply(null, config._a);
-    config._d.setUTCMinutes(config._d.getUTCMinutes() - config._tzm);
-    getParsingFlags(config).rfc2822 = true;
+    config2._a = parsedArray;
+    config2._tzm = calculateOffset(match[8], match[9], match[10]);
+    config2._d = createUTCDate.apply(null, config2._a);
+    config2._d.setUTCMinutes(config2._d.getUTCMinutes() - config2._tzm);
+    getParsingFlags(config2).rfc2822 = true;
   } else {
-    config._isValid = false;
+    config2._isValid = false;
   }
 }
-function configFromString(config) {
-  var matched = aspNetJsonRegex.exec(config._i);
+function configFromString(config2) {
+  var matched = aspNetJsonRegex.exec(config2._i);
   if (matched !== null) {
-    config._d = /* @__PURE__ */ new Date(+matched[1]);
+    config2._d = /* @__PURE__ */ new Date(+matched[1]);
     return;
   }
-  configFromISO(config);
-  if (config._isValid === false) {
-    delete config._isValid;
+  configFromISO(config2);
+  if (config2._isValid === false) {
+    delete config2._isValid;
   } else {
     return;
   }
-  configFromRFC2822(config);
-  if (config._isValid === false) {
-    delete config._isValid;
+  configFromRFC2822(config2);
+  if (config2._isValid === false) {
+    delete config2._isValid;
   } else {
     return;
   }
-  if (config._strict) {
-    config._isValid = false;
+  if (config2._strict) {
+    config2._isValid = false;
   } else {
-    hooks.createFromInputFallback(config);
+    hooks.createFromInputFallback(config2);
   }
 }
 hooks.createFromInputFallback = deprecate(
   "value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.",
-  function(config) {
-    config._d = /* @__PURE__ */ new Date(config._i + (config._useUTC ? " UTC" : ""));
+  function(config2) {
+    config2._d = /* @__PURE__ */ new Date(config2._i + (config2._useUTC ? " UTC" : ""));
   }
 );
 function defaults(a, b, c) {
@@ -2112,9 +2489,9 @@ function defaults(a, b, c) {
   }
   return c;
 }
-function currentDateArray(config) {
+function currentDateArray(config2) {
   var nowValue = new Date(hooks.now());
-  if (config._useUTC) {
+  if (config2._useUTC) {
     return [
       nowValue.getUTCFullYear(),
       nowValue.getUTCMonth(),
@@ -2123,58 +2500,58 @@ function currentDateArray(config) {
   }
   return [nowValue.getFullYear(), nowValue.getMonth(), nowValue.getDate()];
 }
-function configFromArray(config) {
+function configFromArray(config2) {
   var i, date, input = [], currentDate, expectedWeekday, yearToUse;
-  if (config._d) {
+  if (config2._d) {
     return;
   }
-  currentDate = currentDateArray(config);
-  if (config._w && config._a[DATE] == null && config._a[MONTH] == null) {
-    dayOfYearFromWeekInfo(config);
+  currentDate = currentDateArray(config2);
+  if (config2._w && config2._a[DATE] == null && config2._a[MONTH] == null) {
+    dayOfYearFromWeekInfo(config2);
   }
-  if (config._dayOfYear != null) {
-    yearToUse = defaults(config._a[YEAR], currentDate[YEAR]);
-    if (config._dayOfYear > daysInYear(yearToUse) || config._dayOfYear === 0) {
-      getParsingFlags(config)._overflowDayOfYear = true;
+  if (config2._dayOfYear != null) {
+    yearToUse = defaults(config2._a[YEAR], currentDate[YEAR]);
+    if (config2._dayOfYear > daysInYear(yearToUse) || config2._dayOfYear === 0) {
+      getParsingFlags(config2)._overflowDayOfYear = true;
     }
-    date = createUTCDate(yearToUse, 0, config._dayOfYear);
-    config._a[MONTH] = date.getUTCMonth();
-    config._a[DATE] = date.getUTCDate();
+    date = createUTCDate(yearToUse, 0, config2._dayOfYear);
+    config2._a[MONTH] = date.getUTCMonth();
+    config2._a[DATE] = date.getUTCDate();
   }
-  for (i = 0; i < 3 && config._a[i] == null; ++i) {
-    config._a[i] = input[i] = currentDate[i];
+  for (i = 0; i < 3 && config2._a[i] == null; ++i) {
+    config2._a[i] = input[i] = currentDate[i];
   }
   for (; i < 7; i++) {
-    config._a[i] = input[i] = config._a[i] == null ? i === 2 ? 1 : 0 : config._a[i];
+    config2._a[i] = input[i] = config2._a[i] == null ? i === 2 ? 1 : 0 : config2._a[i];
   }
-  if (config._a[HOUR] === 24 && config._a[MINUTE] === 0 && config._a[SECOND] === 0 && config._a[MILLISECOND] === 0) {
-    config._nextDay = true;
-    config._a[HOUR] = 0;
+  if (config2._a[HOUR] === 24 && config2._a[MINUTE] === 0 && config2._a[SECOND] === 0 && config2._a[MILLISECOND] === 0) {
+    config2._nextDay = true;
+    config2._a[HOUR] = 0;
   }
-  config._d = (config._useUTC ? createUTCDate : createDate).apply(
+  config2._d = (config2._useUTC ? createUTCDate : createDate).apply(
     null,
     input
   );
-  expectedWeekday = config._useUTC ? config._d.getUTCDay() : config._d.getDay();
-  if (config._tzm != null) {
-    config._d.setUTCMinutes(config._d.getUTCMinutes() - config._tzm);
+  expectedWeekday = config2._useUTC ? config2._d.getUTCDay() : config2._d.getDay();
+  if (config2._tzm != null) {
+    config2._d.setUTCMinutes(config2._d.getUTCMinutes() - config2._tzm);
   }
-  if (config._nextDay) {
-    config._a[HOUR] = 24;
+  if (config2._nextDay) {
+    config2._a[HOUR] = 24;
   }
-  if (config._w && typeof config._w.d !== "undefined" && config._w.d !== expectedWeekday) {
-    getParsingFlags(config).weekdayMismatch = true;
+  if (config2._w && typeof config2._w.d !== "undefined" && config2._w.d !== expectedWeekday) {
+    getParsingFlags(config2).weekdayMismatch = true;
   }
 }
-function dayOfYearFromWeekInfo(config) {
+function dayOfYearFromWeekInfo(config2) {
   var w, weekYear, week, weekday, dow, doy, temp, weekdayOverflow, curWeek;
-  w = config._w;
+  w = config2._w;
   if (w.GG != null || w.W != null || w.E != null) {
     dow = 1;
     doy = 4;
     weekYear = defaults(
       w.GG,
-      config._a[YEAR],
+      config2._a[YEAR],
       weekOfYear(createLocal(), 1, 4).year
     );
     week = defaults(w.W, 1);
@@ -2183,10 +2560,10 @@ function dayOfYearFromWeekInfo(config) {
       weekdayOverflow = true;
     }
   } else {
-    dow = config._locale._week.dow;
-    doy = config._locale._week.doy;
+    dow = config2._locale._week.dow;
+    doy = config2._locale._week.doy;
     curWeek = weekOfYear(createLocal(), dow, doy);
-    weekYear = defaults(w.gg, config._a[YEAR], curWeek.year);
+    weekYear = defaults(w.gg, config2._a[YEAR], curWeek.year);
     week = defaults(w.w, curWeek.week);
     if (w.d != null) {
       weekday = w.d;
@@ -2203,40 +2580,40 @@ function dayOfYearFromWeekInfo(config) {
     }
   }
   if (week < 1 || week > weeksInYear(weekYear, dow, doy)) {
-    getParsingFlags(config)._overflowWeeks = true;
+    getParsingFlags(config2)._overflowWeeks = true;
   } else if (weekdayOverflow != null) {
-    getParsingFlags(config)._overflowWeekday = true;
+    getParsingFlags(config2)._overflowWeekday = true;
   } else {
     temp = dayOfYearFromWeeks(weekYear, week, weekday, dow, doy);
-    config._a[YEAR] = temp.year;
-    config._dayOfYear = temp.dayOfYear;
+    config2._a[YEAR] = temp.year;
+    config2._dayOfYear = temp.dayOfYear;
   }
 }
 hooks.ISO_8601 = function() {
 };
 hooks.RFC_2822 = function() {
 };
-function configFromStringAndFormat(config) {
-  if (config._f === hooks.ISO_8601) {
-    configFromISO(config);
+function configFromStringAndFormat(config2) {
+  if (config2._f === hooks.ISO_8601) {
+    configFromISO(config2);
     return;
   }
-  if (config._f === hooks.RFC_2822) {
-    configFromRFC2822(config);
+  if (config2._f === hooks.RFC_2822) {
+    configFromRFC2822(config2);
     return;
   }
-  config._a = [];
-  getParsingFlags(config).empty = true;
-  var string = "" + config._i, i, parsedInput, tokens2, token2, skipped, stringLength = string.length, totalParsedInputLength = 0, era, tokenLen;
-  tokens2 = expandFormat(config._f, config._locale).match(formattingTokens) || [];
+  config2._a = [];
+  getParsingFlags(config2).empty = true;
+  var string = "" + config2._i, i, parsedInput, tokens2, token2, skipped, stringLength = string.length, totalParsedInputLength = 0, era, tokenLen;
+  tokens2 = expandFormat(config2._f, config2._locale).match(formattingTokens) || [];
   tokenLen = tokens2.length;
   for (i = 0; i < tokenLen; i++) {
     token2 = tokens2[i];
-    parsedInput = (string.match(getParseRegexForToken(token2, config)) || [])[0];
+    parsedInput = (string.match(getParseRegexForToken(token2, config2)) || [])[0];
     if (parsedInput) {
       skipped = string.substr(0, string.indexOf(parsedInput));
       if (skipped.length > 0) {
-        getParsingFlags(config).unusedInput.push(skipped);
+        getParsingFlags(config2).unusedInput.push(skipped);
       }
       string = string.slice(
         string.indexOf(parsedInput) + parsedInput.length
@@ -2245,35 +2622,35 @@ function configFromStringAndFormat(config) {
     }
     if (formatTokenFunctions[token2]) {
       if (parsedInput) {
-        getParsingFlags(config).empty = false;
+        getParsingFlags(config2).empty = false;
       } else {
-        getParsingFlags(config).unusedTokens.push(token2);
+        getParsingFlags(config2).unusedTokens.push(token2);
       }
-      addTimeToArrayFromToken(token2, parsedInput, config);
-    } else if (config._strict && !parsedInput) {
-      getParsingFlags(config).unusedTokens.push(token2);
+      addTimeToArrayFromToken(token2, parsedInput, config2);
+    } else if (config2._strict && !parsedInput) {
+      getParsingFlags(config2).unusedTokens.push(token2);
     }
   }
-  getParsingFlags(config).charsLeftOver = stringLength - totalParsedInputLength;
+  getParsingFlags(config2).charsLeftOver = stringLength - totalParsedInputLength;
   if (string.length > 0) {
-    getParsingFlags(config).unusedInput.push(string);
+    getParsingFlags(config2).unusedInput.push(string);
   }
-  if (config._a[HOUR] <= 12 && getParsingFlags(config).bigHour === true && config._a[HOUR] > 0) {
-    getParsingFlags(config).bigHour = void 0;
+  if (config2._a[HOUR] <= 12 && getParsingFlags(config2).bigHour === true && config2._a[HOUR] > 0) {
+    getParsingFlags(config2).bigHour = void 0;
   }
-  getParsingFlags(config).parsedDateParts = config._a.slice(0);
-  getParsingFlags(config).meridiem = config._meridiem;
-  config._a[HOUR] = meridiemFixWrap(
-    config._locale,
-    config._a[HOUR],
-    config._meridiem
+  getParsingFlags(config2).parsedDateParts = config2._a.slice(0);
+  getParsingFlags(config2).meridiem = config2._meridiem;
+  config2._a[HOUR] = meridiemFixWrap(
+    config2._locale,
+    config2._a[HOUR],
+    config2._meridiem
   );
-  era = getParsingFlags(config).era;
+  era = getParsingFlags(config2).era;
   if (era !== null) {
-    config._a[YEAR] = config._locale.erasConvertYear(era, config._a[YEAR]);
+    config2._a[YEAR] = config2._locale.erasConvertYear(era, config2._a[YEAR]);
   }
-  configFromArray(config);
-  checkOverflow(config);
+  configFromArray(config2);
+  checkOverflow(config2);
 }
 function meridiemFixWrap(locale2, hour, meridiem2) {
   var isPm;
@@ -2295,21 +2672,21 @@ function meridiemFixWrap(locale2, hour, meridiem2) {
     return hour;
   }
 }
-function configFromStringAndArray(config) {
-  var tempConfig, bestMoment, scoreToBeat, i, currentScore, validFormatFound, bestFormatIsValid = false, configfLen = config._f.length;
+function configFromStringAndArray(config2) {
+  var tempConfig, bestMoment, scoreToBeat, i, currentScore, validFormatFound, bestFormatIsValid = false, configfLen = config2._f.length;
   if (configfLen === 0) {
-    getParsingFlags(config).invalidFormat = true;
-    config._d = /* @__PURE__ */ new Date(NaN);
+    getParsingFlags(config2).invalidFormat = true;
+    config2._d = /* @__PURE__ */ new Date(NaN);
     return;
   }
   for (i = 0; i < configfLen; i++) {
     currentScore = 0;
     validFormatFound = false;
-    tempConfig = copyConfig({}, config);
-    if (config._useUTC != null) {
-      tempConfig._useUTC = config._useUTC;
+    tempConfig = copyConfig({}, config2);
+    if (config2._useUTC != null) {
+      tempConfig._useUTC = config2._useUTC;
     }
-    tempConfig._f = config._f[i];
+    tempConfig._f = config2._f[i];
     configFromStringAndFormat(tempConfig);
     if (isValid(tempConfig)) {
       validFormatFound = true;
@@ -2332,73 +2709,73 @@ function configFromStringAndArray(config) {
       }
     }
   }
-  extend(config, bestMoment || tempConfig);
+  extend(config2, bestMoment || tempConfig);
 }
-function configFromObject(config) {
-  if (config._d) {
+function configFromObject(config2) {
+  if (config2._d) {
     return;
   }
-  var i = normalizeObjectUnits(config._i), dayOrDate = i.day === void 0 ? i.date : i.day;
-  config._a = map(
+  var i = normalizeObjectUnits(config2._i), dayOrDate = i.day === void 0 ? i.date : i.day;
+  config2._a = map(
     [i.year, i.month, dayOrDate, i.hour, i.minute, i.second, i.millisecond],
     function(obj) {
       return obj && parseInt(obj, 10);
     }
   );
-  configFromArray(config);
+  configFromArray(config2);
 }
-function createFromConfig(config) {
-  var res = new Moment(checkOverflow(prepareConfig(config)));
+function createFromConfig(config2) {
+  var res = new Moment(checkOverflow(prepareConfig(config2)));
   if (res._nextDay) {
     res.add(1, "d");
     res._nextDay = void 0;
   }
   return res;
 }
-function prepareConfig(config) {
-  var input = config._i, format2 = config._f;
-  config._locale = config._locale || getLocale(config._l);
+function prepareConfig(config2) {
+  var input = config2._i, format2 = config2._f;
+  config2._locale = config2._locale || getLocale(config2._l);
   if (input === null || format2 === void 0 && input === "") {
     return createInvalid({ nullInput: true });
   }
   if (typeof input === "string") {
-    config._i = input = config._locale.preparse(input);
+    config2._i = input = config2._locale.preparse(input);
   }
   if (isMoment(input)) {
     return new Moment(checkOverflow(input));
   } else if (isDate(input)) {
-    config._d = input;
+    config2._d = input;
   } else if (isArray(format2)) {
-    configFromStringAndArray(config);
+    configFromStringAndArray(config2);
   } else if (format2) {
-    configFromStringAndFormat(config);
+    configFromStringAndFormat(config2);
   } else {
-    configFromInput(config);
+    configFromInput(config2);
   }
-  if (!isValid(config)) {
-    config._d = null;
+  if (!isValid(config2)) {
+    config2._d = null;
   }
-  return config;
+  return config2;
 }
-function configFromInput(config) {
-  var input = config._i;
+function configFromInput(config2) {
+  var input = config2._i;
   if (isUndefined(input)) {
-    config._d = new Date(hooks.now());
+    config2._d = new Date(hooks.now());
   } else if (isDate(input)) {
-    config._d = new Date(input.valueOf());
+    config2._d = new Date(input.valueOf());
   } else if (typeof input === "string") {
-    configFromString(config);
+    configFromString(config2);
   } else if (isArray(input)) {
-    config._a = map(input.slice(0), function(obj) {
+    config2._a = map(input.slice(0), function(obj) {
       return parseInt(obj, 10);
     });
-    configFromArray(config);
+    configFromArray(config2);
   } else if (isObject(input)) {
-    configFromObject(config);
+    configFromObject(config2);
   } else if (isNumber(input)) {
-    config._d = new Date(input);
+    config2._d = new Date(input);
   } else {
-    hooks.createFromInputFallback(config);
+    hooks.createFromInputFallback(config2);
   }
 }
 function createLocalOrUTC(input, format2, locale2, strict, isUTC) {
@@ -2554,9 +2931,9 @@ offset("Z", ":");
 offset("ZZ", "");
 addRegexToken("Z", matchShortOffset);
 addRegexToken("ZZ", matchShortOffset);
-addParseToken(["Z", "ZZ"], function(input, array, config) {
-  config._useUTC = true;
-  config._tzm = offsetFromString(matchShortOffset, input);
+addParseToken(["Z", "ZZ"], function(input, array, config2) {
+  config2._useUTC = true;
+  config2._tzm = offsetFromString(matchShortOffset, input);
 });
 var chunkOffset = /([\+\-]|\d\d)/gi;
 function offsetFromString(matcher, string) {
@@ -2786,13 +3163,13 @@ function momentsDifference(base, other) {
   }
   return res;
 }
-function createAdder(direction, name) {
+function createAdder(direction, name2) {
   return function(val, period) {
     var dur, tmp;
     if (period !== null && !isNaN(+period)) {
       deprecateSimple(
-        name,
-        "moment()." + name + "(period, number) is deprecated. Please use moment()." + name + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
+        name2,
+        "moment()." + name2 + "(period, number) is deprecated. Please use moment()." + name2 + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
       );
       tmp = val;
       val = period;
@@ -3318,12 +3695,12 @@ addRegexToken("NNNN", matchEraName);
 addRegexToken("NNNNN", matchEraNarrow);
 addParseToken(
   ["N", "NN", "NNN", "NNNN", "NNNNN"],
-  function(input, array, config, token2) {
-    var era = config._locale.erasParse(input, token2, config._strict);
+  function(input, array, config2, token2) {
+    var era = config2._locale.erasParse(input, token2, config2._strict);
     if (era) {
-      getParsingFlags(config).era = era;
+      getParsingFlags(config2).era = era;
     } else {
-      getParsingFlags(config).invalidEra = input;
+      getParsingFlags(config2).invalidEra = input;
     }
   }
 );
@@ -3333,13 +3710,13 @@ addRegexToken("yyy", matchUnsigned);
 addRegexToken("yyyy", matchUnsigned);
 addRegexToken("yo", matchEraYearOrdinal);
 addParseToken(["y", "yy", "yyy", "yyyy"], YEAR);
-addParseToken(["yo"], function(input, array, config, token2) {
+addParseToken(["yo"], function(input, array, config2, token2) {
   var match;
-  if (config._locale._eraYearOrdinalRegex) {
-    match = input.match(config._locale._eraYearOrdinalRegex);
+  if (config2._locale._eraYearOrdinalRegex) {
+    match = input.match(config2._locale._eraYearOrdinalRegex);
   }
-  if (config._locale.eraYearOrdinalParse) {
-    array[YEAR] = config._locale.eraYearOrdinalParse(input, match);
+  if (config2._locale.eraYearOrdinalParse) {
+    array[YEAR] = config2._locale.eraYearOrdinalParse(input, match);
   } else {
     array[YEAR] = parseInt(input, 10);
   }
@@ -3366,10 +3743,10 @@ function localeEras(m, format2) {
   return eras;
 }
 function localeErasParse(eraName, format2, strict) {
-  var i, l, eras = this.eras(), name, abbr, narrow;
+  var i, l, eras = this.eras(), name2, abbr, narrow;
   eraName = eraName.toUpperCase();
   for (i = 0, l = eras.length; i < l; ++i) {
-    name = eras[i].name.toUpperCase();
+    name2 = eras[i].name.toUpperCase();
     abbr = eras[i].abbr.toUpperCase();
     narrow = eras[i].narrow.toUpperCase();
     if (strict) {
@@ -3382,7 +3759,7 @@ function localeErasParse(eraName, format2, strict) {
           }
           break;
         case "NNNN":
-          if (name === eraName) {
+          if (name2 === eraName) {
             return eras[i];
           }
           break;
@@ -3392,7 +3769,7 @@ function localeErasParse(eraName, format2, strict) {
           }
           break;
       }
-    } else if ([name, abbr, narrow].indexOf(eraName) >= 0) {
+    } else if ([name2, abbr, narrow].indexOf(eraName) >= 0) {
       return eras[i];
     }
   }
@@ -3529,11 +3906,11 @@ addRegexToken("GGGGG", match1to6, match6);
 addRegexToken("ggggg", match1to6, match6);
 addWeekParseToken(
   ["gggg", "ggggg", "GGGG", "GGGGG"],
-  function(input, week, config, token2) {
+  function(input, week, config2, token2) {
     week[token2.substr(0, 2)] = toInt(input);
   }
 );
-addWeekParseToken(["gg", "GG"], function(input, week, config, token2) {
+addWeekParseToken(["gg", "GG"], function(input, week, config2, token2) {
   week[token2] = hooks.parseTwoDigitYear(input);
 });
 function getSetWeekYear(input) {
@@ -3611,8 +3988,8 @@ var getSetDayOfMonth = makeGetSet("Date", true);
 addFormatToken("DDD", ["DDDD", 3], "DDDo", "dayOfYear");
 addRegexToken("DDD", match1to3);
 addRegexToken("DDDD", match3);
-addParseToken(["DDD", "DDDD"], function(input, array, config) {
-  config._dayOfYear = toInt(input);
+addParseToken(["DDD", "DDDD"], function(input, array, config2) {
+  config2._dayOfYear = toInt(input);
 });
 function getSetDayOfYear(input) {
   var dayOfYear = Math.round(
@@ -4029,9 +4406,9 @@ function get$2(units) {
   units = normalizeUnits(units);
   return this.isValid() ? this[units + "s"]() : NaN;
 }
-function makeGetter(name) {
+function makeGetter(name2) {
   return function() {
-    return this.isValid() ? this._data[name] : NaN;
+    return this.isValid() ? this._data[name2] : NaN;
   };
 }
 var milliseconds = makeGetter("milliseconds"), seconds = makeGetter("seconds"), minutes = makeGetter("minutes"), hours = makeGetter("hours"), days = makeGetter("days"), months = makeGetter("months"), years = makeGetter("years");
@@ -4183,11 +4560,11 @@ addFormatToken("X", 0, 0, "unix");
 addFormatToken("x", 0, 0, "valueOf");
 addRegexToken("x", matchSigned);
 addRegexToken("X", matchTimestamp);
-addParseToken("X", function(input, array, config) {
-  config._d = new Date(parseFloat(input) * 1e3);
+addParseToken("X", function(input, array, config2) {
+  config2._d = new Date(parseFloat(input) * 1e3);
 });
-addParseToken("x", function(input, array, config) {
-  config._d = new Date(toInt(input));
+addParseToken("x", function(input, array, config2) {
+  config2._d = new Date(toInt(input));
 });
 //! moment.js
 hooks.version = "2.30.1";
@@ -4367,15 +4744,15 @@ async function getOneChapter(params) {
   }
 }
 const bundleLabels = [];
-function findLevel(items, initPath, config) {
+function findLevel(items, initPath, config2) {
   if (items.length <= 0) return null;
   const current = initPath.shift();
   for (const chapter of items) {
     const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
     if (selfPath === current) {
-      if ((config == null ? void 0 : config.labels) === true) bundleLabels.push(chapter.label);
+      if ((config2 == null ? void 0 : config2.labels) === true) bundleLabels.push(chapter.label);
       if (initPath.length <= 0) {
-        if ((config == null ? void 0 : config.labels) === true) {
+        if ((config2 == null ? void 0 : config2.labels) === true) {
           const labels = [...bundleLabels];
           bundleLabels.length = 0;
           return { chapter, labels };
@@ -4384,7 +4761,7 @@ function findLevel(items, initPath, config) {
         }
       } else {
         if (chapter.items && chapter.items.length > 0) {
-          return findLevel(chapter.items, initPath, config);
+          return findLevel(chapter.items, initPath, config2);
         } else {
           throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
         }
@@ -4731,18 +5108,19 @@ async function deleteChapterBlock(params) {
   }
 }
 createRequire(import.meta.url);
-const __dirname = path$1.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path$1.join(__dirname, "..");
+const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path$2.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path$1.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path$1.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$1.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+const MAIN_DIST = path$2.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path$2.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$2.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+console.log(process.env.APP_KEY);
 let win;
 function createWindow() {
   win = new BrowserWindow({
-    icon: path$1.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    icon: path$2.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path$1.join(__dirname, "preload.mjs")
+      preload: path$2.join(__dirname, "preload.mjs")
     }
   });
   win.webContents.on("did-finish-load", async () => {
@@ -4756,7 +5134,7 @@ function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path$1.join(RENDERER_DIST, "index.html"));
+    win.loadFile(path$2.join(RENDERER_DIST, "index.html"));
   }
 }
 app.on("window-all-closed", () => {
@@ -4772,8 +5150,8 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   createWindow();
-  ipcMain.handle("get-users", async (event, config) => {
-    return await getUsers(config);
+  ipcMain.handle("get-users", async (event, config2) => {
+    return await getUsers(config2);
   });
   ipcMain.handle("create-user", async (event, params) => {
     return await createUser(params);
