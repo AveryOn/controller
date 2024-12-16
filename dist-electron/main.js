@@ -428,6 +428,7 @@ async function verify(input, hash) {
 }
 async function encryptJsonData(data, signature) {
   if (!data) throw new Error("[Services.encryptJsonData]>> NOT_DATA");
+  if (!signature || typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
@@ -461,7 +462,7 @@ function prepareExpireTime(expires) {
   ready += Date.now();
   return ready;
 }
-const KEY = "61dbbc0d980e1795d52e3e63b2adae4a3dfa438c0cb0e83a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+const KEY = process.env.APP_KEY || "61dbbc0d980e1795d52e3e63b2adae4a3dfa438c0cb0e83a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
 async function createAccessToken(payload, expires) {
   try {
     if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
@@ -5114,7 +5115,6 @@ const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path$2.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path$2.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$2.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-console.log(process.env.APP_KEY);
 let win;
 function createWindow() {
   win = new BrowserWindow({

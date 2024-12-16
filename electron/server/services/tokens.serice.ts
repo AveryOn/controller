@@ -1,4 +1,3 @@
-import moment from "moment";
 import { AccessTokenData, ExpiresToken } from "../types/services/tokens.types";
 import { decryptJsonData, encryptJsonData } from "./crypto.service";
 
@@ -15,7 +14,7 @@ function prepareExpireTime(expires: ExpiresToken) {
     return ready;
 }
 
-const KEY = '61dbbc0d980e1795d52e3e63b2adae4a3dfa438c0cb0e83a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e';
+const KEY = process.env.APP_KEY || 'a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e';
 // Формирование токена доступа
 export async function createAccessToken(payload: any, expires: ExpiresToken) {
     try {
