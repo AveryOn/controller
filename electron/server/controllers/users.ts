@@ -22,7 +22,6 @@ export async function resetUsersDB() {
     }
 }
 
-
 // Запись данных в БД users 
 async function writeUsersDataFs(data: User[]): Promise<void> {
     try {
@@ -54,7 +53,7 @@ export async function prepareUsersStore(): Promise<boolean> {
 export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
     try {
         // Получение списка пользователей
-        const users: Array<User> = JSON.parse(await readFile(FSCONFIG));
+        const users: Array<User> = await readFile(FSCONFIG);
         // Получение по пагинации
         if (config && config.page && config.perPage) {
             const right = config.perPage * config.page;
@@ -70,6 +69,7 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
 
 // Создание нового пользователя
 export async function createUser(params: CreateUserParams) {
+    console.log('[createUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
         // Получение списка пользователей
@@ -89,6 +89,7 @@ export async function createUser(params: CreateUserParams) {
             avatar: null,
         }
         users.push(newUser);
+        Reflect.deleteProperty(newUser, 'password');
         // Запись нового пользователя в БД
         await writeUsersDataFs(users);
         return newUser;

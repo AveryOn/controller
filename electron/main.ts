@@ -36,7 +36,7 @@ function createWindow() {
     // Test active push message to Renderer-process.
     win.webContents.on('did-finish-load', async () => {
         // Сброс БД materials
-        await resetAllDB({ exclude: ['materials'] });
+        // await resetAllDB({ exclude: ['materials'] });
         let isReliableStores: boolean = true;
         // Проверка баз данных
         isReliableStores = await prepareUsersStore(); // Users

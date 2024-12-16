@@ -503,15 +503,6 @@ const FSCONFIG$1 = {
   filename: FILENAME,
   format: "json"
 };
-async function resetUsersDB() {
-  console.log("[resetUsersDB] => void");
-  try {
-    await writeFile([], FSCONFIG$1);
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
 async function writeUsersDataFs(data) {
   try {
     return void await writeFile(JSON.stringify(data), FSCONFIG$1);
@@ -535,7 +526,7 @@ async function prepareUsersStore() {
 }
 async function getUsers(config2) {
   try {
-    const users = JSON.parse(await readFile(FSCONFIG$1));
+    const users = await readFile(FSCONFIG$1);
     if (config2 && config2.page && config2.perPage) {
       const right = config2.perPage * config2.page;
       const left = right - config2.perPage;
@@ -547,6 +538,7 @@ async function getUsers(config2) {
   }
 }
 async function createUser(params) {
+  console.log("[createUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
     const users = await getUsers();
@@ -563,6 +555,7 @@ async function createUser(params) {
       avatar: null
     };
     users.push(newUser);
+    Reflect.deleteProperty(newUser, "password");
     await writeUsersDataFs(users);
     return newUser;
   } catch (err) {
@@ -4679,16 +4672,6 @@ async function prepareMaterialsStoreForMenu() {
     }
   });
 }
-async function resetMaterialDB() {
-  console.log("[resetMaterialDB] => void");
-  try {
-    await writeFile([], FSCONFIG);
-    await writeFile([], FSCONFIG_MENU);
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
 async function createChapter(params) {
   console.log("[createChapter] => ", params);
   try {
@@ -5127,15 +5110,6 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
-async function resetAllDB(options2) {
-  console.log("[RESET ALL DATA]>> ...");
-  try {
-    if (!(options2 == null ? void 0 : options2.exclude.includes("materials"))) await resetMaterialDB();
-    if (!(options2 == null ? void 0 : options2.exclude.includes("users"))) await resetUsersDB();
-  } catch (err) {
-    throw err;
-  }
-}
 createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
@@ -5152,7 +5126,6 @@ function createWindow() {
     }
   });
   win.webContents.on("did-finish-load", async () => {
-    await resetAllDB({ exclude: ["materials"] });
     let isReliableStores = true;
     isReliableStores = await prepareUsersStore();
     isReliableStores = await prepareMaterialsStore();
