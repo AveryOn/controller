@@ -11,6 +11,18 @@ const FSCONFIG: FsOperationConfig = {
     format: 'json',
 }
 
+// Сбросить все данные users 
+export async function resetUsersDB() {
+    console.log('[resetUsersDB] => void');
+    try {
+        await writeFile([], FSCONFIG);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+
 // Запись данных в БД users 
 async function writeUsersDataFs(data: User[]): Promise<void> {
     try {

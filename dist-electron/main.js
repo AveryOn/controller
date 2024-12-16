@@ -459,6 +459,7 @@ function prepareExpireTime(expires) {
   if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
   ready += 1e3 * 60 * Math.max(expires.m, 1);
   ready += 1e3 * Math.max(expires.s, 1);
+  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
   ready += Date.now();
   return ready;
 }
@@ -473,25 +474,58 @@ async function createAccessToken(payload, expires) {
     throw err;
   }
 }
-const USER_FILENAME = "users.json";
+async function writeFile(data, config2) {
+  try {
+    const userDataDir = app.getPath(config2.directory);
+    const filePath = path$1.join(userDataDir, config2.filename);
+    const correctData = config2.format === "json" ? JSON.stringify(data) : data;
+    return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function readFile(config2) {
+  try {
+    const userDataDir = app.getPath(config2.directory);
+    const filePath = path$1.join(userDataDir, config2.filename);
+    const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
+    return config2.format === "json" ? JSON.parse(data) : data;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+const FILENAME = "users.json";
+const FSCONFIG$1 = {
+  directory: "appData",
+  encoding: "utf-8",
+  filename: FILENAME,
+  format: "json"
+};
+async function resetUsersDB() {
+  console.log("[resetUsersDB] => void");
+  try {
+    await writeFile([], FSCONFIG$1);
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 async function writeUsersDataFs(data) {
   try {
-    const userDataDir = app.getPath("userData");
-    const filePath = path$1.join(userDataDir, USER_FILENAME);
-    return void await fs$1.writeFile(filePath, JSON.stringify(data), { encoding: "utf-8" });
+    return void await writeFile(JSON.stringify(data), FSCONFIG$1);
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
 async function prepareUsersStore() {
-  const userDataDir = app.getPath("userData");
-  const filePath = path$1.join(userDataDir, USER_FILENAME);
-  return fs$1.readFile(filePath, { encoding: "utf-8" }).then((data) => {
+  return readFile(FSCONFIG$1).then((data) => {
     return true;
   }).catch(async () => {
     try {
-      await fs$1.writeFile(filePath, JSON.stringify([]), { encoding: "utf-8" });
+      await writeFile(JSON.stringify([]), FSCONFIG$1);
       return true;
     } catch (err) {
       console.error("WRITE FILE", err);
@@ -501,9 +535,7 @@ async function prepareUsersStore() {
 }
 async function getUsers(config2) {
   try {
-    const userDataDir = app.getPath("userData");
-    const filePath = path$1.join(userDataDir, USER_FILENAME);
-    const users = JSON.parse(await fs$1.readFile(filePath, { encoding: "utf-8" }));
+    const users = JSON.parse(await readFile(FSCONFIG$1));
     if (config2 && config2.page && config2.perPage) {
       const right = config2.perPage * config2.page;
       const left = right - config2.perPage;
@@ -590,28 +622,6 @@ async function updatePassword(params) {
     });
     await writeUsersDataFs(users);
     return true;
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-async function writeFile(data, config2) {
-  try {
-    const userDataDir = app.getPath(config2.directory);
-    const filePath = path$1.join(userDataDir, config2.filename);
-    const correctData = config2.format === "json" ? JSON.stringify(data) : data;
-    return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-async function readFile(config2) {
-  try {
-    const userDataDir = app.getPath(config2.directory);
-    const filePath = path$1.join(userDataDir, config2.filename);
-    const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
-    return config2.format === "json" ? JSON.parse(data) : data;
   } catch (err) {
     console.error(err);
     throw err;
@@ -4669,6 +4679,16 @@ async function prepareMaterialsStoreForMenu() {
     }
   });
 }
+async function resetMaterialDB() {
+  console.log("[resetMaterialDB] => void");
+  try {
+    await writeFile([], FSCONFIG);
+    await writeFile([], FSCONFIG_MENU);
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 async function createChapter(params) {
   console.log("[createChapter] => ", params);
   try {
@@ -5107,6 +5127,15 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
+async function resetAllDB(options2) {
+  console.log("[RESET ALL DATA]>> ...");
+  try {
+    if (!(options2 == null ? void 0 : options2.exclude.includes("materials"))) await resetMaterialDB();
+    if (!(options2 == null ? void 0 : options2.exclude.includes("users"))) await resetUsersDB();
+  } catch (err) {
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
@@ -5123,6 +5152,7 @@ function createWindow() {
     }
   });
   win.webContents.on("did-finish-load", async () => {
+    await resetAllDB({ exclude: ["materials"] });
     let isReliableStores = true;
     isReliableStores = await prepareUsersStore();
     isReliableStores = await prepareMaterialsStore();

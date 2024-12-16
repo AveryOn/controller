@@ -6,7 +6,8 @@ import path from 'node:path'
 import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, resetMaterialDB, syncMaterialsStores } from './server/controllers/materials'
+import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, syncMaterialsStores } from './server/controllers/materials'
+import { resetAllDB } from './server/controllers';
 
 
 const require = createRequire(import.meta.url);
@@ -35,7 +36,7 @@ function createWindow() {
     // Test active push message to Renderer-process.
     win.webContents.on('did-finish-load', async () => {
         // Сброс БД materials
-        // await resetMaterialDB();
+        await resetAllDB({ exclude: ['materials'] });
         let isReliableStores: boolean = true;
         // Проверка баз данных
         isReliableStores = await prepareUsersStore(); // Users
