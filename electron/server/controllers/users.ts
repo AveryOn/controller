@@ -73,7 +73,7 @@ export async function createUser(params: CreateUserParams) {
     try {
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
         // Получение списка пользователей
-        const users: Array<User> = await getUsers();
+        const users: Array<User> = await readFile(FSCONFIG);
         // Проверка на то что пользователя с таким username в БД нет
         users.forEach((user) => {
             if (user.username === params.username) {
@@ -91,7 +91,7 @@ export async function createUser(params: CreateUserParams) {
         users.push(newUser);
         Reflect.deleteProperty(newUser, 'password');
         // Запись нового пользователя в БД
-        await writeUsersDataFs(users);
+        await writeFile(users, FSCONFIG);
         return newUser;
     } catch (err) {
         console.error(err);
@@ -101,10 +101,12 @@ export async function createUser(params: CreateUserParams) {
 
 // Подтверждение учетных данных пользователя при входе в систему
 export async function loginUser(params: LoginParams): Promise<LoginResponse> {
+    console.log('[loginUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
         // Извлечение пользователей
-        const users: User[] = await getUsers();
+        const users: User[] = await readFile(FSCONFIG);
+        
         // Поиск пользователя по username
         const findedUser: User | undefined = users.find((user: User) => user.username === params.username);
         if (!findedUser) {

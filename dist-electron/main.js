@@ -541,7 +541,7 @@ async function createUser(params) {
   console.log("[createUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
-    const users = await getUsers();
+    const users = await readFile(FSCONFIG$1);
     users.forEach((user) => {
       if (user.username === params.username) {
         throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
@@ -556,7 +556,7 @@ async function createUser(params) {
     };
     users.push(newUser);
     Reflect.deleteProperty(newUser, "password");
-    await writeUsersDataFs(users);
+    await writeFile(users, FSCONFIG$1);
     return newUser;
   } catch (err) {
     console.error(err);
@@ -564,9 +564,10 @@ async function createUser(params) {
   }
 }
 async function loginUser(params) {
+  console.log("[loginUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
-    const users = await getUsers();
+    const users = await readFile(FSCONFIG$1);
     const findedUser = users.find((user) => user.username === params.username);
     if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
@@ -5126,6 +5127,8 @@ function createWindow() {
     }
   });
   win.webContents.on("did-finish-load", async () => {
+    const result = await readFile({ directory: "appData", encoding: "utf-8", filename: "users.json", "format": "json" });
+    console.log(result);
     let isReliableStores = true;
     isReliableStores = await prepareUsersStore();
     isReliableStores = await prepareMaterialsStore();
