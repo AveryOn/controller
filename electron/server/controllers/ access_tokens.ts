@@ -1,5 +1,5 @@
 import { FsOperationConfig, readFile, writeFile } from "../services/fs.service";
-import { createAccessToken } from "../services/tokens.serice";
+import { createAccessToken } from "../services/tokens.service";
 
 
 const AT_FILENAME = 'access_tokens.json';

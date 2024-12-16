@@ -462,7 +462,7 @@ function prepareExpireTime(expires) {
   ready += Date.now();
   return ready;
 }
-const KEY = process.env.APP_KEY || "61dbbc0d980e1795d52e3e63b2adae4a3dfa438c0cb0e83a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
 async function createAccessToken(payload, expires) {
   try {
     if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
@@ -470,7 +470,6 @@ async function createAccessToken(payload, expires) {
     const token2 = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
     return token2;
   } catch (err) {
-    console.error(err);
     throw err;
   }
 }

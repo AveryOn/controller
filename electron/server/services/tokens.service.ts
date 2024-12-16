@@ -10,6 +10,7 @@ function prepareExpireTime(expires: ExpiresToken) {
     if(expires.h) ready += 1000*60*60*Math.max(expires.h, 1);
     if(expires.m) ready += 1000*60*Math.max(expires.m, 1);
     if(expires.s) ready += 1000*Math.max(expires.s, 1);
+    if(!ready) throw new Error('[prepareExpireTime]>> INVALID_INPUT');
     ready+=Date.now();
     return ready;
 }
@@ -23,7 +24,6 @@ export async function createAccessToken(payload: any, expires: ExpiresToken) {
         const token = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
         return token;
     } catch (err) {
-        console.error(err);
         throw err;
     }
 }
@@ -31,14 +31,13 @@ export async function createAccessToken(payload: any, expires: ExpiresToken) {
 // Верификация токена доступа и получение payload
 export async function verifyAccessToken(token: string): Promise<AccessTokenData> {
     try {
-        if(!token) throw new Error('[verifyAccessToken]>> INVALID_INPUT');
+        if(!token || typeof token !== 'string') throw new Error('[verifyAccessToken]>> INVALID_INPUT');
         const payload: AccessTokenData = JSON.parse(await decryptJsonData(token, KEY));
         if(payload.expires <= Date.now()) {
             throw new Error('[verifyAccessToken]>> EXPIRES_LIFE_TOKEN');
         }
         return payload;
     } catch (err) {
-        console.error(err);
         throw err;
     }
 }
