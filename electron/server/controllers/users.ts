@@ -80,18 +80,21 @@ export async function createUser(params: CreateUserParams) {
                 throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
             }
         });
+        const now = (new Date()).toISOString();
         // Если проверка прошла успешно, то создаем нового пользователя
         const hash = await encrypt(params.password);
         const newUser: User = {
-            id: users.length + 1,
+            id: Date.now(),
             username: params.username,
             password: hash,
             avatar: null,
+            createdAt: now,
+            updatedAt: now,
         }
         users.push(newUser);
-        Reflect.deleteProperty(newUser, 'password');
         // Запись нового пользователя в БД
         await writeFile(users, FSCONFIG);
+        Reflect.deleteProperty(newUser, 'password');
         return newUser;
     } catch (err) {
         console.error(err);
@@ -112,6 +115,8 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
         if (!findedUser) {
             throw '[loginUser]>> NOT_EXISTS_RECORD';
         }
+        console.log(findedUser);
+        
         // Проверка пароля
         const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
             console.log('[loginUser]>> INTERNAL_ERROR', err);

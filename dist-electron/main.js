@@ -547,16 +547,19 @@ async function createUser(params) {
         throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
       }
     });
+    const now2 = (/* @__PURE__ */ new Date()).toISOString();
     const hash = await encrypt(params.password);
     const newUser = {
-      id: users.length + 1,
+      id: Date.now(),
       username: params.username,
       password: hash,
-      avatar: null
+      avatar: null,
+      createdAt: now2,
+      updatedAt: now2
     };
     users.push(newUser);
-    Reflect.deleteProperty(newUser, "password");
     await writeFile(users, FSCONFIG$1);
+    Reflect.deleteProperty(newUser, "password");
     return newUser;
   } catch (err) {
     console.error(err);
@@ -572,6 +575,7 @@ async function loginUser(params) {
     if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
     }
+    console.log(findedUser);
     const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
       console.log("[loginUser]>> INTERNAL_ERROR", err);
     });
