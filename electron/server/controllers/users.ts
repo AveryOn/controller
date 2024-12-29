@@ -33,15 +33,17 @@ async function writeUsersDataFs(data: User[]): Promise<void> {
 }
 
 // Подгтововить базу данных пользователей
-export async function prepareUsersStore(): Promise<boolean> {
+export async function prepareUsersStore(): Promise<boolean | undefined> {
     return readFile(FSCONFIG)
         .then((data) => {
             return true;
         })
-        .catch(async () => {
+        .catch(async (err) => {
             try {
-                await writeFile(JSON.stringify([]), FSCONFIG);
-                return true;
+                if(err.code === 'ENOENT') {
+                    await writeFile(JSON.stringify([]), FSCONFIG);
+                    return true;
+                }
             } catch (err) {
                 console.error('WRITE FILE', err);
                 return false;

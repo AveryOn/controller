@@ -514,12 +514,14 @@ async function writeUsersDataFs(data) {
 async function prepareUsersStore() {
   return readFile(FSCONFIG$1).then((data) => {
     return true;
-  }).catch(async () => {
+  }).catch(async (err) => {
     try {
-      await writeFile(JSON.stringify([]), FSCONFIG$1);
-      return true;
-    } catch (err) {
-      console.error("WRITE FILE", err);
+      if (err.code === "ENOENT") {
+        await writeFile(JSON.stringify([]), FSCONFIG$1);
+        return true;
+      }
+    } catch (err2) {
+      console.error("WRITE FILE", err2);
       return false;
     }
   });
@@ -4653,12 +4655,15 @@ async function prepareMaterialsStore() {
   console.log("[prepareMaterialsStore] => void");
   return readFile(FSCONFIG).then((data) => {
     return true;
-  }).catch(async () => {
+  }).catch(async (err) => {
     try {
-      await writeFile([], FSCONFIG);
-      return true;
-    } catch (err) {
-      console.error("WRITE FILE", err);
+      if (err.code === "ENOENT") {
+        await writeFile([], FSCONFIG);
+        return true;
+      }
+      return void 0;
+    } catch (err2) {
+      console.error("WRITE FILE", err2);
       return false;
     }
   });
