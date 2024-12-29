@@ -1,18 +1,31 @@
-import { app } from 'electron';
-import path from 'path';
-import fs from 'fs/promises';
 import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
-import { createAccessToken } from '../services/tokens.serice';
+import { createAccessToken } from '../services/tokens.service';
+import { FsOperationConfig, readFile, writeFile } from '../services/fs.service';
 
-const USER_FILENAME = 'users.json';
+const FILENAME = 'users.json';
+const FSCONFIG: FsOperationConfig = {
+    directory: 'appData',
+    encoding: 'utf-8',
+    filename: FILENAME,
+    format: 'json',
+}
+
+// Сбросить все данные users 
+export async function resetUsersDB() {
+    console.log('[resetUsersDB] => void');
+    try {
+        await writeFile([], FSCONFIG);
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
 
 // Запись данных в БД users 
 async function writeUsersDataFs(data: User[]): Promise<void> {
     try {
-        const userDataDir = app.getPath('userData');
-        const filePath = path.join(userDataDir, USER_FILENAME);
-        return void await fs.writeFile(filePath, JSON.stringify(data), { encoding: 'utf-8' });
+        return void await writeFile(JSON.stringify(data), FSCONFIG);
     } catch (err) {
         console.error(err);
         throw err;
@@ -21,15 +34,13 @@ async function writeUsersDataFs(data: User[]): Promise<void> {
 
 // Подгтововить базу данных пользователей
 export async function prepareUsersStore(): Promise<boolean> {
-    const userDataDir = app.getPath('userData');
-    const filePath = path.join(userDataDir, USER_FILENAME);
-    return fs.readFile(filePath, { encoding: 'utf-8' })
+    return readFile(FSCONFIG)
         .then((data) => {
             return true;
         })
         .catch(async () => {
             try {
-                await fs.writeFile(filePath, JSON.stringify([]), { encoding: 'utf-8' });
+                await writeFile(JSON.stringify([]), FSCONFIG);
                 return true;
             } catch (err) {
                 console.error('WRITE FILE', err);
@@ -42,9 +53,7 @@ export async function prepareUsersStore(): Promise<boolean> {
 export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
     try {
         // Получение списка пользователей
-        const userDataDir = app.getPath('userData');
-        const filePath = path.join(userDataDir, USER_FILENAME);
-        const users: Array<User> = JSON.parse(await fs.readFile(filePath, { encoding: 'utf-8' }));
+        const users: Array<User> = await readFile(FSCONFIG);
         // Получение по пагинации
         if (config && config.page && config.perPage) {
             const right = config.perPage * config.page;
@@ -60,10 +69,11 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
 
 // Создание нового пользователя
 export async function createUser(params: CreateUserParams) {
+    console.log('[createUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
         // Получение списка пользователей
-        const users: Array<User> = await getUsers();
+        const users: Array<User> = await readFile(FSCONFIG);
         // Проверка на то что пользователя с таким username в БД нет
         users.forEach((user) => {
             if (user.username === params.username) {
@@ -79,8 +89,9 @@ export async function createUser(params: CreateUserParams) {
             avatar: null,
         }
         users.push(newUser);
+        Reflect.deleteProperty(newUser, 'password');
         // Запись нового пользователя в БД
-        await writeUsersDataFs(users);
+        await writeFile(users, FSCONFIG);
         return newUser;
     } catch (err) {
         console.error(err);
@@ -90,10 +101,12 @@ export async function createUser(params: CreateUserParams) {
 
 // Подтверждение учетных данных пользователя при входе в систему
 export async function loginUser(params: LoginParams): Promise<LoginResponse> {
+    console.log('[loginUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
         // Извлечение пользователей
-        const users: User[] = await getUsers();
+        const users: User[] = await readFile(FSCONFIG);
+        
         // Поиск пользователя по username
         const findedUser: User | undefined = users.find((user: User) => user.username === params.username);
         if (!findedUser) {
