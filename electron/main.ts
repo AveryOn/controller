@@ -8,7 +8,7 @@ import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParam
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
 import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, syncMaterialsStores } from './server/controllers/materials'
 import { resetAllDB } from './server/controllers';
-import { readFile } from './server/services/fs.service';
+import { readDir, readFile } from './server/services/fs.service';
 
 
 const require = createRequire(import.meta.url);
@@ -38,8 +38,9 @@ function createWindow() {
     win.webContents.on('did-finish-load', async () => {
         // Сброс БД materials
         // await resetAllDB({ exclude: ['materials'] });
-        const result = await readFile({ directory: 'appData', encoding: 'utf-8', filename: 'users.json', 'format': 'json'});
-        console.log(result);
+        // const result = await readFile({ directory: 'appData', encoding: 'utf-8', filename: 'user_tom/user_tom.json', 'format': 'json'});
+        // const files = await readDir('/')
+        // console.log('FILES', files);
         
         let isReliableStores: boolean = true;
         // Проверка баз данных

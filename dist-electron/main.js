@@ -474,26 +474,51 @@ async function createAccessToken(payload, expires) {
     throw err;
   }
 }
+function getAppDirname() {
+  return path$1.join(app.getPath("appData"), "controller");
+}
 async function writeFile(data, config2) {
   try {
-    const userDataDir = app.getPath(config2.directory);
-    const filePath = path$1.join(userDataDir, config2.filename);
+    const appDataDir = getAppDirname();
+    const filePath = path$1.join(appDataDir, config2.filename);
     const correctData = config2.format === "json" ? JSON.stringify(data) : data;
     return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
   } catch (err) {
-    console.error(err);
+    console.error("[writeFile]>>", err);
     throw err;
   }
 }
 async function readFile(config2) {
   try {
-    const userDataDir = app.getPath(config2.directory);
-    const filePath = path$1.join(userDataDir, config2.filename);
+    const appDataDir = getAppDirname();
+    const filePath = path$1.join(appDataDir, config2.filename);
     const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
     return config2.format === "json" ? JSON.parse(data) : data;
   } catch (err) {
     console.error(err);
     throw err;
+  }
+}
+async function mkDir(dirName) {
+  try {
+    const root = getAppDirname();
+    const filePath = path$1.join(root, dirName);
+    await fs$1.mkdir(filePath, { recursive: true });
+  } catch (err) {
+    throw err;
+  }
+}
+async function isExistFileOrDir(pathName) {
+  if (!pathName) throw new Error("[isExistFileOrDir]>> pathName обязательный аргумент");
+  try {
+    const root = getAppDirname();
+    const fullPath = path$1.join(root, pathName);
+    await fs$1.access(fullPath, fs$1.constants.F_OK);
+    return true;
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      return false;
+    } else throw err;
   }
 }
 const FILENAME = "users.json";
@@ -517,9 +542,10 @@ async function prepareUsersStore() {
   }).catch(async (err) => {
     try {
       if (err.code === "ENOENT") {
-        await writeFile(JSON.stringify([]), FSCONFIG$1);
+        await writeFile([], FSCONFIG$1);
         return true;
       }
+      return false;
     } catch (err2) {
       console.error("WRITE FILE", err2);
       return false;
@@ -536,6 +562,34 @@ async function getUsers(config2) {
     } else return users;
   } catch (err) {
     console.error(err);
+    throw err;
+  }
+}
+async function initUserDir(user) {
+  console.log("[initUserDir] =>", user);
+  if (!user) throw new Error("user - обязательный аргумент");
+  try {
+    if (typeof user.id !== "number" || user.id !== user.id) {
+      throw new TypeError("[initUserDir]>> ID пользователя неверный");
+    }
+    const userDirName = `user_${user.username}`;
+    const isExistUserDir = await isExistFileOrDir(userDirName);
+    if (isExistUserDir === false) {
+      console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
+      await mkDir(userDirName);
+      if (await isExistFileOrDir(userDirName)) {
+        console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
+        await writeFile({}, { ...FSCONFIG$1, filename: `${userDirName}/${userDirName}.json` });
+        return true;
+      } else {
+        console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
+        return false;
+      }
+    } else {
+      console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
+      return false;
+    }
+  } catch (err) {
     throw err;
   }
 }
@@ -562,6 +616,10 @@ async function createUser(params) {
     users.push(newUser);
     await writeFile(users, FSCONFIG$1);
     Reflect.deleteProperty(newUser, "password");
+    const isCreationNewDir = await initUserDir(newUser);
+    if (!isCreationNewDir) {
+      throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+    }
     return newUser;
   } catch (err) {
     console.error(err);
@@ -4661,7 +4719,7 @@ async function prepareMaterialsStore() {
         await writeFile([], FSCONFIG);
         return true;
       }
-      return void 0;
+      return false;
     } catch (err2) {
       console.error("WRITE FILE", err2);
       return false;
@@ -5136,8 +5194,6 @@ function createWindow() {
     }
   });
   win.webContents.on("did-finish-load", async () => {
-    const result = await readFile({ directory: "appData", encoding: "utf-8", filename: "users.json", "format": "json" });
-    console.log(result);
     let isReliableStores = true;
     isReliableStores = await prepareUsersStore();
     isReliableStores = await prepareMaterialsStore();

@@ -37,7 +37,7 @@ const FSCONFIG_MENU: FsOperationConfig = {
 }
 
 // Подготовить базу данных материалов
-export async function prepareMaterialsStore(): Promise<boolean | undefined> {
+export async function prepareMaterialsStore(): Promise<boolean> {
     console.log('[prepareMaterialsStore] => void');
     return readFile(FSCONFIG)
         .then((data) => {
@@ -49,7 +49,7 @@ export async function prepareMaterialsStore(): Promise<boolean | undefined> {
                     await writeFile([], FSCONFIG);
                     return true;
                 }
-                return undefined;
+                return false;
             } catch (err) {
                 console.error('WRITE FILE', err);
                 return false;

@@ -1,7 +1,7 @@
 import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
 import { createAccessToken } from '../services/tokens.service';
-import { FsOperationConfig, readFile, writeFile } from '../services/fs.service';
+import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
 
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
@@ -33,7 +33,7 @@ async function writeUsersDataFs(data: User[]): Promise<void> {
 }
 
 // Подгтововить базу данных пользователей
-export async function prepareUsersStore(): Promise<boolean | undefined> {
+export async function prepareUsersStore(): Promise<boolean> {
     return readFile(FSCONFIG)
         .then((data) => {
             return true;
@@ -41,9 +41,10 @@ export async function prepareUsersStore(): Promise<boolean | undefined> {
         .catch(async (err) => {
             try {
                 if(err.code === 'ENOENT') {
-                    await writeFile(JSON.stringify([]), FSCONFIG);
+                    await writeFile([], FSCONFIG);
                     return true;
                 }
+                return false;
             } catch (err) {
                 console.error('WRITE FILE', err);
                 return false;
@@ -65,6 +66,44 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
         else return users;
     } catch (err) {
         console.error(err);
+        throw err;
+    }
+}
+
+// Зарегистрировать пользовательскую директорию (при регистрации нового пользователя)
+async function initUserDir(user: User): Promise<boolean> {
+    console.log('[initUserDir] =>', user);
+    if(!user) throw new Error('user - обязательный аргумент');
+    try {
+        // Если id пользователя невалидный
+        if(typeof user.id !== 'number' || user.id !== user.id) {
+            throw new TypeError('[initUserDir]>> ID пользователя неверный');
+        }
+        // Создается имя директории
+        const userDirName = `user_${user.username}`;
+        const isExistUserDir = await isExistFileOrDir(userDirName);
+        // Если пользовательская директория НЕ существует
+        if(isExistUserDir === false) {
+            console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
+            // Сначала создать директорию
+            await mkDir(userDirName);
+            if(await isExistFileOrDir(userDirName)) {
+                console.log('СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО');
+                // Затем создать файл user-[id].json (Он нужен т.к у каждого из пользователей должна быть информация о себе)
+                await writeFile({}, { ...FSCONFIG, filename: `${userDirName}/${userDirName}.json` });
+                return true;
+            }
+            else {
+                console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
+                return false;
+            }
+        }
+        // Если пользовательская директория существует
+        else {
+            console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
+            return false;
+        }
+    } catch (err) {
         throw err;
     }
 }
@@ -97,6 +136,10 @@ export async function createUser(params: CreateUserParams) {
         // Запись нового пользователя в БД
         await writeFile(users, FSCONFIG);
         Reflect.deleteProperty(newUser, 'password');
+        const isCreationNewDir = await initUserDir(newUser);
+        if(!isCreationNewDir) {
+            throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+        }
         return newUser;
     } catch (err) {
         console.error(err);
@@ -107,6 +150,7 @@ export async function createUser(params: CreateUserParams) {
 // Подтверждение учетных данных пользователя при входе в систему
 export async function loginUser(params: LoginParams): Promise<LoginResponse> {
     console.log('[loginUser] =>', params);
+
     try {
         if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
         // Извлечение пользователей
