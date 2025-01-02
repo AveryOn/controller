@@ -174,7 +174,7 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
             Reflect.deleteProperty(readyUser, 'password');
             // Формируем токен доступа
             const token = await createAccessToken({ 
-                id: readyUser.id, 
+                userId: readyUser.id, 
                 username: readyUser.username 
             }, { m: 1, s: 20 });
             return {
