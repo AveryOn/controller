@@ -7,7 +7,7 @@ import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } fr
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
 import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, syncMaterialsStores } from './server/controllers/materials'
-import { resetAllDB } from './server/controllers';
+import { prepareUserStorage, resetAllDB } from './server/controllers';
 import { readDir, readFile } from './server/services/fs.service';
 
 
@@ -42,11 +42,9 @@ function createWindow() {
         // const files = await readDir('/')
         // console.log('FILES', files);
         
-        let isReliableStores: boolean = true;
         // Проверка баз данных
-        isReliableStores = await prepareUsersStore(); // Users
-        isReliableStores = await prepareMaterialsStore(); // Materials
-        isReliableStores = await prepareMaterialsStoreForMenu() // Materials For Menu
+        const isReliableStores = await prepareUserStorage();
+
         win?.webContents.send('main-process-message', isReliableStores);
         console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
     })
