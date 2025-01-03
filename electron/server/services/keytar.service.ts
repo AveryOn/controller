@@ -3,6 +3,8 @@ const SERVICE_NAME = 'controller';
 
 // Установить ключ
 export async function setKey(account: string, password: string): Promise<boolean> {
+    if(!account || !password) throw new Error('[keytar.setKey]>> account and password are required arguments');
+    if(typeof account !== 'string' || typeof password !== 'string') throw new Error('[keytar.setKey]>> account and password must be strings');
     try {
         await setPassword(SERVICE_NAME, account, password);
         return true;
@@ -14,8 +16,11 @@ export async function setKey(account: string, password: string): Promise<boolean
 
 // Удалить ключ
 export async function deleteKey(account: string) {
+    if(!account) throw new Error('[keytar.deleteKey]>> account is required argument');
+    if(typeof account !== 'string') throw new Error('[keytar.deleteKey]>> account must be string');
     try {
-        return await deletePassword(SERVICE_NAME, account);
+        await deletePassword(SERVICE_NAME, account);
+        return true
     } catch (err) {
         console.error('[keytar.deleteKey]>>', err);
         return false;
@@ -24,6 +29,8 @@ export async function deleteKey(account: string) {
 
 // Получить сохраненный ключ для сервиса и аккаунта
 export async function getKey(account: string): Promise<string | null> {
+    if(!account) throw new Error('[keytar.getKey]>> account is required argument');
+    if(typeof account !== 'string') throw new Error('[keytar.getKey]>> account must be string');
     try {
         return await getPassword(SERVICE_NAME, account);
     } catch (err) {
@@ -43,7 +50,7 @@ export async function findKey(): Promise<string | null> {
 }
 
 // Получить все учетные данные аккаунтов в границах сервиса
-export async function getAccounts(): Promise<Array<{account: string, password: string}>> {
+export async function getAccounts(): Promise<Array<{ account: string, password: string }>> {
     try {
         return await findCredentials(SERVICE_NAME);
     } catch (err) {
