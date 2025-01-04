@@ -73,10 +73,6 @@ function createWindow() {
         // const result = await readFile({ directory: 'appData', encoding: 'utf-8', filename: 'user_tom/user_tom.json', 'format': 'json'});
         // const files = await readDir('/')
         // console.log('FILES', files);
-        
-
-
-
     })
 
     if (VITE_DEV_SERVER_URL) {

@@ -1,5 +1,5 @@
 import { setPassword, deletePassword, getPassword, findPassword, findCredentials } from 'keytar'
-const SERVICE_NAME = 'controller';
+const SERVICE_NAME = process.env.SERVICE_NAME || 'controller';
 
 // Установить ключ
 export async function setKey(account: string, password: string): Promise<boolean> {

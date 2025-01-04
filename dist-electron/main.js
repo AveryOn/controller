@@ -463,12 +463,26 @@ function prepareExpireTime(expires) {
   ready += Date.now();
   return ready;
 }
+function createSignatureToken() {
+  try {
+    return "abc123";
+  } catch (err) {
+    console.error("[createSignatureToken]>>", err);
+    throw err;
+  }
+}
 const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
 async function createAccessToken(payload, expires) {
   try {
     if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
     const expiresStamp = prepareExpireTime(expires);
-    const token2 = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
+    const signatureToken = createSignatureToken();
+    const tokenData = {
+      expires: expiresStamp,
+      payload,
+      signature: signatureToken
+    };
+    const token2 = await encryptJsonData(tokenData, KEY);
     return token2;
   } catch (err) {
     throw err;
@@ -644,7 +658,7 @@ async function loginUser(params) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const token2 = await createAccessToken({
-        id: readyUser.id,
+        userId: readyUser.id,
         username: readyUser.username
       }, { m: 1, s: 20 });
       return {
@@ -5178,6 +5192,21 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
+async function prepareUserStore(win2, params) {
+  console.log("[prepareUserStore]>> ", params);
+  try {
+    let isReliableStores = true;
+    isReliableStores = await prepareUsersStore();
+    isReliableStores = await prepareMaterialsStore();
+    isReliableStores = await prepareMaterialsStoreForMenu();
+    if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
+    win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
+    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
+  } catch (err) {
+    console.error("[prepareUserStore]>> ", err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
@@ -5194,12 +5223,6 @@ function createWindow() {
     }
   });
   win.webContents.on("did-finish-load", async () => {
-    let isReliableStores = true;
-    isReliableStores = await prepareUsersStore();
-    isReliableStores = await prepareMaterialsStore();
-    isReliableStores = await prepareMaterialsStoreForMenu();
-    win == null ? void 0 : win.webContents.send("main-process-message", isReliableStores);
-    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
   });
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
@@ -5220,6 +5243,9 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   createWindow();
+  ipcMain.handle("prepare-user-storage", async (event, params) => {
+    return await prepareUserStore(win, params);
+  });
   ipcMain.handle("get-users", async (event, config2) => {
     return await getUsers(config2);
   });
