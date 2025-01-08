@@ -1,4 +1,4 @@
-import { AccessTokenData, ExpiresToken } from "../types/services/tokens.types";
+import { AccessTokenData, AccessTokenPayload, ExpiresToken } from "../types/services/tokens.types";
 import { decryptJsonData, encryptJsonData } from "./crypto.service";
 
 // Создать время со смещением вперед
@@ -15,13 +15,29 @@ function prepareExpireTime(expires: ExpiresToken) {
     return ready;
 }
 
+// Создать сигнатуру токена для исключения риска его подделки
+function createSignatureToken() {
+    try {
+        return 'abc123';
+    } catch (err) {
+        console.error('[createSignatureToken]>>', err);
+        throw err;
+    }        
+}
+
 const KEY = process.env.APP_KEY || 'a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e';
 // Формирование токена доступа
-export async function createAccessToken(payload: any, expires: ExpiresToken) {
+export async function createAccessToken(payload: AccessTokenPayload, expires: ExpiresToken): Promise<string> {
     try {
         if(!payload || !expires) throw new Error('[createAccessToken]>> INVALID_INPUT');
         const expiresStamp: number = prepareExpireTime(expires);
-        const token = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
+        const signatureToken: string = createSignatureToken();
+        const tokenData: AccessTokenData = {
+            expires: expiresStamp,
+            payload,
+            signature: signatureToken,
+        }
+        const token = await encryptJsonData(tokenData, KEY);
         return token;
     } catch (err) {
         throw err;

@@ -463,37 +463,76 @@ function prepareExpireTime(expires) {
   ready += Date.now();
   return ready;
 }
+function createSignatureToken() {
+  try {
+    return "abc123";
+  } catch (err) {
+    console.error("[createSignatureToken]>>", err);
+    throw err;
+  }
+}
 const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
 async function createAccessToken(payload, expires) {
   try {
     if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
     const expiresStamp = prepareExpireTime(expires);
-    const token2 = await encryptJsonData({ payload, expires: expiresStamp }, KEY);
+    const signatureToken = createSignatureToken();
+    const tokenData = {
+      expires: expiresStamp,
+      payload,
+      signature: signatureToken
+    };
+    const token2 = await encryptJsonData(tokenData, KEY);
     return token2;
   } catch (err) {
     throw err;
   }
 }
+function getAppDirname() {
+  return path$1.join(app.getPath("appData"), "controller");
+}
 async function writeFile(data, config2) {
   try {
-    const userDataDir = app.getPath(config2.directory);
-    const filePath = path$1.join(userDataDir, config2.filename);
+    const appDataDir = getAppDirname();
+    const filePath = path$1.join(appDataDir, config2.filename);
     const correctData = config2.format === "json" ? JSON.stringify(data) : data;
     return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
   } catch (err) {
-    console.error(err);
+    console.error("[writeFile]>>", err);
     throw err;
   }
 }
 async function readFile(config2) {
   try {
-    const userDataDir = app.getPath(config2.directory);
-    const filePath = path$1.join(userDataDir, config2.filename);
+    const appDataDir = getAppDirname();
+    const filePath = path$1.join(appDataDir, config2.filename);
     const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
     return config2.format === "json" ? JSON.parse(data) : data;
   } catch (err) {
     console.error(err);
     throw err;
+  }
+}
+async function mkDir(dirName) {
+  try {
+    const root = getAppDirname();
+    const filePath = path$1.join(root, dirName);
+    await fs$1.mkdir(filePath, { recursive: true });
+  } catch (err) {
+    throw err;
+  }
+}
+async function isExistFileOrDir(pathName) {
+  if (!pathName) throw new Error("[isExistFileOrDir]>> pathName обязательный аргумент");
+  try {
+    const root = getAppDirname();
+    const fullPath = path$1.join(root, pathName);
+    await fs$1.access(fullPath, fs$1.constants.F_OK);
+    return true;
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      return false;
+    } else throw err;
   }
 }
 const FILENAME = "users.json";
@@ -514,12 +553,15 @@ async function writeUsersDataFs(data) {
 async function prepareUsersStore() {
   return readFile(FSCONFIG$1).then((data) => {
     return true;
-  }).catch(async () => {
+  }).catch(async (err) => {
     try {
-      await writeFile(JSON.stringify([]), FSCONFIG$1);
-      return true;
-    } catch (err) {
-      console.error("WRITE FILE", err);
+      if (err.code === "ENOENT") {
+        await writeFile([], FSCONFIG$1);
+        return true;
+      }
+      return false;
+    } catch (err2) {
+      console.error("WRITE FILE", err2);
       return false;
     }
   });
@@ -537,6 +579,34 @@ async function getUsers(config2) {
     throw err;
   }
 }
+async function initUserDir(user) {
+  console.log("[initUserDir] =>", user);
+  if (!user) throw new Error("user - обязательный аргумент");
+  try {
+    if (typeof user.id !== "number" || user.id !== user.id) {
+      throw new TypeError("[initUserDir]>> ID пользователя неверный");
+    }
+    const userDirName = `user_${user.username}`;
+    const isExistUserDir = await isExistFileOrDir(userDirName);
+    if (isExistUserDir === false) {
+      console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
+      await mkDir(userDirName);
+      if (await isExistFileOrDir(userDirName)) {
+        console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
+        await writeFile({}, { ...FSCONFIG$1, filename: `${userDirName}/${userDirName}.json` });
+        return true;
+      } else {
+        console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
+        return false;
+      }
+    } else {
+      console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
+      return false;
+    }
+  } catch (err) {
+    throw err;
+  }
+}
 async function createUser(params) {
   console.log("[createUser] =>", params);
   try {
@@ -547,16 +617,23 @@ async function createUser(params) {
         throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
       }
     });
+    const now2 = (/* @__PURE__ */ new Date()).toISOString();
     const hash = await encrypt(params.password);
     const newUser = {
-      id: users.length + 1,
+      id: Date.now(),
       username: params.username,
       password: hash,
-      avatar: null
+      avatar: null,
+      createdAt: now2,
+      updatedAt: now2
     };
     users.push(newUser);
-    Reflect.deleteProperty(newUser, "password");
     await writeFile(users, FSCONFIG$1);
+    Reflect.deleteProperty(newUser, "password");
+    const isCreationNewDir = await initUserDir(newUser);
+    if (!isCreationNewDir) {
+      throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+    }
     return newUser;
   } catch (err) {
     console.error(err);
@@ -572,6 +649,7 @@ async function loginUser(params) {
     if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
     }
+    console.log(findedUser);
     const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
       console.log("[loginUser]>> INTERNAL_ERROR", err);
     });
@@ -580,7 +658,7 @@ async function loginUser(params) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const token2 = await createAccessToken({
-        id: readyUser.id,
+        userId: readyUser.id,
         username: readyUser.username
       }, { m: 1, s: 20 });
       return {
@@ -4649,12 +4727,15 @@ async function prepareMaterialsStore() {
   console.log("[prepareMaterialsStore] => void");
   return readFile(FSCONFIG).then((data) => {
     return true;
-  }).catch(async () => {
+  }).catch(async (err) => {
     try {
-      await writeFile([], FSCONFIG);
-      return true;
-    } catch (err) {
-      console.error("WRITE FILE", err);
+      if (err.code === "ENOENT") {
+        await writeFile([], FSCONFIG);
+        return true;
+      }
+      return false;
+    } catch (err2) {
+      console.error("WRITE FILE", err2);
       return false;
     }
   });
@@ -5111,6 +5192,21 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
+async function prepareUserStore(win2, params) {
+  console.log("[prepareUserStore]>> ", params);
+  try {
+    let isReliableStores = true;
+    isReliableStores = await prepareUsersStore();
+    isReliableStores = await prepareMaterialsStore();
+    isReliableStores = await prepareMaterialsStoreForMenu();
+    if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
+    win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
+    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
+  } catch (err) {
+    console.error("[prepareUserStore]>> ", err);
+    throw err;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
@@ -5127,14 +5223,6 @@ function createWindow() {
     }
   });
   win.webContents.on("did-finish-load", async () => {
-    const result = await readFile({ directory: "appData", encoding: "utf-8", filename: "users.json", "format": "json" });
-    console.log(result);
-    let isReliableStores = true;
-    isReliableStores = await prepareUsersStore();
-    isReliableStores = await prepareMaterialsStore();
-    isReliableStores = await prepareMaterialsStoreForMenu();
-    win == null ? void 0 : win.webContents.send("main-process-message", isReliableStores);
-    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
   });
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
@@ -5155,6 +5243,9 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   createWindow();
+  ipcMain.handle("prepare-user-storage", async (event, params) => {
+    return await prepareUserStore(win, params);
+  });
   ipcMain.handle("get-users", async (event, config2) => {
     return await getUsers(config2);
   });

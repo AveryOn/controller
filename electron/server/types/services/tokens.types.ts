@@ -1,7 +1,11 @@
-
+export interface AccessTokenPayload {
+    userId: number | string;
+    username: string;
+}
 export interface AccessTokenData {
-    payload: any;
+    payload: AccessTokenPayload;
     expires: number; 
+    signature: string;
 }
 
 export interface ExpiresToken {

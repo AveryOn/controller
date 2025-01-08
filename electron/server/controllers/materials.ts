@@ -43,10 +43,13 @@ export async function prepareMaterialsStore(): Promise<boolean> {
         .then((data) => {
             return true;
         })
-        .catch(async () => {
+        .catch(async (err) => {
             try {
-                await writeFile([], FSCONFIG);
-                return true;
+                if(err.code === 'ENOENT') {
+                    await writeFile([], FSCONFIG);
+                    return true;
+                }
+                return false;
             } catch (err) {
                 console.error('WRITE FILE', err);
                 return false;

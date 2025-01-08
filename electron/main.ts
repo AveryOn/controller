@@ -3,12 +3,44 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { prepareUsersStore, getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
-import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types'
-import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types'
-import { createChapter, createChapterBlock, createSubChapter, deleteChapter, deleteChapterBlock, deleteSubChapter, editChapter, editChapterBlock, getChapters, getOneChapter, getOneSubChapter, prepareMaterialsStore, prepareMaterialsStoreForMenu, syncMaterialsStores } from './server/controllers/materials'
+import { getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
+import type {
+    CreateUserParams,
+    GetUsersConfig,
+    LoginParams,
+    UpdatePasswordParams
+} from './server/types/controllers/users.types'
+import type {
+    ChapterCreate,
+    CreateChapterBlock,
+    DeleteChapterBlock,
+    DeleteChapterParams,
+    DeleteSubChapterParams,
+    EditChapterBlock,
+    EditChapterBlockTitle,
+    EditChapterParams,
+    GetChapterOneParams,
+    GetChaptersConfig,
+    GetSubChapterOneParams,
+    SubChapterCreate
+} from './server/types/controllers/materials.types'
+import { createChapter, 
+    createChapterBlock, 
+    createSubChapter, 
+    deleteChapter, 
+    deleteChapterBlock, 
+    deleteSubChapter, 
+    editChapter, 
+    editChapterBlock, 
+    getChapters, 
+    getOneChapter, 
+    getOneSubChapter, 
+    syncMaterialsStores 
+} from './server/controllers/materials'
+import { PrepareUserStorageParams } from './server/types/controllers/system.types';
 import { resetAllDB } from './server/controllers';
-import { readFile } from './server/services/fs.service';
+import { readDir, readFile } from './server/services/fs.service';
+import { prepareUserStore } from './server/controllers/system.controller';
 
 
 const require = createRequire(import.meta.url);
@@ -38,16 +70,9 @@ function createWindow() {
     win.webContents.on('did-finish-load', async () => {
         // Сброс БД materials
         // await resetAllDB({ exclude: ['materials'] });
-        const result = await readFile({ directory: 'appData', encoding: 'utf-8', filename: 'users.json', 'format': 'json'});
-        console.log(result);
-        
-        let isReliableStores: boolean = true;
-        // Проверка баз данных
-        isReliableStores = await prepareUsersStore(); // Users
-        isReliableStores = await prepareMaterialsStore(); // Materials
-        isReliableStores = await prepareMaterialsStoreForMenu() // Materials For Menu
-        win?.webContents.send('main-process-message', isReliableStores);
-        console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
+        // const result = await readFile({ directory: 'appData', encoding: 'utf-8', filename: 'user_tom/user_tom.json', 'format': 'json'});
+        // const files = await readDir('/')
+        // console.log('FILES', files);
     })
 
     if (VITE_DEV_SERVER_URL) {
@@ -81,6 +106,13 @@ app.whenReady().then(async () => {
     // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
 
     // Обработчики IPC
+    // ==========  SYSTEM  ==========
+    // Запрос на подготовки хранилища пользователя
+    ipcMain.handle("prepare-user-storage", async (event, params: PrepareUserStorageParams) => {
+        return await prepareUserStore(win, params);
+    });
+
+    // ==========  USERS  ===========
     // Получение пользователей
     ipcMain.handle("get-users", async (event, config?: GetUsersConfig) => {
         return await getUsers(config);

@@ -33,4 +33,6 @@ export interface User {
     username: string;
     password: string;
     avatar?: undefined | null | string;
+    createdAt: string;
+    updatedAt: string;
 }

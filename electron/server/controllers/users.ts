@@ -1,7 +1,7 @@
 import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
 import { createAccessToken } from '../services/tokens.service';
-import { FsOperationConfig, readFile, writeFile } from '../services/fs.service';
+import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
 
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
@@ -38,10 +38,13 @@ export async function prepareUsersStore(): Promise<boolean> {
         .then((data) => {
             return true;
         })
-        .catch(async () => {
+        .catch(async (err) => {
             try {
-                await writeFile(JSON.stringify([]), FSCONFIG);
-                return true;
+                if(err.code === 'ENOENT') {
+                    await writeFile([], FSCONFIG);
+                    return true;
+                }
+                return false;
             } catch (err) {
                 console.error('WRITE FILE', err);
                 return false;
@@ -67,6 +70,44 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
     }
 }
 
+// Зарегистрировать пользовательскую директорию (при регистрации нового пользователя)
+async function initUserDir(user: User): Promise<boolean> {
+    console.log('[initUserDir] =>', user);
+    if(!user) throw new Error('user - обязательный аргумент');
+    try {
+        // Если id пользователя невалидный
+        if(typeof user.id !== 'number' || user.id !== user.id) {
+            throw new TypeError('[initUserDir]>> ID пользователя неверный');
+        }
+        // Создается имя директории
+        const userDirName = `user_${user.username}`;
+        const isExistUserDir = await isExistFileOrDir(userDirName);
+        // Если пользовательская директория НЕ существует
+        if(isExistUserDir === false) {
+            console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
+            // Сначала создать директорию
+            await mkDir(userDirName);
+            if(await isExistFileOrDir(userDirName)) {
+                console.log('СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО');
+                // Затем создать файл user-[id].json (Он нужен т.к у каждого из пользователей должна быть информация о себе)
+                await writeFile({}, { ...FSCONFIG, filename: `${userDirName}/${userDirName}.json` });
+                return true;
+            }
+            else {
+                console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
+                return false;
+            }
+        }
+        // Если пользовательская директория существует
+        else {
+            console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
+            return false;
+        }
+    } catch (err) {
+        throw err;
+    }
+}
+
 // Создание нового пользователя
 export async function createUser(params: CreateUserParams) {
     console.log('[createUser] =>', params);
@@ -80,18 +121,25 @@ export async function createUser(params: CreateUserParams) {
                 throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
             }
         });
+        const now = (new Date()).toISOString();
         // Если проверка прошла успешно, то создаем нового пользователя
         const hash = await encrypt(params.password);
         const newUser: User = {
-            id: users.length + 1,
+            id: Date.now(),
             username: params.username,
             password: hash,
             avatar: null,
+            createdAt: now,
+            updatedAt: now,
         }
         users.push(newUser);
-        Reflect.deleteProperty(newUser, 'password');
         // Запись нового пользователя в БД
         await writeFile(users, FSCONFIG);
+        Reflect.deleteProperty(newUser, 'password');
+        const isCreationNewDir = await initUserDir(newUser);
+        if(!isCreationNewDir) {
+            throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+        }
         return newUser;
     } catch (err) {
         console.error(err);
@@ -102,6 +150,7 @@ export async function createUser(params: CreateUserParams) {
 // Подтверждение учетных данных пользователя при входе в систему
 export async function loginUser(params: LoginParams): Promise<LoginResponse> {
     console.log('[loginUser] =>', params);
+
     try {
         if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
         // Извлечение пользователей
@@ -112,6 +161,8 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
         if (!findedUser) {
             throw '[loginUser]>> NOT_EXISTS_RECORD';
         }
+        console.log(findedUser);
+        
         // Проверка пароля
         const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
             console.log('[loginUser]>> INTERNAL_ERROR', err);
@@ -123,7 +174,7 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
             Reflect.deleteProperty(readyUser, 'password');
             // Формируем токен доступа
             const token = await createAccessToken({ 
-                id: readyUser.id, 
+                userId: readyUser.id, 
                 username: readyUser.username 
             }, { m: 1, s: 20 });
             return {
