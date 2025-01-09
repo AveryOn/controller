@@ -560,20 +560,55 @@ async function initDB(dbname, username) {
     console.log(`БД ${dbFileName} уже существует`);
     const dbProcess = execProcess(path$1.join(import.meta.dirname, "..", "electron/server/database/init.js"));
     dbProcess.send({ action: "db:init", payload: { dbpath: fullDbPath } });
-    dbProcess.on("message", ({ action, status, payload }) => {
-      if (status === "ok") {
-        console.log("ok");
-      }
-      console.log({ action, status, payload });
-    });
+    return dbProcess;
   } catch (err) {
     console.error(`[initDB=>${dbname}]>>`, err);
     throw err;
   }
 }
+const processContracts = {
+  materials: {
+    migrations: {
+      initChaptersTable: "db:materials-mgs-init-chapters-table",
+      initSubChaptersTable: "db:materials-mgs-init-sub-chapters-table",
+      initBlocksTable: "db:materials-mgs-init-blocks-table"
+    }
+  }
+};
+async function executeMigrations(process2, dbname) {
+  return new Promise((resolve, reject) => {
+    let actionStack = Object.values(processContracts[dbname].migrations);
+    let migrationAmount = actionStack.length;
+    process2.on("message", (msg) => {
+      console.log(msg);
+      if (actionStack.includes(msg.action)) {
+        if (msg.status === "ok") {
+          actionStack = actionStack.filter((action) => action !== msg.action);
+          if (actionStack.length <= 0) {
+            process2.removeAllListeners();
+            console.log("RESOLVE", migrationAmount);
+            resolve(migrationAmount);
+          }
+        } else if (msg.status === "error") reject(msg.payload.msg);
+      }
+    });
+    for (const action of actionStack) {
+      if (action) process2.send({
+        action,
+        payload: { namespace: dbname }
+      });
+    }
+    process2.on("error", (err) => {
+      console.error(`[executeMigrations (${dbname})]>>`, err);
+      throw err;
+    });
+  });
+}
 async function initUserDataBases(username) {
   try {
-    const db = await initDB("MATERIALS_DB_NAME", username);
+    const materialsProcess = await initDB("MATERIALS_DB_NAME", username);
+    const migrations = await executeMigrations(materialsProcess, "materials");
+    console.log("Миграции выполнены", migrations);
   } catch (err) {
     throw err;
   }
