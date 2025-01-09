@@ -2,6 +2,7 @@ import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePas
 import { encrypt, verify } from '../services/crypto.service';
 import { createAccessToken } from '../services/tokens.service';
 import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
+import { initUserDataBases } from '../services/db.service';
 
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
@@ -91,6 +92,8 @@ async function initUserDir(user: User): Promise<boolean> {
                 console.log('СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО');
                 // Затем создать файл user-[id].json (Он нужен т.к у каждого из пользователей должна быть информация о себе)
                 await writeFile({}, { ...FSCONFIG, filename: `${userDirName}/${userDirName}.json` });
+                // Инициализация баз данных
+                await initUserDataBases(user.username);
                 return true;
             }
             else {
@@ -108,7 +111,7 @@ async function initUserDir(user: User): Promise<boolean> {
     }
 }
 
-// Создание нового пользователя
+// Создание нового пользователя при регистрации
 export async function createUser(params: CreateUserParams) {
     console.log('[createUser] =>', params);
     try {

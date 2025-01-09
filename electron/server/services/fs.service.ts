@@ -12,7 +12,7 @@ export interface FsOperationConfig {
 }
 
 // Получает корневую директорию приложения
-function getAppDirname() {
+export function getAppDirname() {
     return path.join(app.getPath('appData'), 'controller');
 }
 
@@ -69,11 +69,16 @@ export async function readDir(dirName: string) {
 // interface IsExistFileOrDirConfig {
 //     root?: UserDirectory | (string & {}),
 // }
-export async function isExistFileOrDir(pathName: string): Promise<boolean> {
+export async function isExistFileOrDir(pathName: string, config?: { custom: boolean }): Promise<boolean> {
     if(!pathName) throw new Error('[isExistFileOrDir]>> pathName обязательный аргумент');
     try {
-        const root: string = getAppDirname();
-        const fullPath = path.join(root, pathName);
+        let root: string;
+        let fullPath: string;
+        if(!config?.custom) {
+            root = getAppDirname();
+            fullPath = path.join(root, pathName);
+        }
+        else fullPath = pathName;
         await fs.access(fullPath, fs.constants.F_OK);
         return true;
     } catch (err) {

@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path$2 from "node:path";
 import fs$1 from "fs/promises";
+import { fork } from "child_process";
 var main$1 = { exports: {} };
 const name = "dotenv";
 const version$1 = "16.4.7";
@@ -522,17 +523,59 @@ async function mkDir(dirName) {
     throw err;
   }
 }
-async function isExistFileOrDir(pathName) {
+async function isExistFileOrDir(pathName, config2) {
   if (!pathName) throw new Error("[isExistFileOrDir]>> pathName обязательный аргумент");
   try {
-    const root = getAppDirname();
-    const fullPath = path$1.join(root, pathName);
+    let root;
+    let fullPath;
+    if (!(config2 == null ? void 0 : config2.custom)) {
+      root = getAppDirname();
+      fullPath = path$1.join(root, pathName);
+    } else fullPath = pathName;
     await fs$1.access(fullPath, fs$1.constants.F_OK);
     return true;
   } catch (err) {
     if (err.code === "ENOENT") {
       return false;
     } else throw err;
+  }
+}
+function execProcess(filename) {
+  const process2 = fork(filename);
+  return process2;
+}
+const dblist = {
+  MATERIALS_DB_NAME: process.env["MATERIALS_DB_NAME"] || "materials",
+  SETTINGS_DB_NAME: process.env["SETTINGS_DB_NAME"] || "settings",
+  SECRETS_DB_NAME: process.env["SECRETS_DB_NAME"] || "secrets"
+};
+async function initDB(dbname, username) {
+  try {
+    if (!dbname || !Object.prototype.hasOwnProperty.call(dblist, dbname)) {
+      throw new Error("[sqlite.initDB]>> invalid dbname");
+    }
+    const dbFileName = dblist[dbname];
+    const fullDbPath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dblist[dbname]}.db`);
+    const isExist = await isExistFileOrDir(fullDbPath, { custom: true });
+    console.log(`БД ${dbFileName} уже существует`);
+    const dbProcess = execProcess(path$1.join(import.meta.dirname, "..", "electron/server/database/init.js"));
+    dbProcess.send({ action: "db:init", payload: { dbpath: fullDbPath } });
+    dbProcess.on("message", ({ action, status, payload }) => {
+      if (status === "ok") {
+        console.log("ok");
+      }
+      console.log({ action, status, payload });
+    });
+  } catch (err) {
+    console.error(`[initDB=>${dbname}]>>`, err);
+    throw err;
+  }
+}
+async function initUserDataBases(username) {
+  try {
+    const db = await initDB("MATERIALS_DB_NAME", username);
+  } catch (err) {
+    throw err;
   }
 }
 const FILENAME = "users.json";
@@ -594,6 +637,7 @@ async function initUserDir(user) {
       if (await isExistFileOrDir(userDirName)) {
         console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
         await writeFile({}, { ...FSCONFIG$1, filename: `${userDirName}/${userDirName}.json` });
+        await initUserDataBases(user.username);
         return true;
       } else {
         console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
@@ -5243,6 +5287,7 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   createWindow();
+  await initUserDataBases("alex");
   ipcMain.handle("prepare-user-storage", async (event, params) => {
     return await prepareUserStore(win, params);
   });

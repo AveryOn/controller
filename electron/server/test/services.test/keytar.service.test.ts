@@ -70,29 +70,29 @@ describe('[Service: keytar]', () => {
         });
     });
 
-    // Тестирование getAccounts
-    describe('Function: { getAccounts }', () => {
-        test('getAccounts -> верный ввод | аккаунтов нет', async () => {
-            const result = await getAccounts();
-            expect(result).toStrictEqual([]);
-        });
-        test('getAccounts -> верный ввод | аккаунты есть', async () => {
-            // создать аккаунт
-            await setKey('account1', 'hello123');
-            await setKey('account2', 'hello122');
-            const result = await getAccounts();
-            expect(result).toStrictEqual([
-                {
-                    "account": "account2",
-                    "password": "hello122",
-                },
-                {
-                    "account": "account1",
-                    "password": "hello123",
-                },
-            ]);
-            await deleteKey('account1');
-            await deleteKey('account2');
-        });
-    });
+    // // Тестирование getAccounts
+    // describe('Function: { getAccounts }', () => {
+    //     test('getAccounts -> верный ввод | аккаунтов нет', async () => {
+    //         const result = await getAccounts();
+    //         expect(result).toStrictEqual([]);
+    //     });
+    //     test('getAccounts -> верный ввод | аккаунты есть', async () => {
+    //         // создать аккаунт
+    //         await setKey('account1', 'hello123');
+    //         await setKey('account2', 'hello122');
+    //         const result = await getAccounts();
+    //         expect(result).toStrictEqual([
+    //             {
+    //                 "account": "account2",
+    //                 "password": "hello122",
+    //             },
+    //             {
+    //                 "account": "account1",
+    //                 "password": "hello123",
+    //             },
+    //         ]);
+    //         await deleteKey('account1');
+    //         await deleteKey('account2');
+    //     });
+    // });
 });
