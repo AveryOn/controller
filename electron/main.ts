@@ -110,7 +110,7 @@ app.whenReady().then(async () => {
     createWindow();
     // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
     // Обработчики IPC
-    
+    await prepareUserStore(win, { username: 'alex' });
     // ==========  SYSTEM  ==========
     // Запрос на подготовки хранилища пользователя
     ipcMain.handle("prepare-user-storage", async (event, params: PrepareUserStorageParams) => {

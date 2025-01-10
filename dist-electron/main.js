@@ -5307,6 +5307,12 @@ class InstanceDatabase {
       return await this.requestIPC({ action: "exec", payload: { sql } });
     } else throw new Error("exec => process is not defined");
   }
+  // Запуск миграций для текущей базы данных
+  async migrate() {
+    if (this.process) {
+      return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: null });
+    } else throw new Error("exec => process is not defined");
+  }
 }
 const _DatabaseManager = class _DatabaseManager {
   constructor() {
@@ -5323,33 +5329,33 @@ const _DatabaseManager = class _DatabaseManager {
     return _DatabaseManager.instanceManager;
   }
   // Подключение всех баз данных
-  async executeAllInitDB(items) {
+  async executeAllInitDB(username, items) {
     if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
-    for (const item of items) {
-      const isReliable = await new Promise((resolve, reject) => {
-        const dbname = item.arguments[0];
-        this[dbname] = new item.constructor(...item.arguments, (enabled) => {
-          resolve(enabled);
+    try {
+      for (const item of items) {
+        const isReliable = await new Promise((resolve, reject) => {
+          const dbname = item.dbname;
+          this[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+            resolve(enabled);
+          });
         });
-      });
-      this.stateConnectManager = isReliable;
+        this.stateConnectManager = isReliable;
+      }
+      return this.stateConnectManager;
+    } catch (err) {
+      console.error("[executeAllInitDB]>> ", err);
+      throw err;
     }
-    return this.stateConnectManager;
   }
   // Инициализация Баз Данных
   async init(username) {
     try {
       this.username = username;
-      return await this.executeAllInitDB([
-        {
-          constructor: InstanceDatabase,
-          arguments: [
-            "materials",
-            this.username
-          ]
-        }
+      return await this.executeAllInitDB(username, [
+        { dbname: "materials" }
       ]);
     } catch (err) {
+      console.error("[DatabaseManager.init]>> ", err);
       throw err;
     }
   }
@@ -5361,8 +5367,8 @@ async function prepareUserStore(win2, params) {
   try {
     let isReliableStores = true;
     const manager = DatabaseManager.instance();
-    isReliableStores = await manager.init(params.username);
-    isReliableStores = await prepareUsersStore();
+    if (!await manager.init(params.username)) isReliableStores = false;
+    if (!await prepareUsersStore()) isReliableStores = false;
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
     win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
     console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
@@ -5407,6 +5413,7 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   createWindow();
+  await prepareUserStore(win, { username: "alex" });
   ipcMain.handle("prepare-user-storage", async (event, params) => {
     return await prepareUserStore(win, params);
   });

@@ -1,5 +1,10 @@
 import pkg from 'sqlite3';
-const { verbose, Database } = pkg;
+const { verbose } = pkg;
+import materialsMigration from '../../server/database/migrations/materials.migration.js';
+
+const migrations = {
+    "migrate:materials": materialsMigration,
+}
 
 let db = null;
 process.on("message", async (msg) => {
@@ -21,6 +26,32 @@ process.on("message", async (msg) => {
                     })
                 }
             });
+        }
+        // Запуск миграций
+        if(msg.action.includes('migrate:')) {
+            Object.keys(migrations).forEach(async (key) => {
+                if(msg.action.includes(key)) {
+                    const migrateList = migrations[key];
+                    if(Array.isArray(migrateList)) {
+                        for (const sql of migrateList) {
+                            await new Promise((resolve) => {
+                                db.exec(sql, (err) => {
+                                    if(err) process.send({ action: msg.action, payload: err, status: 'error' });
+                                    else {
+                                        process.send({ 
+                                            action: msg.action, 
+                                            payload: null, 
+                                            status: 'ok' 
+                                        })
+                                        resolve(true);
+                                    }
+                                });
+                            })
+                        }
+                    }
+                }
+            })
+            process.send({ action: msg.action, payload: null, status: 'ok' });
         }
         // для all запросов 
         if(msg.action.includes('all')) {

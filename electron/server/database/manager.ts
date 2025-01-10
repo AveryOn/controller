@@ -106,14 +106,17 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         }
         else throw new Error('exec => process is not defined');
     }
+    // Запуск миграций для текущей базы данных
+    async migrate(): Promise<IpcContractRes> {
+        if (this.process) {
+            return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: null });
+        }
+        else throw new Error('exec => process is not defined');
+    }
 }
 
 interface InitDbItem {
-    constructor: typeof InstanceDatabase;
-    arguments: [
-        dbname: DnNamesType, 
-        username: string, 
-    ];
+    dbname: DnNamesType, 
 }
 // Главный менеджер по управлению базами данных
 export class DatabaseManager {
@@ -134,18 +137,23 @@ export class DatabaseManager {
     }
 
     // Подключение всех баз данных
-    private async executeAllInitDB(items: Array<InitDbItem>): Promise<boolean> {
+    private async executeAllInitDB(username: string, items: Array<InitDbItem>): Promise<boolean> {
         if(!items || !Array.isArray(items)) throw TypeError('[executeAllInitDB]>> invalid items');   
-        for (const item of items) {
-            const isReliable: boolean = await new Promise((resolve, reject) => {
-                const dbname = item.arguments[0];
-                this[dbname] = new item.constructor(...item.arguments, (enabled) => {
-                    resolve(enabled);
-                })
-            });
-            this.stateConnectManager = isReliable;
+        try {
+            for (const item of items) {
+                const isReliable: boolean = await new Promise((resolve, reject) => {
+                    const dbname = item.dbname;
+                    this[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+                        resolve(enabled);
+                    })
+                });
+                this.stateConnectManager = isReliable;
+            }
+            return this.stateConnectManager;
+        } catch (err) {
+            console.error('[executeAllInitDB]>> ', err);
+            throw err;
         }
-        return this.stateConnectManager;
     }
 
     // Инициализация Баз Данных
@@ -153,16 +161,11 @@ export class DatabaseManager {
         try {
             this.username = username;
             // здесь поочередно вызываются иниты баз данных. Порядок важен
-            return await this.executeAllInitDB([
-                { 
-                    constructor: InstanceDatabase, 
-                    arguments: [
-                        'materials', 
-                        this.username, 
-                    ], 
-                },
+            return await this.executeAllInitDB(username, [
+                { dbname: 'materials' },
             ]);
         } catch (err) {
+            console.error('[DatabaseManager.init]>> ', err);
             throw err;
         }
     }
