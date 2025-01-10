@@ -7,7 +7,7 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-type DnNamesType = 'materials';
+type DbNamesType = 'materials';
 
 // контракт запроса
 interface IpcContractReq {
@@ -27,12 +27,12 @@ export interface InstanceDatabaseDoc {
 
 // Экземпляр базы данных
 export class InstanceDatabase implements InstanceDatabaseDoc {
-    private dbname: DnNamesType | null      = null;
+    private dbname: DbNamesType | null      = null;
     private dbpath: string | null           = null;
     private processPath: string | null      = null;
     private process: ChildProcess | null    = null;
 
-    constructor (dbname: DnNamesType, username: string, state?: (enabled: boolean) => void) {
+    constructor (dbname: DbNamesType, username: string, state?: (enabled: boolean) => void) {
         if(!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
         if(!username || typeof username !== 'string') throw new Error("InstanceDatabase > constructor: username is a required");
         this.init(dbname, username, (isReliable) => {
@@ -40,8 +40,8 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         })
     };
 
-    private init(dbname: DnNamesType, username: string, state?: (enabled: boolean) => void) {
-        this.dbname = dbname as DnNamesType;
+    private init(dbname: DbNamesType, username: string, state?: (enabled: boolean) => void) {
+        this.dbname = dbname as DbNamesType;
         this.dbpath = path.join(app.getPath('appData'), 'controller', `user_${username}`, `${dbname}.db`);
         this.processPath = path.join(__dirname, '../electron/server/database/init.js');
         this.process = fork(this.processPath);
@@ -116,7 +116,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
 }
 
 interface InitDbItem {
-    dbname: DnNamesType, 
+    dbname: DbNamesType, 
 }
 // Главный менеджер по управлению базами данных
 export class DatabaseManager {
