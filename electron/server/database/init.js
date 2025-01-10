@@ -1,68 +1,90 @@
 import pkg from 'sqlite3';
 const { verbose, Database } = pkg;
-import MaterialsMigrations from '../database/migrations/materials.migration.js';
 
-
-const processContracts = {
-    materials: {
-        migrations: {
-            initChaptersTable: 'db:materials-mgs-init-chapters-table',
-            initSubChaptersTable: 'db:materials-mgs-init-sub-chapters-table',
-            initBlocksTable: 'db:materials-mgs-init-blocks-table',
-        }
-    }
-}
-
-function initDB(dbpath) {
-    return new Promise((resolve, reject) => {
-        const sqlite3 = verbose();
-        return new sqlite3.Database(dbpath);
-    })
-}
-
-let db;
+let db = null;
 process.on("message", async (msg) => {
-    if(!msg) process.emit('uncaughtException', { status: 'error', msg: 'msg is required argument' }) 
-    if(!msg?.action) throw 'invalid msg action'
-
-    // Отправляем сообщение обратно в родительский процесс
-    if (msg.action === "db:init") {
-        db = await initDB(msg.payload.dbpath);
-        
-        process.send({
-            action: "db:init",
-            status: 'ok',
-            payload: {  }
-        });
-    }
-
-    if(!(db instanceof Database)) {
-        console.log('DB IS NONE');
-        return;
-    }
-    // Взаимодействие с БД материалов
-    if(msg?.payload?.namespace === 'materials') {
-        const migrationsMaterials = new MaterialsMigrations();
-        const migrationsMaterialsActions = Object.values(processContracts.materials.migrations);
-
-        if(migrationsMaterialsActions.includes(msg.action)) {
-            const initChapterTable = processContracts.materials.migrations.initChaptersTable;
-            const initSubChapterTable = processContracts.materials.migrations.initSubChaptersTable;
-            const initBlocksTable = processContracts.materials.migrations.initBlocksTable;
-
-            // Создание таблицы разделов
-            if(msg.action === initChapterTable) {
-                await migrationsMaterials.initChaptersTable(db)
-                process.send({ action: initChapterTable, payload: {}, status: 'ok' })
-            }
-            // Создание таблицы подразделов
-            if(msg.action === initSubChapterTable) {
-                process.send({ action: initSubChapterTable, payload: {}, status: 'ok' })
-            }
-            // Создание таблицы блоков
-            if(msg.action === initBlocksTable) {
-                process.send({ action: initBlocksTable, payload: {}, status: 'ok' })
-            }
+    
+    if(msg && msg.action) {
+        // инициализация базы данных
+        if(msg.action.includes('init')) {
+            if(!msg.payload?.dbpath) throw new Error('dbpath is a required')
+            const sqlite3 = verbose();
+            db = new sqlite3.Database(msg?.payload?.dbpath, (err) => {
+                if(err) {
+                    process.send({ action: msg.action, payload: err, status: 'error' });
+                }
+                else {
+                    process.send({ 
+                        action: msg.action, 
+                        payload: null, 
+                        status: 'ok' 
+                    })
+                }
+            });
+        }
+        // для all запросов 
+        if(msg.action.includes('all')) {
+            db.all(msg.payload.sql, (err, rows) => {
+                if(err) {
+                    process.send({ action: msg.action, payload: err, status: 'error' });
+                }
+                else {
+                    process.send({ 
+                        action: msg.action, 
+                        payload: rows ?? null, 
+                        status: 'ok' 
+                    })
+                }
+            })
+        }
+        // для get запросов
+        if(msg.action.includes('get')) {
+            db.get(msg.payload.sql, (err, row) => {
+                if(err) {
+                    process.send({ action: msg.action, payload: err, status: 'error' });
+                }
+                else {
+                    process.send({ 
+                        action: msg.action, 
+                        payload: row ?? null, 
+                        status: 'ok' 
+                    })
+                }
+            });
+        }
+        // для run запросов
+        if(msg.action.includes('run')) {
+            db.run(msg.payload.sql, (err) => {
+                if(err) {
+                    process.send({ action: msg.action, payload: err, status: 'error' });
+                }
+                else {
+                    process.send({ 
+                        action: msg.action, 
+                        payload: null, 
+                        status: 'ok' 
+                    })
+                }
+            });
+        }
+        // для exec запросов
+        if(msg.action.includes('exec')) {
+            db.exec(msg.payload.sql, (err) => {
+                if(err) {
+                    process.send({ action: msg.action, payload: err, status: 'error' });
+                }
+                else {
+                    process.send({ 
+                        action: msg.action, 
+                        payload: null, 
+                        status: 'ok' 
+                    })
+                }
+            });
         }
     }
+    else {
+        console.log('msg and msg.action required');
+    }
+    
 });

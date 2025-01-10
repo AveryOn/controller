@@ -7,9 +7,11 @@ describe('[Service: crypto]', () => {
     // Тестирование функции encrypt
     describe('Function: { encrypt }', () => {
         test('encrypt -> нет данных на вход', async () => {
+            // @ts-ignore
             await expect(encrypt()).rejects.toThrowError(/^input - обязательный аргумент$/);
         });
         test('encrypt -> на вход число', async () => {
+            // @ts-ignore
             await expect(encrypt(123)).rejects.toThrowError(/^input - должен быть типа string$/);
         });
         test('encrypt -> на вход строка', async () => {
@@ -22,15 +24,19 @@ describe('[Service: crypto]', () => {
     // Тестирование функции verify
     describe('Function: { verify }', () => {
         test('verify -> нет данных на вход', async () => {
+            // @ts-ignore
             await expect(verify()).rejects.toThrowError(/^input, hash - обязательные аргмуенты$/);
         });
         test('verify -> для input передано число', async () => {
+            // @ts-ignore
             await expect(verify(123)).rejects.toThrowError(/^input, hash - обязательные аргмуенты$/);
         });
         test('verify -> input: number, salt: string, hash: string', async () => {
+            // @ts-ignore
             await expect(verify(123, 'text', 'text')).rejects.toThrowError(/^аргументы input, hash должны быть типа string$/);
         });
         test('verify -> все аргументы строки', async () => {
+            // @ts-ignore
             expect(await verify('text', 'text', 'text')).toBe(false);
         });
         test('verify -> все аргументы верные', async () => {
@@ -42,12 +48,15 @@ describe('[Service: crypto]', () => {
     // Тестирование функции encryptJsonData
     describe('Function: { encryptJsonData }', () => {
         test('encryptJsonData -> нет данных на вход', async () => {
+            // @ts-ignore
             await expect(encryptJsonData()).rejects.toThrowError('[Services.encryptJsonData]>> NOT_DATA');
         });
         test('encryptJsonData -> для data объект, второй пуст', async () => {
+            // @ts-ignore
             await expect(encryptJsonData({ key: 'text' })).rejects.toThrowError('[Services.encryptJsonData]>> INVALID_SIGNATURE');
         });
         test('encryptJsonData -> для data объект, второй число', async () => {
+            // @ts-ignore
             await expect(encryptJsonData({ key: 'text' }, 123)).rejects.toThrowError('[Services.encryptJsonData]>> INVALID_SIGNATURE');
         });
         test('encryptJsonData -> Аргументы правильного типа', async () => {
@@ -77,12 +86,15 @@ describe('[Service: crypto]', () => {
     // Тестирование функции decryptJsonData
     describe('Function: { decryptJsonData }', () => {
         test('decryptJsonData -> нет данных на вход', async () => {
+            // @ts-ignore
             await expect(decryptJsonData()).rejects.toThrowError('[Services.decryptJsonData]>> NOT_DATA');
         });
         test('decryptJsonData -> для data объект, второй пуст', async () => {
+            // @ts-ignore
             await expect(decryptJsonData({ key: 'text' })).rejects.toThrowError('[Services.decryptJsonData]>> INVALID_SIGNATURE');
         });
         test('decryptJsonData -> для data объект, второй число', async () => {
+            // @ts-ignore
             await expect(decryptJsonData({ key: 'text' }, 123)).rejects.toThrowError('[Services.decryptJsonData]>> INVALID_SIGNATURE');
         });
         test('decryptJsonData -> на вход правильные данные (object)', async () => {

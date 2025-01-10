@@ -20,6 +20,7 @@ import { Chapter,
 } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
+import { DatabaseManager } from "../database/manager";
 
 const MATERIALS_FILENAME = 'materials.json';
 const MATERIALS_MENU_FILENAME = 'materials-menu.json';

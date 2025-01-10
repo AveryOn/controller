@@ -1,13 +1,17 @@
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import require$$0 from "fs";
-import path$1 from "path";
+import path$1, { dirname } from "path";
 import require$$2 from "os";
 import crypto$1 from "crypto";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath$1 } from "node:url";
 import path$2 from "node:path";
 import fs$1 from "fs/promises";
 import { fork } from "child_process";
+import { fileURLToPath } from "url";
 var main$1 = { exports: {} };
 const name = "dotenv";
 const version$1 = "16.4.7";
@@ -531,7 +535,7 @@ async function isExistFileOrDir(pathName, config2) {
     if (!(config2 == null ? void 0 : config2.custom)) {
       root = getAppDirname();
       fullPath = path$1.join(root, pathName);
-    } else fullPath = pathName;
+    }
     await fs$1.access(fullPath, fs$1.constants.F_OK);
     return true;
   } catch (err) {
@@ -539,10 +543,6 @@ async function isExistFileOrDir(pathName, config2) {
       return false;
     } else throw err;
   }
-}
-function execProcess(filename) {
-  const process2 = fork(filename);
-  return process2;
 }
 const dblist = {
   MATERIALS_DB_NAME: process.env["MATERIALS_DB_NAME"] || "materials",
@@ -555,12 +555,6 @@ async function initDB(dbname, username) {
       throw new Error("[sqlite.initDB]>> invalid dbname");
     }
     const dbFileName = dblist[dbname];
-    const fullDbPath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dblist[dbname]}.db`);
-    const isExist = await isExistFileOrDir(fullDbPath, { custom: true });
-    console.log(`БД ${dbFileName} уже существует`);
-    const dbProcess = execProcess(path$1.join(import.meta.dirname, "..", "electron/server/database/init.js"));
-    dbProcess.send({ action: "db:init", payload: { dbpath: fullDbPath } });
-    return dbProcess;
   } catch (err) {
     console.error(`[initDB=>${dbname}]>>`, err);
     throw err;
@@ -4802,37 +4796,6 @@ const FSCONFIG_MENU = {
   filename: MATERIALS_MENU_FILENAME,
   format: "json"
 };
-async function prepareMaterialsStore() {
-  console.log("[prepareMaterialsStore] => void");
-  return readFile(FSCONFIG).then((data) => {
-    return true;
-  }).catch(async (err) => {
-    try {
-      if (err.code === "ENOENT") {
-        await writeFile([], FSCONFIG);
-        return true;
-      }
-      return false;
-    } catch (err2) {
-      console.error("WRITE FILE", err2);
-      return false;
-    }
-  });
-}
-async function prepareMaterialsStoreForMenu() {
-  console.log("[prepareMaterialsStoreForMenu] => void");
-  return readFile(FSCONFIG_MENU).then((data) => {
-    return true;
-  }).catch(async () => {
-    try {
-      await writeFile([], FSCONFIG_MENU);
-      return true;
-    } catch (err) {
-      console.error("WRITE FILE", err);
-      return false;
-    }
-  });
-}
 async function createChapter(params) {
   console.log("[createChapter] => ", params);
   try {
@@ -5271,13 +5234,135 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
+const __filename = fileURLToPath(import.meta.url);
+const __dirname$1 = dirname(__filename);
+class InstanceDatabase {
+  constructor(dbname, username, state) {
+    __publicField(this, "dbname", null);
+    __publicField(this, "dbpath", null);
+    __publicField(this, "processPath", null);
+    __publicField(this, "process", null);
+    if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
+    if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
+    this.init(dbname, username, (isReliable) => {
+      state && state(isReliable);
+    });
+  }
+  init(dbname, username, state) {
+    this.dbname = dbname;
+    this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
+    this.processPath = path$1.join(__dirname$1, "../electron/server/database/init.js");
+    this.process = fork(this.processPath);
+    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }).then(({ status }) => state && state(status === "ok")).catch(() => {
+      state && state(false);
+    });
+  }
+  // сделать запрос к дочернему процессу и получить ответ
+  async requestIPC(data) {
+    try {
+      if (this.process) {
+        const action = `${data.action}-${Date.now()}`;
+        let returnData;
+        const promise = new Promise((resolve, reject) => {
+          returnData = (res) => {
+            if (res.status === "error") reject(res.payload);
+            if (res.action === action) {
+              resolve(res);
+            }
+          };
+          this.process.on("message", returnData);
+        });
+        this.process.send({ action, payload: data.payload });
+        const response = await promise;
+        this.process.removeListener("message", returnData);
+        return response;
+      } else throw new Error("requestIPC => process is not defined");
+    } catch (err) {
+      console.log("requestIPC>>", err);
+      throw err;
+    }
+  }
+  /* Запросы к sqlite */
+  // Выполняет запрос и возвращает все строки результата
+  async all(sql) {
+    if (this.process) {
+      return await this.requestIPC({ action: "all", payload: { sql } });
+    } else throw new Error("all => process is not defined");
+  }
+  // Выполняет запрос и возвращает одну строку результата
+  async get(sql) {
+    if (this.process) {
+      return await this.requestIPC({ action: "get", payload: { sql } });
+    } else throw new Error("get => process is not defined");
+  }
+  // Выполняет запрос без возврата результата 
+  async run(sql) {
+    if (this.process) {
+      return await this.requestIPC({ action: "run", payload: { sql } });
+    } else throw new Error("run => process is not defined");
+  }
+  // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
+  async exec(sql) {
+    if (this.process) {
+      return await this.requestIPC({ action: "exec", payload: { sql } });
+    } else throw new Error("exec => process is not defined");
+  }
+}
+const _DatabaseManager = class _DatabaseManager {
+  constructor() {
+    __publicField(this, "materials");
+    __publicField(this, "username", null);
+    __publicField(this, "stateConnectManager", true);
+  }
+  // получение экземпляра менеджера
+  static instance() {
+    if (!_DatabaseManager.instanceManager) {
+      const instance = new _DatabaseManager();
+      _DatabaseManager.instanceManager = instance;
+    }
+    return _DatabaseManager.instanceManager;
+  }
+  // Подключение всех баз данных
+  async executeAllInitDB(items) {
+    if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
+    for (const item of items) {
+      const isReliable = await new Promise((resolve, reject) => {
+        const dbname = item.arguments[0];
+        this[dbname] = new item.constructor(...item.arguments, (enabled) => {
+          resolve(enabled);
+        });
+      });
+      this.stateConnectManager = isReliable;
+    }
+    return this.stateConnectManager;
+  }
+  // Инициализация Баз Данных
+  async init(username) {
+    try {
+      this.username = username;
+      return await this.executeAllInitDB([
+        {
+          constructor: InstanceDatabase,
+          arguments: [
+            "materials",
+            this.username
+          ]
+        }
+      ]);
+    } catch (err) {
+      throw err;
+    }
+  }
+};
+__publicField(_DatabaseManager, "instanceManager", null);
+let DatabaseManager = _DatabaseManager;
 async function prepareUserStore(win2, params) {
   console.log("[prepareUserStore]>> ", params);
   try {
     let isReliableStores = true;
+    const manager = DatabaseManager.instance();
+    isReliableStores = await manager.init(params.username);
     isReliableStores = await prepareUsersStore();
-    isReliableStores = await prepareMaterialsStore();
-    isReliableStores = await prepareMaterialsStoreForMenu();
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
     win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
     console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
@@ -5287,7 +5372,7 @@ async function prepareUserStore(win2, params) {
   }
 }
 createRequire(import.meta.url);
-const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
+const __dirname = path$2.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path$2.join(process.env.APP_ROOT, "dist-electron");
@@ -5322,7 +5407,6 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   createWindow();
-  await initUserDataBases("alex");
   ipcMain.handle("prepare-user-storage", async (event, params) => {
     return await prepareUserStore(win, params);
   });

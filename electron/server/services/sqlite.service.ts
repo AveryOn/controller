@@ -12,18 +12,18 @@ const dblist = {
 }
 
 // Подключение к БД. Формирование экземпляра
-export async function initDB(dbname: keyof typeof dblist, username: string): Promise<ChildProcess> {
+export async function initDB(dbname: keyof typeof dblist, username: string): Promise<any> {
     try {
         if(!dbname || !Object.prototype.hasOwnProperty.call(dblist, dbname)) {
             throw new Error('[sqlite.initDB]>> invalid dbname');
         }
         const dbFileName: string = dblist[dbname];
-        const fullDbPath = path.join(app.getPath('appData'), 'controller', `user_${username}`, `${dblist[dbname]}.db`)
-        const isExist = await isExistFileOrDir(fullDbPath, { custom: true });
-        console.log(`БД ${dbFileName} уже существует`);
-        const dbProcess = execProcess(path.join(import.meta.dirname, '..', 'electron/server/database/init.js'));
-        dbProcess.send({ action: 'db:init', payload: { dbpath: fullDbPath }});
-        return dbProcess;
+        // const fullDbPath = path.join(app.getPath('appData'), 'controller', `user_${username}`, `${dblist[dbname]}.db`)
+        // const isExist = await isExistFileOrDir(fullDbPath, { custom: true });
+        // console.log(`БД ${dbFileName} уже существует`);
+        // const dbProcess = execProcess(path.join(import.meta.dirname, '..', 'electron/server/database/init.js'));
+        // dbProcess.send({ action: 'db:init', payload: { dbpath: fullDbPath }});
+        // return dbProcess;
     } catch (err) {
         console.error(`[initDB=>${dbname}]>>`, err);
         throw err;

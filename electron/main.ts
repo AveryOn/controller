@@ -45,6 +45,7 @@ import { initUserDataBases } from './server/services/db.service';
 import Database from 'better-sqlite3';
 import { verbose } from 'sqlite3';
 import { execProcess } from './server/services/process.service';
+import { DatabaseManager } from './server/database/manager';
 
 
 const require = createRequire(import.meta.url);
@@ -109,7 +110,7 @@ app.whenReady().then(async () => {
     createWindow();
     // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
     // Обработчики IPC
-    await initUserDataBases('alex');
+    
     // ==========  SYSTEM  ==========
     // Запрос на подготовки хранилища пользователя
     ipcMain.handle("prepare-user-storage", async (event, params: PrepareUserStorageParams) => {
