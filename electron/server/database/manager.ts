@@ -200,7 +200,7 @@ export class DatabaseManager {
         }
     }
 
-    // Инициализация Баз Данных
+    // Инициализация Баз Данных уровня пользователя
     async initOnUser(username: string): Promise<boolean> {
         try {
             this.username = username;
@@ -219,8 +219,8 @@ export class DatabaseManager {
         try {
             for (let key in this.instanceDatabaseList) {
                 if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
-                    const ins = this.instanceDatabaseList[key];
-                    await ins.migrate();
+                    const db = this.instanceDatabaseList[key];
+                    await db.migrate();
                 }
             }
         } catch (err) {
