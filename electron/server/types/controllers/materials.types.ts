@@ -21,6 +21,7 @@ export interface SubChapterCreate {
 }
 
 export interface GetChaptersConfig extends PaginatorParams {
+    token: string;
     forMenu?: boolean;
 }
 

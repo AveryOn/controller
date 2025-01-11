@@ -40,7 +40,8 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         try {
             loadingGetMenuChapters.value = true;
             if(materialChaptersMenu.value[0].type === 'loading') {
-                const items = await getChapters({ forMenu: true });
+                const token = localStorage.getItem('token') ?? '';
+                const items = await getChapters({ forMenu: true, token: token });
                 updateMenuItems(items);
             } 
         } catch (err) {

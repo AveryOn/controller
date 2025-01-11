@@ -481,12 +481,20 @@ const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
 function getAppDirname() {
   return path$1.join(app.getPath("appData"), "controller");
 }
+function getAppUserDirname(username) {
+  return path$1.join(app.getPath("appData"), "controller", `user_${username}`);
+}
 function getDistProjectDir() {
   return app.isPackaged ? path$1.join(process.resourcesPath, "app.asar.unpacked", "dist-electron") : __dirname$1;
 }
 async function writeFile(data, config2) {
   try {
-    const appDataDir = getAppDirname();
+    let appDataDir;
+    if (config2.customPath === true) {
+      appDataDir = config2.directory;
+    } else {
+      appDataDir = getAppDirname();
+    }
     const filePath = path$1.join(appDataDir, config2.filename);
     const correctData = config2.format === "json" ? JSON.stringify(data) : data;
     return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
@@ -497,7 +505,12 @@ async function writeFile(data, config2) {
 }
 async function readFile(config2) {
   try {
-    const appDataDir = getAppDirname();
+    let appDataDir;
+    if (config2.customPath === true) {
+      appDataDir = config2.directory;
+    } else {
+      appDataDir = getAppDirname();
+    }
     const filePath = path$1.join(appDataDir, config2.filename);
     const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
     return config2.format === "json" ? JSON.parse(data) : data;
@@ -4897,6 +4910,55 @@ function formatDate(date, template, utcOffset) {
     throw err;
   }
 }
+function prepareExpireTime(expires) {
+  let ready = 0;
+  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
+  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
+  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
+  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  if (expires.m) ready += 1e3 * 60 * Math.max(expires.m, 1);
+  if (expires.s) ready += 1e3 * Math.max(expires.s, 1);
+  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
+  ready += Date.now();
+  return ready;
+}
+function createSignatureToken() {
+  try {
+    return "abc123";
+  } catch (err) {
+    console.error("[createSignatureToken]>>", err);
+    throw err;
+  }
+}
+const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+async function createAccessToken(payload, expires) {
+  try {
+    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
+    const expiresStamp = prepareExpireTime(expires);
+    const signatureToken = createSignatureToken();
+    const tokenData = {
+      expires: expiresStamp,
+      payload,
+      signature: signatureToken
+    };
+    const token2 = await encryptJsonData(tokenData, KEY);
+    return token2;
+  } catch (err) {
+    throw err;
+  }
+}
+async function verifyAccessToken(token2) {
+  try {
+    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
+    const payload = JSON.parse(await decryptJsonData(token2, KEY));
+    if (payload.expires <= Date.now()) {
+      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    }
+    return payload;
+  } catch (err) {
+    throw err;
+  }
+}
 const MATERIALS_FILENAME = "materials.json";
 const MATERIALS_MENU_FILENAME = "materials-menu.json";
 const FSCONFIG = {
@@ -4911,6 +4973,21 @@ const FSCONFIG_MENU = {
   filename: MATERIALS_MENU_FILENAME,
   format: "json"
 };
+async function prepareMaterialsStoreForMenu(username) {
+  const userDirPath = getAppUserDirname(username);
+  console.log("[prepareMaterialsStoreForMenu] => void");
+  return readFile(FSCONFIG_MENU).then((data) => {
+    return true;
+  }).catch(async () => {
+    try {
+      await writeFile([], { ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+      return true;
+    } catch (err) {
+      console.error("WRITE FILE", err);
+      return false;
+    }
+  });
+}
 async function createChapter(params) {
   console.log("[createChapter] => ", params);
   try {
@@ -4948,9 +5025,14 @@ async function createChapter(params) {
 async function getChapters(params) {
   console.log("getChapters => ", params);
   try {
+    if (!params) throw new Error("[getChapters]>> invalid params");
+    if (!params.token) new Error("[getChapters]>> 401 UNAUTHORIZATE");
+    const { payload: { username } } = await verifyAccessToken(params.token);
+    const userDirPath = getAppUserDirname(username);
     let chapters;
     if ((params == null ? void 0 : params.forMenu) === true) {
-      chapters = await readFile(FSCONFIG_MENU);
+      chapters = await readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+      chapters = [];
     } else chapters = await readFile(FSCONFIG);
     if (!chapters) throw "[getChapters]>> INTERNAL_ERROR";
     if (params && params.page && params.perPage) {
@@ -5349,55 +5431,6 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
-function prepareExpireTime(expires) {
-  let ready = 0;
-  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
-  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
-  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
-  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
-  if (expires.m) ready += 1e3 * 60 * Math.max(expires.m, 1);
-  if (expires.s) ready += 1e3 * Math.max(expires.s, 1);
-  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
-  ready += Date.now();
-  return ready;
-}
-function createSignatureToken() {
-  try {
-    return "abc123";
-  } catch (err) {
-    console.error("[createSignatureToken]>>", err);
-    throw err;
-  }
-}
-const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
-async function createAccessToken(payload, expires) {
-  try {
-    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
-    const expiresStamp = prepareExpireTime(expires);
-    const signatureToken = createSignatureToken();
-    const tokenData = {
-      expires: expiresStamp,
-      payload,
-      signature: signatureToken
-    };
-    const token2 = await encryptJsonData(tokenData, KEY);
-    return token2;
-  } catch (err) {
-    throw err;
-  }
-}
-async function verifyAccessToken(token2) {
-  try {
-    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
-    const payload = JSON.parse(await decryptJsonData(token2, KEY));
-    if (payload.expires <= Date.now()) {
-      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
-    }
-    return payload;
-  } catch (err) {
-    throw err;
-  }
-}
 async function prepareUserStore(win2, username) {
   console.log("[prepareUserStore]>> ", username);
   try {
@@ -5405,6 +5438,7 @@ async function prepareUserStore(win2, username) {
     const manager = DatabaseManager.instance();
     if (!await manager.initOnUser(username, { migrate: true })) isReliableStores = false;
     if (!await prepareUsersStore()) isReliableStores = false;
+    if (!await prepareMaterialsStoreForMenu(username)) isReliableStores = false;
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
     win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
     console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
@@ -5417,7 +5451,7 @@ async function validateAccessToken(params) {
   console.log("[validateAccessToken] =>", params);
   try {
     if (!(params == null ? void 0 : params.token)) throw "[validateAccessToken]>> INVALID_DATA";
-    return await verifyAccessToken(params.token);
+    return !!await verifyAccessToken(params.token);
   } catch (err) {
     console.error(err);
     return false;

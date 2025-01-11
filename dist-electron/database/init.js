@@ -18,9 +18,11 @@ process.on("message", async (msg) => {
             const sqlite3 = verbose();
             db = new sqlite3.Database(msg?.payload?.dbpath, (err) => {
                 if(err) {
+                    console.log(err);
                     process.send({ action: msg.action, payload: err, status: 'error' });
                 }
                 else {
+                    console.log('OK');
                     process.send({ 
                         action: msg.action, 
                         payload: null, 

@@ -3,13 +3,14 @@ import fs from 'fs/promises';
 import { app } from 'electron';
 import { fileURLToPath } from 'url';
 
-export type UserDirectory = "home" | "appData" | "userData" | "sessionData" | "temp" | "exe" | "module" | "desktop" | "documents" | "downloads" | "music" | "pictures" | "videos" | "recent" | "logs" | "crashDumps";
+export type UserDirectory = (string | {}) | "home" | "appData" | "userData" | "sessionData" | "temp" | "exe" | "module" | "desktop" | "documents" | "downloads" | "music" | "pictures" | "videos" | "recent" | "logs" | "crashDumps";
 export type FormatData = 'text' | 'json';
 export interface FsOperationConfig {
     filename: string;
     directory: UserDirectory; 
     format: FormatData;
     encoding: BufferEncoding;
+    customPath?: boolean;
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +18,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Получает корневую директорию приложения (для хранения данных приложения)
 export function getAppDirname() {
     return path.join(app.getPath('appData'), 'controller');
+}
+
+// Получает корневую директорию пользовательского хранилища
+export function getAppUserDirname(username: string) {
+    return path.join(app.getPath('appData'), 'controller', `user_${username}`);
 }
 
 // Получает корневую директорию работы приложения
@@ -29,8 +35,14 @@ export function getDistProjectDir() {
 // Запись в файл
 export async function writeFile(data: any, config: FsOperationConfig): Promise<void> {
     try {
-        const appDataDir = getAppDirname();
-        const filePath = path.join(appDataDir, config.filename);
+        let appDataDir: UserDirectory;
+        if(config.customPath === true) {
+            appDataDir = config.directory;
+        }
+        else {
+            appDataDir = getAppDirname();
+        }
+        const filePath = path.join(appDataDir as string, config.filename);
         const correctData = (config.format === 'json') ? JSON.stringify(data) : data;
         return void await fs.writeFile(filePath, correctData, { encoding: config.encoding || 'utf-8' });
     } catch (err) {
@@ -42,8 +54,13 @@ export async function writeFile(data: any, config: FsOperationConfig): Promise<v
 // Чтение файла
 export async function readFile(config: FsOperationConfig): Promise<any> {
     try {
-        const appDataDir = getAppDirname();
-        const filePath = path.join(appDataDir, config.filename);
+        let appDataDir: UserDirectory;
+        if(config.customPath === true) {
+            appDataDir = config.directory;
+        } else {
+            appDataDir = getAppDirname();
+        }
+        const filePath = path.join(appDataDir as string, config.filename);
         const data = await fs.readFile(filePath, { encoding: config.encoding || 'utf-8' });
         return (config.format === 'json') ? JSON.parse(data) : data;
     } catch (err) {

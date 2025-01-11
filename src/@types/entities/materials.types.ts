@@ -184,6 +184,7 @@ export interface GetChaptersParams {
     page?: number;
     perPage?: number;
     forMenu?: boolean;
+    token: string;
 }
 
 export interface GetOneChapterParams {

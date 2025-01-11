@@ -108,6 +108,7 @@ app.whenReady().then(async () => {
     const isReadyDB = await DatabaseManager
         .instance()
         .initOnApp({ migrate: true });
+    
     if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
     await prepareUsersStore()
     console.debug('APPLICATION DATABASES ARE READY');

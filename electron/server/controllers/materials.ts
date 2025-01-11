@@ -1,4 +1,4 @@
-import { writeFile, readFile, type FsOperationConfig } from "../services/fs.service";
+import { writeFile, readFile, type FsOperationConfig, getAppUserDirname } from "../services/fs.service";
 import { encrypt, verify } from '../services/crypto.service';
 import { Chapter, 
     ChapterBlock, 
@@ -21,6 +21,7 @@ import { Chapter,
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 import { DatabaseManager } from "../database/manager";
+import { verifyAccessToken } from "../services/tokens.service";
 
 const MATERIALS_FILENAME = 'materials.json';
 const MATERIALS_MENU_FILENAME = 'materials-menu.json';
@@ -59,7 +60,8 @@ export async function prepareMaterialsStore(): Promise<boolean> {
 }
 
 // Подготовить базу данных для меню материалов
-export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
+export async function prepareMaterialsStoreForMenu(username: string): Promise<boolean> {
+    const userDirPath = getAppUserDirname(username);
     console.log('[prepareMaterialsStoreForMenu] => void');
     return readFile(FSCONFIG_MENU)
         .then((data) => {
@@ -67,7 +69,7 @@ export async function prepareMaterialsStoreForMenu(): Promise<boolean> {
         })
         .catch(async () => {
             try {
-                await writeFile([], FSCONFIG_MENU);
+                await writeFile([], { ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
                 return true;
             } catch (err) {
                 console.error('WRITE FILE', err);
@@ -129,13 +131,18 @@ export async function createChapter(params: ChapterCreate) {
 }
 
 // Получение данных сущности Материалы (Либо для панели меню, либо оригинальные данные)
-export async function getChapters(params?: GetChaptersConfig): Promise<ChapterForMenu[] | Chapter[]> {
+export async function getChapters(params: GetChaptersConfig): Promise<ChapterForMenu[] | Chapter[]> {
     console.log('getChapters => ', params);
     try {
+        if(!params) throw new Error('[getChapters]>> invalid params');
+        if(!params.token) new Error('[getChapters]>> 401 UNAUTHORIZATE');
+        const { payload: { username } } = await verifyAccessToken(params.token);
+        const userDirPath = getAppUserDirname(username);
         // Если запрос шел от панели меню
         let chapters: ChapterForMenu[] | Chapter[];
         if (params?.forMenu === true) {
-            chapters = await readFile(FSCONFIG_MENU);
+            chapters = await readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+            chapters = [];
         }
         // Классическое получение данных
         else chapters = await readFile(FSCONFIG);
