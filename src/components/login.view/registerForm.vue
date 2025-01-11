@@ -17,10 +17,11 @@
 import Fluid from 'primevue/fluid';
 import { ref, defineEmits } from 'vue';
 import useNotices from '../../composables/notices';
+import { createUserApi } from '../../api/users.api';
 const notices = useNotices();
 
 const emit = defineEmits({
-    'confirm:login': (state: boolean) => true,
+    'confirm:register': (state: boolean) => true,
 })
 
 const isLoading = ref(false);
@@ -36,13 +37,13 @@ async function submit() {
     try {
         isLoading.value = true;
         if (form.value.password === form.value.confirmPassword) {
-            const newUser = await window.electron.createUser({
+            const newUser = await createUserApi({ 
                 username: form.value.username,
-                password: form.value.password,
-            });
+                password: form.value.password, 
+            })
             console.log(newUser);
         }
-        emit('confirm:login', true);
+        emit('confirm:register', true);
     } catch (error) {
         notices.show({ severity: 'error', detail: 'Error' });
     }

@@ -7,7 +7,24 @@ export interface User {
 }
 
 
-export interface LoginResponse {
+export interface LoginResponseApi {
     token: string;
     user: User;
+}
+
+export interface PrepareUserStorageParamsApi {
+    username: string;
+}
+
+export interface CreateUserParamsApi {
+    username: string;
+    password: string;
+}
+
+export interface UserCreateResponseApi {
+    id: number;
+    username: string;
+    avatar?: undefined | null | string;
+    createdAt: string;
+    updatedAt: string;
 }

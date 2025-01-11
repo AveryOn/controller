@@ -1,30 +1,8 @@
 import { ChildProcess, fork } from 'child_process';
 import { app } from 'electron';
 import path from 'path'
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { getDistProjectDir } from '../services/fs.service';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-type DbNamesType = 'materials' | 'users';
-type UsernameType =  '--' | (string & {});
-
-// контракт запроса
-interface IpcContractReq {
-    action: string;
-    payload: any;
-}
-
-// контракт ответа
-interface IpcContractRes {
-    action: string;
-    payload: any;
-    status: 'ok' | 'error';
-}
-
-export interface InstanceDatabaseDoc {
-}
+import { DbNamesType, InitDbItem, InstanceDatabaseDoc, IpcContractReq, IpcContractRes, UsernameType } from '../types/database/index.types';
 
 // Экземпляр базы данных
 export class InstanceDatabase implements InstanceDatabaseDoc {
@@ -93,30 +71,30 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
 
     /* Запросы к sqlite */
     // Выполняет запрос и возвращает все строки результата
-    async all(sql: string): Promise<IpcContractRes> {
+    async all(sql: string, args?: any[]): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'all', payload: { sql } });
+            return await this.requestIPC({ action: 'all', payload: { sql, arguments: args } });
         }
         else throw new Error('all => process is not defined');
     }
     // Выполняет запрос и возвращает одну строку результата
-    async get(sql: string): Promise<IpcContractRes> {
+    async get(sql: string, args?: any[]): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'get', payload: { sql } });
+            return await this.requestIPC({ action: 'get', payload: { sql, arguments: args } });
         }
         else throw new Error('get => process is not defined');
     }
     // Выполняет запрос без возврата результата 
-    async run(sql: string): Promise<IpcContractRes> {
+    async run(sql: string, args?: any[]): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'run', payload: { sql } });
+            return await this.requestIPC({ action: 'run', payload: { sql, arguments: args } });
         }
         else throw new Error('run => process is not defined');
     }
     // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
-    async exec(sql: string): Promise<IpcContractRes> {
+    async exec(sql: string, args?: any[]): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'exec', payload: { sql } });
+            return await this.requestIPC({ action: 'exec', payload: { sql, arguments: args } });
         }
         else throw new Error('exec => process is not defined');
     }
@@ -129,10 +107,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
     }
 }
 
-interface InitDbItem {
-    dbname: DbNamesType,
-    isGeneral?: boolean,
-}
+
 // Главный менеджер по управлению базами данных
 export class DatabaseManager {
     private instanceDatabaseList: { [key: string]: InstanceDatabase } = Object.create(null);

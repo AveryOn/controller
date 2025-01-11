@@ -2,7 +2,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import require$$0 from "fs";
-import path$1, { dirname } from "path";
+import path$1 from "path";
 import require$$2 from "os";
 import crypto$1 from "crypto";
 import { app, BrowserWindow, ipcMain } from "electron";
@@ -548,67 +548,215 @@ async function isExistFileOrDir(pathName, config2) {
     } else throw err;
   }
 }
-const dblist = {
-  MATERIALS_DB_NAME: process.env["MATERIALS_DB_NAME"] || "materials",
-  SETTINGS_DB_NAME: process.env["SETTINGS_DB_NAME"] || "settings",
-  SECRETS_DB_NAME: process.env["SECRETS_DB_NAME"] || "secrets"
-};
-async function initDB(dbname, username) {
-  try {
-    if (!dbname || !Object.prototype.hasOwnProperty.call(dblist, dbname)) {
-      throw new Error("[sqlite.initDB]>> invalid dbname");
-    }
-    const dbFileName = dblist[dbname];
-  } catch (err) {
-    console.error(`[initDB=>${dbname}]>>`, err);
-    throw err;
-  }
-}
-const processContracts = {
-  materials: {
-    migrations: {
-      initChaptersTable: "db:materials-mgs-init-chapters-table",
-      initSubChaptersTable: "db:materials-mgs-init-sub-chapters-table",
-      initBlocksTable: "db:materials-mgs-init-blocks-table"
-    }
-  }
-};
-async function executeMigrations(process2, dbname) {
-  return new Promise((resolve, reject) => {
-    let actionStack = Object.values(processContracts[dbname].migrations);
-    let migrationAmount = actionStack.length;
-    process2.on("message", (msg) => {
-      console.log(msg);
-      if (actionStack.includes(msg.action)) {
-        if (msg.status === "ok") {
-          actionStack = actionStack.filter((action) => action !== msg.action);
-          if (actionStack.length <= 0) {
-            process2.removeAllListeners();
-            console.log("RESOLVE", migrationAmount);
-            resolve(migrationAmount);
-          }
-        } else if (msg.status === "error") reject(msg.payload.msg);
-      }
+const _InstanceDatabase = class _InstanceDatabase {
+  constructor(dbname, username, state) {
+    __publicField(this, "dbname", null);
+    __publicField(this, "dbpath", null);
+    __publicField(this, "processPath", null);
+    __publicField(this, "process", null);
+    if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
+    if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
+    this.init(dbname, username, (isReliable) => {
+      state && state(isReliable);
     });
-    for (const action of actionStack) {
-      if (action) process2.send({
-        action,
-        payload: { namespace: dbname }
-      });
+    if (!_InstanceDatabase.instanceDB) {
+      _InstanceDatabase.instanceDB = this;
     }
-    process2.on("error", (err) => {
-      console.error(`[executeMigrations (${dbname})]>>`, err);
+  }
+  // Инициализация базы данных
+  init(dbname, username, state) {
+    this.dbname = dbname;
+    if (username !== "--") {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
+    } else {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
+    }
+    this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
+    this.process = fork(this.processPath);
+    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }).then(({ status }) => state && state(status === "ok")).catch(() => {
+      state && state(false);
+    });
+  }
+  // сделать запрос к дочернему процессу и получить ответ
+  async requestIPC(data) {
+    try {
+      if (this.process) {
+        const action = `${data.action}-${Date.now()}`;
+        let returnData;
+        const promise = new Promise((resolve, reject) => {
+          returnData = (res) => {
+            if (res.status === "error") reject(res.payload);
+            if (res.action === action) {
+              resolve(res);
+            }
+          };
+          this.process.on("message", returnData);
+        });
+        this.process.send({ action, payload: data.payload });
+        const response = await promise;
+        this.process.removeListener("message", returnData);
+        return response;
+      } else throw new Error("requestIPC => process is not defined");
+    } catch (err) {
+      console.log("requestIPC>>", err);
       throw err;
-    });
-  });
-}
-async function initUserDataBases(username) {
-  try {
-    const materialsProcess = await initDB("MATERIALS_DB_NAME", username);
-    const migrations = await executeMigrations(materialsProcess, "materials");
-    console.log("Миграции выполнены", migrations);
-  } catch (err) {
-    throw err;
+    }
+  }
+  /* Запросы к sqlite */
+  // Выполняет запрос и возвращает все строки результата
+  async all(sql, args) {
+    if (this.process) {
+      return await this.requestIPC({ action: "all", payload: { sql, arguments: args } });
+    } else throw new Error("all => process is not defined");
+  }
+  // Выполняет запрос и возвращает одну строку результата
+  async get(sql, args) {
+    if (this.process) {
+      return await this.requestIPC({ action: "get", payload: { sql, arguments: args } });
+    } else throw new Error("get => process is not defined");
+  }
+  // Выполняет запрос без возврата результата 
+  async run(sql, args) {
+    if (this.process) {
+      return await this.requestIPC({ action: "run", payload: { sql, arguments: args } });
+    } else throw new Error("run => process is not defined");
+  }
+  // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
+  async exec(sql, args) {
+    if (this.process) {
+      return await this.requestIPC({ action: "exec", payload: { sql, arguments: args } });
+    } else throw new Error("exec => process is not defined");
+  }
+  // Запуск миграций для текущей базы данных
+  async migrate() {
+    if (this.process) {
+      return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: null });
+    } else throw new Error("exec => process is not defined");
+  }
+};
+__publicField(_InstanceDatabase, "instanceDB", null);
+let InstanceDatabase = _InstanceDatabase;
+const _DatabaseManager = class _DatabaseManager {
+  constructor() {
+    __publicField(this, "instanceDatabaseList", /* @__PURE__ */ Object.create(null));
+    __publicField(this, "username", null);
+    __publicField(this, "stateConnectManager", true);
+  }
+  // получение экземпляра менеджера
+  static instance() {
+    if (!_DatabaseManager.instanceManager) {
+      console.log("DatabaseManager > Создан новый экземпляр менеджера");
+      const instance = new _DatabaseManager();
+      _DatabaseManager.instanceManager = instance;
+    }
+    return _DatabaseManager.instanceManager;
+  }
+  // Подключение всех баз данных
+  async executeAllInitDB(username, items) {
+    if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
+    try {
+      for (const item of items) {
+        const isReliable = await new Promise((resolve, reject) => {
+          const dbname = item.dbname;
+          this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+            resolve(enabled);
+          });
+        });
+        this.stateConnectManager = isReliable;
+      }
+      return this.stateConnectManager;
+    } catch (err) {
+      console.error("[executeAllInitDB]>> ", err);
+      throw err;
+    }
+  }
+  // Залутать инстанс БД
+  getDatabase(dbname) {
+    const ins = this.instanceDatabaseList[dbname];
+    if (!ins || !(ins instanceof InstanceDatabase)) {
+      throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
+    }
+    return ins;
+  }
+  // Инициализация Баз Данных уровня приложения
+  async initOnApp(config2) {
+    try {
+      const promise = this.executeAllInitDB("--", [
+        { dbname: "users", isGeneral: true }
+      ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        await this.executeMigrations();
+        console.debug("initOnApp>> migrations were applied");
+      }
+      return await promise;
+    } catch (err) {
+      console.error("[DatabaseManager.initOnApp]>> ", err);
+      throw err;
+    }
+  }
+  // Инициализация Баз Данных уровня пользователя
+  async initOnUser(username, config2) {
+    try {
+      this.username = username;
+      const promise = this.executeAllInitDB(username, [
+        { dbname: "materials", isGeneral: false }
+      ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        await this.executeMigrations();
+        console.debug("initOnUser>> migrations were applied");
+      }
+      return await promise;
+    } catch (err) {
+      console.error("[DatabaseManager.initOnUser]>> ", err);
+      throw err;
+    }
+  }
+  // применить миграции для всех баз данных
+  async executeMigrations() {
+    try {
+      for (let key in this.instanceDatabaseList) {
+        if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
+          const db = this.instanceDatabaseList[key];
+          await db.migrate();
+        }
+      }
+    } catch (err) {
+      console.error("executeMigrations>>", err);
+      throw err;
+    }
+  }
+};
+__publicField(_DatabaseManager, "instanceManager", null);
+let DatabaseManager = _DatabaseManager;
+class UserService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    this.instanceDb = DatabaseManager.instance().getDatabase("users");
+    if (!this.instanceDb) throw new Error("DB users is not initialized");
+  }
+  // Получить массив пользователей
+  async getAll() {
+    const rows = await this.instanceDb.all(`
+            SELECT * FROM users;
+        `);
+    return rows;
+  }
+  // Создать одного пользователя
+  async create({ username, password, avatar, createdAt, updatedAt }) {
+    await this.instanceDb.run(`
+            INSERT INTO users (username, password, avatar, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?);
+        `, [username, password, avatar, createdAt, updatedAt]);
+  }
+  // Найти пользователя по username пользователя
+  async findByUsername(dto) {
+    const res = await this.instanceDb.get(`
+            SELECT * FROM users
+            WHERE username = ?;
+
+        `, [dto.username]);
+    if (!res || !(res == null ? void 0 : res.payload)) throw "[UserService.findByUsername] > user not found";
+    return res.payload;
   }
 }
 const FILENAME = "users.json";
@@ -670,7 +818,6 @@ async function initUserDir(user) {
       if (await isExistFileOrDir(userDirName)) {
         console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
         await writeFile({}, { ...FSCONFIG$1, filename: `${userDirName}/${userDirName}.json` });
-        await initUserDataBases(user.username);
         return true;
       } else {
         console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
@@ -688,6 +835,7 @@ async function createUser(params) {
   console.log("[createUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
+    const userService = new UserService();
     const users = await readFile(FSCONFIG$1);
     users.forEach((user) => {
       if (user.username === params.username) {
@@ -705,6 +853,13 @@ async function createUser(params) {
       updatedAt: now2
     };
     users.push(newUser);
+    await userService.create({
+      username: newUser.username,
+      password: newUser.password,
+      avatar: newUser.avatar,
+      createdAt: newUser.createdAt,
+      updatedAt: newUser.updatedAt
+    });
     await writeFile(users, FSCONFIG$1);
     Reflect.deleteProperty(newUser, "password");
     const isCreationNewDir = await initUserDir(newUser);
@@ -721,7 +876,10 @@ async function loginUser(params) {
   console.log("[loginUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
+    const userService = new UserService();
     const users = await readFile(FSCONFIG$1);
+    const fnus = await userService.findByUsername({ username: params.username });
+    console.log("FINDED", fnus.payload);
     const findedUser = users.find((user) => user.username === params.username);
     if (!findedUser) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
@@ -5238,203 +5396,6 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
-const __filename = fileURLToPath(import.meta.url);
-dirname(__filename);
-const _InstanceDatabase = class _InstanceDatabase {
-  constructor(dbname, username, state) {
-    __publicField(this, "dbname", null);
-    __publicField(this, "dbpath", null);
-    __publicField(this, "processPath", null);
-    __publicField(this, "process", null);
-    if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
-    if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
-    this.init(dbname, username, (isReliable) => {
-      state && state(isReliable);
-    });
-    if (!_InstanceDatabase.instanceDB) {
-      _InstanceDatabase.instanceDB = this;
-    }
-  }
-  // Инициализация базы данных
-  init(dbname, username, state) {
-    this.dbname = dbname;
-    if (username !== "--") {
-      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
-    } else {
-      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
-    }
-    this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
-    this.process = fork(this.processPath);
-    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }).then(({ status }) => state && state(status === "ok")).catch(() => {
-      state && state(false);
-    });
-  }
-  // сделать запрос к дочернему процессу и получить ответ
-  async requestIPC(data) {
-    try {
-      if (this.process) {
-        const action = `${data.action}-${Date.now()}`;
-        let returnData;
-        const promise = new Promise((resolve, reject) => {
-          returnData = (res) => {
-            if (res.status === "error") reject(res.payload);
-            if (res.action === action) {
-              resolve(res);
-            }
-          };
-          this.process.on("message", returnData);
-        });
-        this.process.send({ action, payload: data.payload });
-        const response = await promise;
-        this.process.removeListener("message", returnData);
-        return response;
-      } else throw new Error("requestIPC => process is not defined");
-    } catch (err) {
-      console.log("requestIPC>>", err);
-      throw err;
-    }
-  }
-  /* Запросы к sqlite */
-  // Выполняет запрос и возвращает все строки результата
-  async all(sql) {
-    if (this.process) {
-      return await this.requestIPC({ action: "all", payload: { sql } });
-    } else throw new Error("all => process is not defined");
-  }
-  // Выполняет запрос и возвращает одну строку результата
-  async get(sql) {
-    if (this.process) {
-      return await this.requestIPC({ action: "get", payload: { sql } });
-    } else throw new Error("get => process is not defined");
-  }
-  // Выполняет запрос без возврата результата 
-  async run(sql) {
-    if (this.process) {
-      return await this.requestIPC({ action: "run", payload: { sql } });
-    } else throw new Error("run => process is not defined");
-  }
-  // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
-  async exec(sql) {
-    if (this.process) {
-      return await this.requestIPC({ action: "exec", payload: { sql } });
-    } else throw new Error("exec => process is not defined");
-  }
-  // Запуск миграций для текущей базы данных
-  async migrate() {
-    if (this.process) {
-      return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: null });
-    } else throw new Error("exec => process is not defined");
-  }
-};
-__publicField(_InstanceDatabase, "instanceDB", null);
-let InstanceDatabase = _InstanceDatabase;
-const _DatabaseManager = class _DatabaseManager {
-  constructor() {
-    __publicField(this, "instanceDatabaseList", /* @__PURE__ */ Object.create(null));
-    __publicField(this, "username", null);
-    __publicField(this, "stateConnectManager", true);
-  }
-  // получение экземпляра менеджера
-  static instance() {
-    if (!_DatabaseManager.instanceManager) {
-      console.log("DatabaseManager > Создан новый экземпляр менеджера");
-      const instance = new _DatabaseManager();
-      _DatabaseManager.instanceManager = instance;
-    }
-    return _DatabaseManager.instanceManager;
-  }
-  // Подключение всех баз данных
-  async executeAllInitDB(username, items) {
-    if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
-    try {
-      for (const item of items) {
-        const isReliable = await new Promise((resolve, reject) => {
-          const dbname = item.dbname;
-          this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
-            resolve(enabled);
-          });
-        });
-        this.stateConnectManager = isReliable;
-      }
-      return this.stateConnectManager;
-    } catch (err) {
-      console.error("[executeAllInitDB]>> ", err);
-      throw err;
-    }
-  }
-  // Залутать инстанс БД
-  getDatabase(dbname) {
-    const ins = this.instanceDatabaseList[dbname];
-    if (!ins || !(ins instanceof InstanceDatabase)) {
-      throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
-    }
-    return ins;
-  }
-  // Инициализация Баз Данных уровня приложения
-  async initOnApp(config2) {
-    try {
-      const promise = this.executeAllInitDB("--", [
-        { dbname: "users", isGeneral: true }
-      ]);
-      if ((config2 == null ? void 0 : config2.migrate) === true) {
-        await this.executeMigrations();
-        console.debug("initOnApp>> migrations were applied");
-      }
-      return await promise;
-    } catch (err) {
-      console.error("[DatabaseManager.initOnApp]>> ", err);
-      throw err;
-    }
-  }
-  // Инициализация Баз Данных уровня пользователя
-  async initOnUser(username, config2) {
-    try {
-      this.username = username;
-      const promise = this.executeAllInitDB(username, [
-        { dbname: "materials", isGeneral: false }
-      ]);
-      if ((config2 == null ? void 0 : config2.migrate) === true) {
-        await this.executeMigrations();
-        console.debug("initOnUser>> migrations were applied");
-      }
-      return await promise;
-    } catch (err) {
-      console.error("[DatabaseManager.initOnUser]>> ", err);
-      throw err;
-    }
-  }
-  // применить миграции для всех баз данных
-  async executeMigrations() {
-    try {
-      for (let key in this.instanceDatabaseList) {
-        if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
-          const db = this.instanceDatabaseList[key];
-          await db.migrate();
-        }
-      }
-    } catch (err) {
-      console.error("executeMigrations>>", err);
-      throw err;
-    }
-  }
-};
-__publicField(_DatabaseManager, "instanceManager", null);
-let DatabaseManager = _DatabaseManager;
-async function prepareUserStore(win2, params) {
-  console.log("[prepareUserStore]>> ", params);
-  try {
-    let isReliableStores = true;
-    const manager = DatabaseManager.instance();
-    if (!await manager.initOnUser(params.username)) isReliableStores = false;
-    if (!await prepareUsersStore()) isReliableStores = false;
-    if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
-    win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
-    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
-  } catch (err) {
-    console.error("[prepareUserStore]>> ", err);
-    throw err;
-  }
-}
 createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
@@ -5472,10 +5433,13 @@ app.on("activate", () => {
 app.whenReady().then(async () => {
   const isReadyDB = await DatabaseManager.instance().initOnApp({ migrate: true });
   if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
+  await prepareUsersStore();
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
   ipcMain.handle("prepare-user-storage", async (event, params) => {
-    return await prepareUserStore(win, params);
+    const isReady = await DatabaseManager.instance().initOnUser(params.username, { migrate: true });
+    win == null ? void 0 : win.webContents.send("main-process-message", isReady);
+    return isReady;
   });
   ipcMain.handle("get-users", async (event, config2) => {
     return await getUsers(config2);

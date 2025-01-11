@@ -23,7 +23,7 @@ import Fluid from 'primevue/fluid';
 import { ref, defineEmits } from 'vue';
 import useNotices from '../../composables/notices';
 import { useLoginStore } from '../../stores/login.store';
-import { LoginResponse } from '../../@types/entities/user.types';
+import { LoginResponseApi } from '../../@types/entities/user.types';
 
 const notices = useNotices();
 const loginStore = useLoginStore();
@@ -45,7 +45,7 @@ async function submit() {
     }
     try {
         isLoading.value = true;
-        const { token, user }: LoginResponse = await window.electron.loginUser({...form.value});
+        const { token, user }: LoginResponseApi = await window.electron.loginUser({...form.value});
         loginStore.setCredentials(token, user);
         emit('confirm:login', true, token);
         form.value = {

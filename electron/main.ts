@@ -3,7 +3,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { getUsers, createUser, loginUser, updatePassword } from './server/controllers/users'
+import { getUsers, createUser, loginUser, updatePassword, prepareUsersStore } from './server/controllers/users'
 import type {
     CreateUserParams,
     GetUsersConfig,
@@ -107,8 +107,9 @@ app.whenReady().then(async () => {
     // Инициалзация кластера баз данных
     const isReadyDB = await DatabaseManager
         .instance()
-        .initOnApp({ migrate: false });
+        .initOnApp({ migrate: true });
     if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
+    await prepareUsersStore()
     console.debug('APPLICATION DATABASES ARE READY');
 
     createWindow();
@@ -116,7 +117,11 @@ app.whenReady().then(async () => {
     // ==========  SYSTEM  ==========
     // Запрос на подготовки хранилища пользователя
     ipcMain.handle("prepare-user-storage", async (event, params: PrepareUserStorageParams) => {
-        return await prepareUserStore(win, params);
+        const isReady = await DatabaseManager
+            .instance()
+            .initOnUser(params.username, { migrate: true });
+        win?.webContents.send('main-process-message', isReady);
+        return isReady;
     });
 
     // ==========  USERS  ===========

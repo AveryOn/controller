@@ -22,6 +22,15 @@ export interface LoginResponse {
     token: string;
     user: UserClient;
 }
+
+export interface UserCreateResponse {
+    id: number;
+    username: string;
+    avatar?: undefined | null | string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface UserClient {
     id: number;
     username: string;
@@ -36,3 +45,4 @@ export interface User {
     createdAt: string;
     updatedAt: string;
 }
+

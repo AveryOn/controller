@@ -71,14 +71,15 @@ process.on("message", async (msg) => {
         }
         // для get запросов
         if(msg.action.includes('get')) {
-            db.get(msg.payload.sql, (err, row) => {
+            db.get(msg.payload.sql, msg.payload.arguments, (err, row) => {
                 if(err) {
+                    console.log('ERROR', err);
                     process.send({ action: msg.action, payload: err, status: 'error' });
                 }
                 else {
                     process.send({ 
                         action: msg.action, 
-                        payload: row ?? null, 
+                        payload: row, 
                         status: 'ok' 
                     })
                 }
@@ -86,8 +87,9 @@ process.on("message", async (msg) => {
         }
         // для run запросов
         if(msg.action.includes('run')) {
-            db.run(msg.payload.sql, (err) => {
+            db.run(msg.payload.sql, msg.payload.arguments, (err) => {
                 if(err) {
+                    console.log(err);
                     process.send({ action: msg.action, payload: err, status: 'error' });
                 }
                 else {
@@ -101,7 +103,7 @@ process.on("message", async (msg) => {
         }
         // для exec запросов
         if(msg.action.includes('exec')) {
-            db.exec(msg.payload.sql, (err) => {
+            db.exec(msg.payload.sql, msg.payload.arguments, (err) => {
                 if(err) {
                     process.send({ action: msg.action, payload: err, status: 'error' });
                 }
