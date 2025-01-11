@@ -20,7 +20,6 @@ import { Chapter,
 } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
-import { DatabaseManager } from "../database/manager";
 import { verifyAccessToken } from "../services/tokens.service";
 
 const MATERIALS_FILENAME = 'materials.json';
@@ -36,27 +35,6 @@ const FSCONFIG_MENU: FsOperationConfig = {
     encoding: 'utf-8',
     filename: MATERIALS_MENU_FILENAME,
     format: 'json',
-}
-
-// Подготовить базу данных материалов
-export async function prepareMaterialsStore(): Promise<boolean> {
-    console.log('[prepareMaterialsStore] => void');
-    return readFile(FSCONFIG)
-        .then((data) => {
-            return true;
-        })
-        .catch(async (err) => {
-            try {
-                if(err.code === 'ENOENT') {
-                    await writeFile([], FSCONFIG);
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                console.error('WRITE FILE', err);
-                return false;
-            }
-        });
 }
 
 // Подготовить базу данных для меню материалов
@@ -76,18 +54,6 @@ export async function prepareMaterialsStoreForMenu(username: string): Promise<bo
                 return false;
             }
         });
-}
-
-// Сбросить все данные materials 
-export async function resetMaterialDB() {
-    console.log('[resetMaterialDB] => void');
-    try {
-        await writeFile([], FSCONFIG);
-        await writeFile([], FSCONFIG_MENU);
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
 }
 
 // Создание нового раздела в материалах
