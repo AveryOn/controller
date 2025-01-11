@@ -201,13 +201,18 @@ export class DatabaseManager {
     }
 
     // Инициализация Баз Данных уровня пользователя
-    async initOnUser(username: string): Promise<boolean> {
+    async initOnUser(username: string, config?: { migrate?: boolean }): Promise<boolean> {
         try {
             this.username = username;
             // здесь поочередно вызываются иниты баз данных. Порядок важен
-            return await this.executeAllInitDB(username, [
+            const promise = this.executeAllInitDB(username, [
                 { dbname: 'materials', isGeneral: false },
             ]);
+            if(config?.migrate === true) {
+                await this.executeMigrations();
+                console.debug("initOnUser>> migrations were applied");
+            }
+            return await promise;
         } catch (err) {
             console.error('[DatabaseManager.initOnUser]>> ', err);
             throw err;
