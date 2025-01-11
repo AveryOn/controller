@@ -135,7 +135,7 @@ interface InitDbItem {
 }
 // Главный менеджер по управлению базами данных
 export class DatabaseManager {
-    private instanceDatabaseList: { [key: string]: InstanceDatabase } = {  };
+    private instanceDatabaseList: { [key: string]: InstanceDatabase } = Object.create(null);
     static instanceManager: DatabaseManager | null  = null;
     private username: string | null                 = null;
     private stateConnectManager: boolean            = true;
@@ -183,12 +183,17 @@ export class DatabaseManager {
     }
 
     // Инициализация Баз Данных уровня приложения
-    async initOnApp() {
+    async initOnApp(config?: { migrate?: boolean }) {
         try {
             // здесь поочередно вызываются иниты баз данных. Порядок важен
-            return await this.executeAllInitDB('--', [
+            const promise = this.executeAllInitDB('--', [
                 { dbname: 'users', isGeneral: true },
             ]);
+            if(config?.migrate === true) {
+                await this.executeMigrations();
+                console.debug("initOnApp>> migrations were applied");
+            }
+            return await promise;
         } catch (err) {
             console.error('[DatabaseManager.initOnApp]>> ', err);
             throw err;
@@ -205,6 +210,21 @@ export class DatabaseManager {
             ]);
         } catch (err) {
             console.error('[DatabaseManager.initOnUser]>> ', err);
+            throw err;
+        }
+    }
+
+    // применить миграции для всех баз данных
+    async executeMigrations() {
+        try {
+            for (let key in this.instanceDatabaseList) {
+                if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
+                    const ins = this.instanceDatabaseList[key];
+                    await ins.migrate();
+                }
+            }
+        } catch (err) {
+            console.error('executeMigrations>>', err);
             throw err;
         }
     }

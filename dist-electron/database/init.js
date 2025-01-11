@@ -1,9 +1,11 @@
 import pkg from 'sqlite3';
 const { verbose } = pkg;
 import materialsMigration from './migrations/materials.migration.js';
+import usersMigration from './migrations/users.migration.js';
 
 const migrations = {
     "migrate:materials": materialsMigration,
+    "migrate:users": usersMigration,
 }
 
 let db = null;

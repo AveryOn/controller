@@ -5330,7 +5330,7 @@ __publicField(_InstanceDatabase, "instanceDB", null);
 let InstanceDatabase = _InstanceDatabase;
 const _DatabaseManager = class _DatabaseManager {
   constructor() {
-    __publicField(this, "instanceDatabaseList", {});
+    __publicField(this, "instanceDatabaseList", /* @__PURE__ */ Object.create(null));
     __publicField(this, "username", null);
     __publicField(this, "stateConnectManager", true);
   }
@@ -5371,11 +5371,16 @@ const _DatabaseManager = class _DatabaseManager {
     return ins;
   }
   // Инициализация Баз Данных уровня приложения
-  async initOnApp() {
+  async initOnApp(config2) {
     try {
-      return await this.executeAllInitDB("--", [
+      const promise = this.executeAllInitDB("--", [
         { dbname: "users", isGeneral: true }
       ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        await this.executeMigrations();
+        console.debug("initOnApp>> migrations were applied");
+      }
+      return await promise;
     } catch (err) {
       console.error("[DatabaseManager.initOnApp]>> ", err);
       throw err;
@@ -5390,6 +5395,20 @@ const _DatabaseManager = class _DatabaseManager {
       ]);
     } catch (err) {
       console.error("[DatabaseManager.initOnUser]>> ", err);
+      throw err;
+    }
+  }
+  // применить миграции для всех баз данных
+  async executeMigrations() {
+    try {
+      for (let key in this.instanceDatabaseList) {
+        if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
+          const ins = this.instanceDatabaseList[key];
+          await ins.migrate();
+        }
+      }
+    } catch (err) {
+      console.error("executeMigrations>>", err);
       throw err;
     }
   }
@@ -5446,7 +5465,7 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(async () => {
-  const isReadyDB = await DatabaseManager.instance().initOnApp();
+  const isReadyDB = await DatabaseManager.instance().initOnApp({ migrate: true });
   if (!isReadyDB) {
     throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
   }

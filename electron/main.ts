@@ -104,11 +104,14 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(async () => {
-    const isReadyDB = await DatabaseManager.instance().initOnApp();
+    const isReadyDB = await DatabaseManager
+        .instance()
+        .initOnApp({ migrate: true });
     if(!isReadyDB) {
         throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
     }
     console.debug('APPLICATION DATABASES ARE READY');
+    
     createWindow();
     
     // Обработчики IPC
