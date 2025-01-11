@@ -46,3 +46,11 @@ export interface User {
     updatedAt: string;
 }
 
+export interface UserCreate {
+    username: string;
+    password: string;
+    avatar?: undefined | null | string;
+    createdAt: string;
+    updatedAt: string;
+}
+

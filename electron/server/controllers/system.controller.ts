@@ -10,7 +10,7 @@ export async function prepareUserStore(win: BrowserWindow | null, username: stri
         let isReliableStores: boolean = true;
         const manager = DatabaseManager.instance();
         if(!await manager.initOnUser(username, { migrate: true })) isReliableStores = false;
-        if(!await prepareUsersStore()) isReliableStores = false;
+        // if(!await prepareUsersStore()) isReliableStores = false;
         if(!await prepareMaterialsStoreForMenu(username)) isReliableStores = false;
         // if(!await prepareMaterialsStore()) isReliableStores = false;
         

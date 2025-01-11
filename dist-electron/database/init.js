@@ -89,7 +89,7 @@ process.on("message", async (msg) => {
         }
         // для run запросов
         if(msg.action.includes('run')) {
-            db.run(msg.payload.sql, msg.payload.arguments, (err) => {
+            db.run(msg.payload.sql, msg.payload.arguments, (err, data) => {
                 if(err) {
                     console.log(err);
                     process.send({ action: msg.action, payload: err, status: 'error' });
@@ -97,7 +97,7 @@ process.on("message", async (msg) => {
                 else {
                     process.send({ 
                         action: msg.action, 
-                        payload: null, 
+                        payload: data, 
                         status: 'ok' 
                     })
                 }

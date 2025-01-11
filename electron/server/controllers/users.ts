@@ -1,7 +1,8 @@
-import { CreateUserParams, GetUsersConfig, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
+import { CreateUserParams, GetUsersConfig, UpdatePasswordParams, User, UserCreate, UserCreateResponse } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
 import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
 import UserService from '../database/services/users.service';
+import { prepareUserStore } from './system.controller';
 
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
@@ -9,47 +10,6 @@ const FSCONFIG: FsOperationConfig = {
     encoding: 'utf-8',
     filename: FILENAME,
     format: 'json',
-}
-
-// Сбросить все данные users 
-export async function resetUsersDB() {
-    console.log('[resetUsersDB] => void');
-    try {
-        await writeFile([], FSCONFIG);
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
-
-// Запись данных в БД users 
-async function writeUsersDataFs(data: User[]): Promise<void> {
-    try {
-        return void await writeFile(JSON.stringify(data), FSCONFIG);
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
-
-// Подгтововить базу данных пользователей
-export async function prepareUsersStore(): Promise<boolean> {
-    return readFile(FSCONFIG)
-        .then((data) => {
-            return true;
-        })
-        .catch(async (err) => {
-            try {
-                if(err.code === 'ENOENT') {
-                    await writeFile([], FSCONFIG);
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                console.error('WRITE FILE', err);
-                return false;
-            }
-        })
 }
 
 // Получение пользователей с базы данных
@@ -71,7 +31,7 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
 }
 
 // Зарегистрировать пользовательскую директорию (при регистрации нового пользователя)
-async function initUserDir(user: User): Promise<boolean> {
+async function initUserDir(user: UserCreateResponse): Promise<boolean> {
     console.log('[initUserDir] =>', user);
     if(!user) throw new Error('user - обязательный аргумент');
     try {
@@ -89,9 +49,8 @@ async function initUserDir(user: User): Promise<boolean> {
             await mkDir(userDirName);
             if(await isExistFileOrDir(userDirName)) {
                 console.log('СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО');
-                // Затем создать файл user-[id].json (Он нужен т.к у каждого из пользователей должна быть информация о себе)
-                await writeFile({}, { ...FSCONFIG, filename: `${userDirName}/${userDirName}.json` });
                 // Инициализация баз данных
+                await prepareUserStore(null, user.username);
                 return true;
             }
             else {
@@ -116,36 +75,22 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
         // Получение экземпляра сервиса
         const userService = new UserService();
-        // Получение списка пользователей
-        const users: Array<User> = await readFile(FSCONFIG);
-        // Проверка на то что пользователя с таким username в БД нет
-        users.forEach((user) => {
-            if (user.username === params.username) {
-                throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
-            }
-        });
-        const now = (new Date()).toISOString();
+        const user = await userService.findByUsername({ username: params.username });
+        if(user) {
+            throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
+        }
         // Если проверка прошла успешно, то создаем нового пользователя
+        const now = (new Date()).toISOString();
         const hash = await encrypt(params.password);
-        const newUser: User = {
-            id: Date.now(),
+
+        // Запись нового пользователя в БД
+        const newUser = await userService.create({
             username: params.username,
             password: hash,
             avatar: null,
             createdAt: now,
             updatedAt: now,
-        }
-        users.push(newUser);
-        await userService.create({
-            username: newUser.username,
-            password: newUser.password,
-            avatar: newUser.avatar,
-            createdAt: newUser.createdAt,
-            updatedAt: newUser.updatedAt,
         });
-        // Запись нового пользователя в БД
-        await writeFile(users, FSCONFIG);
-        Reflect.deleteProperty(newUser, 'password');
         const isCreationNewDir = await initUserDir(newUser);
         if(!isCreationNewDir) {
             throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);

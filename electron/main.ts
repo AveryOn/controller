@@ -3,7 +3,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { getUsers, createUser, updatePassword, prepareUsersStore } from './server/controllers/users'
+import { getUsers, createUser, updatePassword } from './server/controllers/users'
 import type {
     CreateUserParams,
     GetUsersConfig,
@@ -37,14 +37,7 @@ import { createChapter,
     getOneSubChapter, 
     syncMaterialsStores 
 } from './server/controllers/materials'
-import { resetAllDB } from './server/controllers';
-import { getDistProjectDir, isExistFileOrDir, readDir, readFile } from './server/services/fs.service';
-import { prepareUserStore } from './server/controllers/system.controller';
-import Database from 'better-sqlite3';
-import { verbose } from 'sqlite3';
-import { execProcess } from './server/services/process.service';
 import { DatabaseManager } from './server/database/manager';
-import fs from 'fs/promises';
 import { loginUser, validateAccessToken } from './server/controllers/auth.controller';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 
@@ -103,6 +96,7 @@ app.on('activate', () => {
     }
 })
 
+// ХУК ЗАПУСКА ПРИЛОЖЕНИЯ
 app.whenReady().then(async () => {
     // Инициалзация кластера баз данных
     const isReadyDB = await DatabaseManager
@@ -110,7 +104,6 @@ app.whenReady().then(async () => {
         .initOnApp({ migrate: true });
     
     if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
-    await prepareUsersStore()
     console.debug('APPLICATION DATABASES ARE READY');
 
     createWindow();
