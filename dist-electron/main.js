@@ -767,7 +767,6 @@ class UserService {
           else return false;
         }).map(([_, value]) => value).join(",");
       } else correctFieldsSql = Object.values(this.allFields).join(",");
-      console.log("correctFieldsSql", correctFieldsSql);
       const res = await this.instanceDb.get(`
                 SELECT ${correctFieldsSql}
                 FROM users
