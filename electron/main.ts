@@ -3,7 +3,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { getUsers, createUser, loginUser, updatePassword, prepareUsersStore } from './server/controllers/users'
+import { getUsers, createUser, updatePassword, prepareUsersStore } from './server/controllers/users'
 import type {
     CreateUserParams,
     GetUsersConfig,
@@ -37,17 +37,15 @@ import { createChapter,
     getOneSubChapter, 
     syncMaterialsStores 
 } from './server/controllers/materials'
-import { PrepareUserStorageParams } from './server/types/controllers/system.types';
 import { resetAllDB } from './server/controllers';
 import { getDistProjectDir, isExistFileOrDir, readDir, readFile } from './server/services/fs.service';
 import { prepareUserStore } from './server/controllers/system.controller';
-import { initUserDataBases } from './server/services/db.service';
 import Database from 'better-sqlite3';
 import { verbose } from 'sqlite3';
 import { execProcess } from './server/services/process.service';
 import { DatabaseManager } from './server/database/manager';
 import fs from 'fs/promises';
-import { validateAccessToken } from './server/controllers/auth.controller';
+import { loginUser, validateAccessToken } from './server/controllers/auth.controller';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 
 
@@ -117,14 +115,6 @@ app.whenReady().then(async () => {
     createWindow();
     // Обработчики IPC
     // ==========  SYSTEM  ==========
-    // Запрос на подготовки хранилища пользователя
-    ipcMain.handle("prepare-user-storage", async (event, params: PrepareUserStorageParams) => {
-        const isReady = await DatabaseManager
-            .instance()
-            .initOnUser(params.username, { migrate: true });
-        win?.webContents.send('main-process-message', isReady);
-        return isReady;
-    });
 
     // ==========  AUTH  ===========
     ipcMain.handle("validate-access-token", async (event, params: ValidateAccessTokenParams) => {
@@ -144,7 +134,7 @@ app.whenReady().then(async () => {
 
     // Вход пользователя в систему
     ipcMain.handle("login-user", async (event, params: LoginParams) => {
-        return await loginUser(params);
+        return await loginUser(win, params, { expiresToken: { Y: 1 } });
     });
 
     // Обновление пароля

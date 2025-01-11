@@ -1,6 +1,5 @@
-import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
+import { CreateUserParams, GetUsersConfig, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
-import { createAccessToken } from '../services/tokens.service';
 import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
 import UserService from '../database/services/users.service';
 
@@ -158,66 +157,18 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
     }
 }
 
-// Подтверждение учетных данных пользователя при входе в систему
-export async function loginUser(params: LoginParams): Promise<LoginResponse> {
-    console.log('[loginUser] =>', params);
-
-    try {
-        if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
-        // Получение экземпляра сервиса
-        const userService = new UserService();
-        // Извлечение пользователей
-        // const users: User[] = await readFile(FSCONFIG);
-        
-        // Поиск пользователя по username
-        const user = await userService.findByUsername({ username: params.username })
-        // const user: User | undefined = users.find((user: User) => user.username === params.username);
-        if (!user) {
-            throw '[loginUser]>> NOT_EXISTS_RECORD';
-        }
-        console.log(user);
-        
-        // Проверка пароля
-        const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
-            console.log('[loginUser]>> INTERNAL_ERROR', err);
-        });
-        // Если пароль верный то выписываем токен
-        if (isVerifyPassword === true) {
-            const readyUser = { ...user };
-            Reflect.deleteProperty(readyUser, 'hash_salt');
-            Reflect.deleteProperty(readyUser, 'password');
-            // Формируем токен доступа
-            const token = await createAccessToken({ 
-                userId: readyUser.id, 
-                username: readyUser.username 
-            }, { m: 5, s: 0 });
-            return {
-                token: token,
-                user: readyUser,
-            } as LoginResponse;
-        }
-        // Иначе выкидываем ошибку
-        else {
-            throw '[loginUser]>> INVALID_CREDENTIALS';
-        }
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
 
 // Обновление пароля
 export async function updatePassword(params: UpdatePasswordParams): Promise<boolean> {
     try {
         if(params.newPassword === params.oldPassword) throw '[updatePassword]>> INVALID_DATA';
         if(!params.username) throw '[updatePassword]>> INVALID_DATA';
-        // Извлечение пользователей
-        // let users: User[] = await getUsers();
+
         // Получение экземпляра сервиса
         const userService = new UserService();
+
         const user = await userService.findByUsername({ username: params.username });
         // Поиск пользователя по username
-        // const user: User | undefined = users.find((user: User) => user.username === params.username);
         if (!user) {
             throw '[updatePassword]>> NOT_EXISTS_RECORD';
         }
@@ -227,19 +178,11 @@ export async function updatePassword(params: UpdatePasswordParams): Promise<bool
         }
         // Хеширование нового пароля
         const hash = await encrypt(params.newPassword);
-        // user.password = hash;
         // Обновление записи пользователя в БД
         await userService.updatePassword({ 
             username: params.username, 
             password: hash 
         });
-        // users = users.map((user: User) => {
-        //     if(user.id === user.id) {
-        //         return user;
-        //     } 
-        //     return user;
-        // });
-        // await writeUsersDataFs(users);
         return true;
     } catch (err) {
         console.error(err);

@@ -4,7 +4,6 @@ electron.contextBridge.exposeInMainWorld("electron", {
   // ============= AUTH =============
   validateAccessToken: (params) => electron.ipcRenderer.invoke("validate-access-token", params),
   // ============= USERS =============
-  prepareUserStorage: (params) => electron.ipcRenderer.invoke("prepare-user-storage", params),
   getUsers: (config) => electron.ipcRenderer.invoke("get-users", config),
   createUser: (params) => electron.ipcRenderer.invoke("create-user", params),
   loginUser: (params) => electron.ipcRenderer.invoke("login-user", params),

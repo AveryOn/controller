@@ -12,10 +12,6 @@ export interface LoginResponseApi {
     user: User;
 }
 
-export interface PrepareUserStorageParamsApi {
-    username: string;
-}
-
 export interface CreateUserParamsApi {
     username: string;
     password: string;

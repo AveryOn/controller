@@ -477,54 +477,6 @@ async function decryptJsonData(data, signature) {
     }
   });
 }
-function prepareExpireTime(expires) {
-  let ready = 0;
-  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
-  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
-  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
-  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
-  ready += 1e3 * 60 * Math.max(expires.m, 1);
-  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
-  ready += Date.now();
-  return ready;
-}
-function createSignatureToken() {
-  try {
-    return "abc123";
-  } catch (err) {
-    console.error("[createSignatureToken]>>", err);
-    throw err;
-  }
-}
-const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
-async function createAccessToken(payload, expires) {
-  try {
-    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
-    const expiresStamp = prepareExpireTime(expires);
-    const signatureToken = createSignatureToken();
-    const tokenData = {
-      expires: expiresStamp,
-      payload,
-      signature: signatureToken
-    };
-    const token2 = await encryptJsonData(tokenData, KEY);
-    return token2;
-  } catch (err) {
-    throw err;
-  }
-}
-async function verifyAccessToken(token2) {
-  try {
-    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
-    const payload = JSON.parse(await decryptJsonData(token2, KEY));
-    if (payload.expires <= Date.now()) {
-      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
-    }
-    return payload;
-  } catch (err) {
-    throw err;
-  }
-}
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
 function getAppDirname() {
   return path$1.join(app.getPath("appData"), "controller");
@@ -907,39 +859,6 @@ async function createUser(params) {
       throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
     }
     return newUser;
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-async function loginUser(params) {
-  console.log("[loginUser] =>", params);
-  try {
-    if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
-    const userService = new UserService();
-    const user = await userService.findByUsername({ username: params.username });
-    if (!user) {
-      throw "[loginUser]>> NOT_EXISTS_RECORD";
-    }
-    console.log(user);
-    const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
-      console.log("[loginUser]>> INTERNAL_ERROR", err);
-    });
-    if (isVerifyPassword === true) {
-      const readyUser = { ...user };
-      Reflect.deleteProperty(readyUser, "hash_salt");
-      Reflect.deleteProperty(readyUser, "password");
-      const token2 = await createAccessToken({
-        userId: readyUser.id,
-        username: readyUser.username
-      }, { m: 5, s: 0 });
-      return {
-        token: token2,
-        user: readyUser
-      };
-    } else {
-      throw "[loginUser]>> INVALID_CREDENTIALS";
-    }
   } catch (err) {
     console.error(err);
     throw err;
@@ -5028,6 +4947,23 @@ async function createChapter(params) {
 }
 async function getChapters(params) {
   console.log("getChapters => ", params);
+  try {
+    let chapters;
+    if ((params == null ? void 0 : params.forMenu) === true) {
+      chapters = await readFile(FSCONFIG_MENU);
+    } else chapters = await readFile(FSCONFIG);
+    if (!chapters) throw "[getChapters]>> INTERNAL_ERROR";
+    if (params && params.page && params.perPage) {
+      const right = params.perPage * params.page;
+      const left = right - params.perPage;
+      let chaptersChunk = chapters.slice(left, right);
+      return chaptersChunk;
+    }
+    return chapters;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
 async function getOneChapter(params) {
   console.log("[getOneChapter] => ", params);
@@ -5413,6 +5349,70 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
+function prepareExpireTime(expires) {
+  let ready = 0;
+  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
+  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
+  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
+  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  if (expires.m) ready += 1e3 * 60 * Math.max(expires.m, 1);
+  if (expires.s) ready += 1e3 * Math.max(expires.s, 1);
+  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
+  ready += Date.now();
+  return ready;
+}
+function createSignatureToken() {
+  try {
+    return "abc123";
+  } catch (err) {
+    console.error("[createSignatureToken]>>", err);
+    throw err;
+  }
+}
+const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+async function createAccessToken(payload, expires) {
+  try {
+    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
+    const expiresStamp = prepareExpireTime(expires);
+    const signatureToken = createSignatureToken();
+    const tokenData = {
+      expires: expiresStamp,
+      payload,
+      signature: signatureToken
+    };
+    const token2 = await encryptJsonData(tokenData, KEY);
+    return token2;
+  } catch (err) {
+    throw err;
+  }
+}
+async function verifyAccessToken(token2) {
+  try {
+    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
+    const payload = JSON.parse(await decryptJsonData(token2, KEY));
+    if (payload.expires <= Date.now()) {
+      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    }
+    return payload;
+  } catch (err) {
+    throw err;
+  }
+}
+async function prepareUserStore(win2, username) {
+  console.log("[prepareUserStore]>> ", username);
+  try {
+    let isReliableStores = true;
+    const manager = DatabaseManager.instance();
+    if (!await manager.initOnUser(username, { migrate: true })) isReliableStores = false;
+    if (!await prepareUsersStore()) isReliableStores = false;
+    if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
+    win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
+    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
+  } catch (err) {
+    console.error("[prepareUserStore]>> ", err);
+    throw err;
+  }
+}
 async function validateAccessToken(params) {
   console.log("[validateAccessToken] =>", params);
   try {
@@ -5421,6 +5421,39 @@ async function validateAccessToken(params) {
   } catch (err) {
     console.error(err);
     return false;
+  }
+}
+async function loginUser(win2, params, config2) {
+  console.log("[loginUser] =>", params);
+  try {
+    if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
+    const userService = new UserService();
+    const user = await userService.findByUsername({ username: params.username });
+    if (!user) {
+      throw "[loginUser]>> NOT_EXISTS_RECORD";
+    }
+    const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
+      console.log("[loginUser]>> INTERNAL_ERROR", err);
+    });
+    if (isVerifyPassword === true) {
+      const readyUser = { ...user };
+      Reflect.deleteProperty(readyUser, "hash_salt");
+      Reflect.deleteProperty(readyUser, "password");
+      const token2 = await createAccessToken({
+        userId: readyUser.id,
+        username: readyUser.username
+      }, config2.expiresToken);
+      await prepareUserStore(win2, params.username);
+      return {
+        token: token2,
+        user: readyUser
+      };
+    } else {
+      throw "[loginUser]>> INVALID_CREDENTIALS";
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
 }
 createRequire(import.meta.url);
@@ -5463,11 +5496,6 @@ app.whenReady().then(async () => {
   await prepareUsersStore();
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
-  ipcMain.handle("prepare-user-storage", async (event, params) => {
-    const isReady = await DatabaseManager.instance().initOnUser(params.username, { migrate: true });
-    win == null ? void 0 : win.webContents.send("main-process-message", isReady);
-    return isReady;
-  });
   ipcMain.handle("validate-access-token", async (event, params) => {
     return await validateAccessToken(params);
   });
@@ -5478,7 +5506,7 @@ app.whenReady().then(async () => {
     return await createUser(params);
   });
   ipcMain.handle("login-user", async (event, params) => {
-    return await loginUser(params);
+    return await loginUser(win, params, { expiresToken: { Y: 1 } });
   });
   ipcMain.handle("update-password", async (event, params) => {
     return await updatePassword(params);
