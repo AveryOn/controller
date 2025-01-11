@@ -456,6 +456,27 @@ async function encryptJsonData(data, signature) {
     }
   });
 }
+async function decryptJsonData(data, signature) {
+  if (!data) throw new Error("[Services.decryptJsonData]>> NOT_DATA");
+  if (!signature || typeof signature !== "string") throw new Error("[Services.decryptJsonData]>> INVALID_SIGNATURE");
+  return new Promise((resolve, reject) => {
+    try {
+      const ALG = "aes-256-cbc";
+      const SALT = data.slice(data.length - 32);
+      const KEY2 = crypto$1.scryptSync(signature, SALT, 32);
+      const IV = Buffer.from(data.slice(0, 32), "hex");
+      if (IV.length < 16) throw new Error("[Services.decryptJsonData]>> INVALID_INIT_VECTOR");
+      let readyData = data.slice(32, data.length - 32);
+      const decipher = crypto$1.createDecipheriv(ALG, KEY2, IV);
+      let decryptedData = decipher.update(readyData, "hex", "utf8");
+      readyData = null;
+      decryptedData += decipher.final("utf8");
+      resolve(decryptedData);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
 function prepareExpireTime(expires) {
   let ready = 0;
   if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
@@ -463,7 +484,6 @@ function prepareExpireTime(expires) {
   if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
   if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
   ready += 1e3 * 60 * Math.max(expires.m, 1);
-  ready += 1e3 * Math.max(expires.s, 1);
   if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
   ready += Date.now();
   return ready;
@@ -489,6 +509,18 @@ async function createAccessToken(payload, expires) {
     };
     const token2 = await encryptJsonData(tokenData, KEY);
     return token2;
+  } catch (err) {
+    throw err;
+  }
+}
+async function verifyAccessToken(token2) {
+  try {
+    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
+    const payload = JSON.parse(await decryptJsonData(token2, KEY));
+    if (payload.expires <= Date.now()) {
+      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    }
+    return payload;
   } catch (err) {
     throw err;
   }
@@ -900,7 +932,7 @@ async function loginUser(params) {
       const token2 = await createAccessToken({
         userId: readyUser.id,
         username: readyUser.username
-      }, { m: 1, s: 20 });
+      }, { m: 5, s: 0 });
       return {
         token: token2,
         user: readyUser
@@ -4996,23 +5028,6 @@ async function createChapter(params) {
 }
 async function getChapters(params) {
   console.log("getChapters => ", params);
-  try {
-    let chapters;
-    if ((params == null ? void 0 : params.forMenu) === true) {
-      chapters = await readFile(FSCONFIG_MENU);
-    } else chapters = await readFile(FSCONFIG);
-    if (!chapters) throw "[getChapters]>> INTERNAL_ERROR";
-    if (params && params.page && params.perPage) {
-      const right = params.perPage * params.page;
-      const left = right - params.perPage;
-      let chaptersChunk = chapters.slice(left, right);
-      return chaptersChunk;
-    }
-    return chapters;
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
 }
 async function getOneChapter(params) {
   console.log("[getOneChapter] => ", params);
@@ -5398,6 +5413,16 @@ async function deleteChapterBlock(params) {
     throw err;
   }
 }
+async function validateAccessToken(params) {
+  console.log("[validateAccessToken] =>", params);
+  try {
+    if (!(params == null ? void 0 : params.token)) throw "[validateAccessToken]>> INVALID_DATA";
+    return await verifyAccessToken(params.token);
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
 createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
@@ -5442,6 +5467,9 @@ app.whenReady().then(async () => {
     const isReady = await DatabaseManager.instance().initOnUser(params.username, { migrate: true });
     win == null ? void 0 : win.webContents.send("main-process-message", isReady);
     return isReady;
+  });
+  ipcMain.handle("validate-access-token", async (event, params) => {
+    return await validateAccessToken(params);
   });
   ipcMain.handle("get-users", async (event, config2) => {
     return await getUsers(config2);

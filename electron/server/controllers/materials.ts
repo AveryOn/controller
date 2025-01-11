@@ -131,28 +131,28 @@ export async function createChapter(params: ChapterCreate) {
 // Получение данных сущности Материалы (Либо для панели меню, либо оригинальные данные)
 export async function getChapters(params?: GetChaptersConfig): Promise<ChapterForMenu[] | Chapter[]> {
     console.log('getChapters => ', params);
-    try {
-        // Если запрос шел от панели меню
-        let chapters: ChapterForMenu[] | Chapter[];
-        if (params?.forMenu === true) {
-            chapters = await readFile(FSCONFIG_MENU);
-        }
-        // Классическое получение данных
-        else chapters = await readFile(FSCONFIG);
-        // Если на текущий момент массива chapters нет то выкидываем ошибку
-        if (!chapters!) throw '[getChapters]>> INTERNAL_ERROR';
-        // Постраничный выбор данных
-        if (params && params.page && params.perPage) {
-            const right = params.perPage * params.page;
-            const left = right - params.perPage;
-            let chaptersChunk = chapters.slice(left, right);
-            return chaptersChunk;
-        }
-        return chapters;
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
+    // try {
+    //     // Если запрос шел от панели меню
+    //     let chapters: ChapterForMenu[] | Chapter[];
+    //     if (params?.forMenu === true) {
+    //         chapters = await readFile(FSCONFIG_MENU);
+    //     }
+    //     // Классическое получение данных
+    //     else chapters = await readFile(FSCONFIG);
+    //     // Если на текущий момент массива chapters нет то выкидываем ошибку
+    //     if (!chapters!) throw '[getChapters]>> INTERNAL_ERROR';
+    //     // Постраничный выбор данных
+    //     if (params && params.page && params.perPage) {
+    //         const right = params.perPage * params.page;
+    //         const left = right - params.perPage;
+    //         let chaptersChunk = chapters.slice(left, right);
+    //         return chaptersChunk;
+    //     }
+    //     return chapters;
+    // } catch (err) {
+    //     console.error(err);
+    //     throw err;
+    // }
 }
 
 // Получение конкретного раздела

@@ -47,6 +47,8 @@ import { verbose } from 'sqlite3';
 import { execProcess } from './server/services/process.service';
 import { DatabaseManager } from './server/database/manager';
 import fs from 'fs/promises';
+import { validateAccessToken } from './server/controllers/auth.controller';
+import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 
 
 const require = createRequire(import.meta.url);
@@ -122,6 +124,11 @@ app.whenReady().then(async () => {
             .initOnUser(params.username, { migrate: true });
         win?.webContents.send('main-process-message', isReady);
         return isReady;
+    });
+
+    // ==========  AUTH  ===========
+    ipcMain.handle("validate-access-token", async (event, params: ValidateAccessTokenParams) => {
+        return await validateAccessToken(params);
     });
 
     // ==========  USERS  ===========

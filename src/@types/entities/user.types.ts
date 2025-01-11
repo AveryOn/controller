@@ -34,3 +34,7 @@ export interface UserCreateResponseApi {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface ValidateAccessTokenParamsApi {
+    token: string | null | undefined;
+}

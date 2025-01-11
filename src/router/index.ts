@@ -3,6 +3,7 @@ import MainView from "../views/MainView.vue";
 import LoginView from "../views/LoginView.vue";
 import { useLoginStore } from "../stores/login.store";
 import MaterialsView from "../views/MaterialsView.vue";
+import { validateAccessTokenApi } from "../api/auth.api";
 
 const router = createRouter({
     history: createMemoryHistory(),
@@ -40,9 +41,11 @@ const router = createRouter({
 
 
 // Защита ранжирования маршрутов
-router.beforeEach((to, from, next) => {
-    const { isAuth } = useLoginStore();
-    if (isAuth === false) {
+router.beforeEach(async (to, from, next) => {
+    const store = useLoginStore();
+    const isValide = await validateAccessTokenApi({ token: localStorage.getItem('token') });
+    store.isAuth = isValide;
+    if (!isValide) {
         // Приватный маршрут
         if (to.meta.private === true) {
             if (from.name !== 'login') {

@@ -2,9 +2,13 @@ import { ipcRenderer, contextBridge } from 'electron'
 import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types';
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types';
 import { PrepareUserStorageParams } from './server/types/controllers/system.types';
+import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
+    // ============= AUTH =============
+    validateAccessToken: (params: ValidateAccessTokenParams) => ipcRenderer.invoke('validate-access-token', params),
+
     // ============= USERS =============
     prepareUserStorage: (params: PrepareUserStorageParams) => ipcRenderer.invoke('prepare-user-storage', params),
     getUsers: (config: GetUsersConfig) => ipcRenderer.invoke('get-users', config),

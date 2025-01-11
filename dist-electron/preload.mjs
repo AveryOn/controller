@@ -1,6 +1,8 @@
 "use strict";
 const electron = require("electron");
 electron.contextBridge.exposeInMainWorld("electron", {
+  // ============= AUTH =============
+  validateAccessToken: (params) => electron.ipcRenderer.invoke("validate-access-token", params),
   // ============= USERS =============
   prepareUserStorage: (params) => electron.ipcRenderer.invoke("prepare-user-storage", params),
   getUsers: (config) => electron.ipcRenderer.invoke("get-users", config),
