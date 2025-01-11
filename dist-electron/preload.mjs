@@ -4,12 +4,13 @@ electron.contextBridge.exposeInMainWorld("electron", {
   // ============= AUTH =============
   validateAccessToken: (params) => electron.ipcRenderer.invoke("validate-access-token", params),
   // ============= USERS =============
+  prepareUserStore: (params) => electron.ipcRenderer.invoke("prepare-user-store", params),
   getUsers: (config) => electron.ipcRenderer.invoke("get-users", config),
   createUser: (params) => electron.ipcRenderer.invoke("create-user", params),
   loginUser: (params) => electron.ipcRenderer.invoke("login-user", params),
   updatePassword: (params) => electron.ipcRenderer.invoke("update-password", params),
   // ===== MATERIALS ========
-  createChapter: (params) => electron.ipcRenderer.invoke("create-chapter", params),
+  createChapter: (params, auth) => electron.ipcRenderer.invoke("create-chapter", params, auth),
   getChapters: (params) => electron.ipcRenderer.invoke("get-menu-chapters", params),
   getChapter: (params) => electron.ipcRenderer.invoke("get-one-chapter", params),
   createSubChapter: (params) => electron.ipcRenderer.invoke("create-sub-chapter", params),

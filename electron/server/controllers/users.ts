@@ -1,8 +1,9 @@
-import { CreateUserParams, GetUsersConfig, UpdatePasswordParams, User, UserCreate, UserCreateResponse } from '../types/controllers/users.types';
+import { CreateUserParams, GetUsersConfig, PrepareUserStoreParams, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
 import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
 import UserService from '../database/services/users.service';
 import { prepareUserStore } from './system.controller';
+import { formatDate } from '../services/date.service';
 
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
@@ -10,6 +11,16 @@ const FSCONFIG: FsOperationConfig = {
     encoding: 'utf-8',
     filename: FILENAME,
     format: 'json',
+}
+
+// Подготовить пользовательское хранилище
+export async function prepareUserStore(params: PrepareUserStoreParams): Promise<Array<User>> {
+    try {
+
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
 }
 
 // Получение пользователей с базы данных
@@ -80,7 +91,7 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
             throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
         }
         // Если проверка прошла успешно, то создаем нового пользователя
-        const now = (new Date()).toISOString();
+        const now = formatDate();
         const hash = await encrypt(params.password);
 
         // Запись нового пользователя в БД

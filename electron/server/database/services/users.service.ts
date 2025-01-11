@@ -55,7 +55,6 @@ export default class UserService {
                 SELECT ${correctFieldsSql}
                 FROM users
                 WHERE username = ?;
-    
             `,[dto.username]);
             if(!res || !res?.payload) return null;
             return res.payload;

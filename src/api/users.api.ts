@@ -6,6 +6,17 @@ import {
 
 
 const TIMEOUT = 1000;
+// Подготовить пользовательское хранилище
+export async function prepareUserStore() {
+    return new Promise((resolve, reject) => {
+        try {
+            resolve(window.electron.prepareUserStore({ token: localStorage.getItem('token') }));
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
 // Регистрация нового пользователя в системе
 export async function createUserApi(params: CreateUserParamsApi): Promise<UserCreateResponseApi> {
     return new Promise((resolve, reject) => {

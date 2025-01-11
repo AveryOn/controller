@@ -1,7 +1,8 @@
 import { ipcRenderer, contextBridge } from 'electron'
-import type { CreateUserParams, GetUsersConfig, LoginParams, UpdatePasswordParams } from './server/types/controllers/users.types';
+import type { CreateUserParams, GetUsersConfig, LoginParams, PrepareUserStoreParams, UpdatePasswordParams } from './server/types/controllers/users.types';
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, EditChapterParams, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
+import { AuthParams } from './server/types/controllers/index.types';
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
@@ -9,13 +10,14 @@ contextBridge.exposeInMainWorld('electron', {
     validateAccessToken: (params: ValidateAccessTokenParams) => ipcRenderer.invoke('validate-access-token', params),
 
     // ============= USERS =============
+    prepareUserStore: (params: PrepareUserStoreParams) => ipcRenderer.invoke('prepare-user-store', params),
     getUsers: (config: GetUsersConfig) => ipcRenderer.invoke('get-users', config),
     createUser: (params: CreateUserParams) => ipcRenderer.invoke('create-user', params),
     loginUser: (params: LoginParams) => ipcRenderer.invoke('login-user', params),
     updatePassword: (params: UpdatePasswordParams) => ipcRenderer.invoke('update-password', params),
 
     // ===== MATERIALS ========
-    createChapter: (params: ChapterCreate) => ipcRenderer.invoke('create-chapter', params),
+    createChapter: (params: ChapterCreate, auth: AuthParams) => ipcRenderer.invoke('create-chapter', params, auth),
     getChapters: (params: GetChaptersConfig) => ipcRenderer.invoke('get-menu-chapters', params),
     getChapter: (params: GetChapterOneParams) => ipcRenderer.invoke('get-one-chapter', params),
     createSubChapter: (params: SubChapterCreate) => ipcRenderer.invoke('create-sub-chapter', params),

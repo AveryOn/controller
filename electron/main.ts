@@ -8,6 +8,7 @@ import type {
     CreateUserParams,
     GetUsersConfig,
     LoginParams,
+    PrepareUserStoreParams,
     UpdatePasswordParams
 } from './server/types/controllers/users.types'
 import type {
@@ -40,6 +41,9 @@ import { createChapter,
 import { DatabaseManager } from './server/database/manager';
 import { loginUser, validateAccessToken } from './server/controllers/auth.controller';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
+import { AuthParams } from './server/types/controllers/index.types';
+import { prepareUserStore } from './server/controllers/system.controller';
+import { verifyAccessToken } from './server/services/tokens.service';
 
 
 const require = createRequire(import.meta.url);
@@ -116,6 +120,12 @@ app.whenReady().then(async () => {
     });
 
     // ==========  USERS  ===========
+    // Подготовить пользовательское хранилище
+    ipcMain.handle("prepare-user-store", async (event, params: PrepareUserStoreParams) => {
+        const { payload: { username } } = await verifyAccessToken(params.token)
+        return await prepareUserStore(win, username);
+    });
+
     // Получение пользователей
     ipcMain.handle("get-users", async (event, config?: GetUsersConfig) => {
         return await getUsers(config);
@@ -138,8 +148,8 @@ app.whenReady().then(async () => {
 
     // ===== MATERIALS ========
     // Созданое нового раздела материалов
-    ipcMain.handle("create-chapter", async (event, params: ChapterCreate) => {
-        return await createChapter(params);
+    ipcMain.handle("create-chapter", async (event, params: ChapterCreate, auth: AuthParams) => {
+        return await createChapter(params, auth);
     });
 
     // Получение разделов для меню

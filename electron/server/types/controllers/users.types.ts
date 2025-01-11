@@ -2,6 +2,10 @@ import { PaginatorParams } from "./index.types";
 
 export interface GetUsersConfig extends PaginatorParams {}
 
+export interface PrepareUserStoreParams {
+    token: string;
+}
+
 export interface UpdatePasswordParams {
     username: string;
     oldPassword: string;

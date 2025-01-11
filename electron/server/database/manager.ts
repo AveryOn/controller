@@ -151,6 +151,7 @@ export class DatabaseManager {
     // Залутать инстанс БД
     getDatabase(dbname: DbNamesType): InstanceDatabase {
         const ins = this.instanceDatabaseList[dbname]
+        console.log(this.instanceDatabaseList);
         if(!ins || !(ins instanceof InstanceDatabase)) {
             throw new Error(`getDatabase > the instance \"${dbname}\" was not initialized`)
         }
@@ -164,6 +165,7 @@ export class DatabaseManager {
             const promise = this.executeAllInitDB('--', [
                 { dbname: 'users', isGeneral: true },
             ]);
+            // вызов миграций
             if(config?.migrate === true) {
                 await this.executeMigrations();
                 console.debug("initOnApp>> migrations were applied");
@@ -177,16 +179,19 @@ export class DatabaseManager {
 
     // Инициализация Баз Данных уровня пользователя
     async initOnUser(username: string, config?: { migrate?: boolean }): Promise<boolean> {
+        
         try {
             this.username = username;
             // здесь поочередно вызываются иниты баз данных. Порядок важен
             const promise = this.executeAllInitDB(username, [
                 { dbname: 'materials', isGeneral: false },
             ]);
+            // вызов миграций
             if(config?.migrate === true) {
                 await this.executeMigrations();
                 console.debug("initOnUser>> migrations were applied");
             }
+            console.log('БЫЛ ВЫЗЫВАН initOnUser', username);
             return await promise;
         } catch (err) {
             console.error('[DatabaseManager.initOnUser]>> ', err);

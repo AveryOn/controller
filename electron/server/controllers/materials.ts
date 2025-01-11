@@ -22,6 +22,8 @@ import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 import { verifyAccessToken } from "../services/tokens.service";
 import ChapterService from "../database/services/chapter.service";
+import { ChapterCreateDto } from "../types/services/chapter.service";
+import { AuthParams } from "../types/controllers/index.types";
 
 const MATERIALS_FILENAME = 'materials.json';
 const MATERIALS_MENU_FILENAME = 'materials-menu.json';
@@ -58,38 +60,36 @@ export async function prepareMaterialsStoreForMenu(username: string): Promise<bo
 }
 
 // Создание нового раздела в материалах
-export async function createChapter(params: ChapterCreate) {
+export async function createChapter(params: ChapterCreate, auth: AuthParams) {
     console.log('[createChapter] => ', params);
     try {
+        if(!auth?.token) throw new Error("[createChapter]>> 401 UNAUTHORIZATE");
+        const { payload } = await verifyAccessToken(auth.token);
+        const chapterService = new ChapterService();
         // Получние материалов с БД
-        const materials: Chapter[] = await readFile(FSCONFIG);
+        // const materials: Chapter[] = await readFile(FSCONFIG);
         // Проверка на уникальность pathName в БД
-        materials.forEach((chapter: Chapter) => {
-            if (chapter.pathName === params.pathName) {
-                throw '[createChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
-            }
-        });
+        // materials.forEach((chapter: Chapter) => {
+        //     if (chapter.pathName === params.pathName) {
+        //         throw '[createChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
+        //     }
+        // });
 
         // Создание нового экзепляра раздела
         const timestamp = formatDate();
-        const newChapter: Chapter = {
-            id: Date.now(),
+        const newChapter = await chapterService.create({
             chapterType: params.chapterType,
-            content: {
-                blocks: [],
-                title: null,
-            },
             label: params.label,
             icon: params.icon,
             iconType: params.iconType,
             pathName: params.pathName,
             route: params.route,
-            items: (params.chapterType === 'dir') ? [] : null,
             createdAt: timestamp,
             updatedAt: timestamp,
-        }
-        materials.push(newChapter);
-        await writeFile(materials, FSCONFIG);
+        });
+  
+        // materials.push(newChapter);
+        // await writeFile(materials, FSCONFIG);
         return newChapter;
     } catch (err) {
         console.error(err);
@@ -109,7 +109,6 @@ export async function getChapters(params: GetChaptersConfig): Promise<ChapterFor
         let chapters: ChapterForMenu[] | Chapter[];
         if (params?.forMenu === true) {
             chapters = await readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
-            chapters = [];
         }
         // Классическое получение данных
         else chapters = await readFile(FSCONFIG);

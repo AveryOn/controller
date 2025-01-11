@@ -50,7 +50,7 @@ export async function createChapter(params: ChapterCreate) {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.createChapter(params);
+                const result = await window.electron.createChapter(params, { token: localStorage.getItem('token') });
                 await syncMaterials();
                 resolve(result);
             } catch (err) {

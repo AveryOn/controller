@@ -12,6 +12,19 @@ export interface ChapterRaw {
     updatedAt:      string;
 }
 
+export interface ChapterRawResponse {
+    id?:             string;
+    pathName?:       string;
+    icon?:           string;
+    iconType?:       string;
+    chapterType?:    string;
+    label?:          string;
+    route?:          string;
+    contentTitle?:   string;
+    createdAt?:      string;
+    updatedAt?:      string;
+}
+
 export interface ChapterForGetAll {
     id?:             string;
     pathName?:       string;
@@ -23,4 +36,28 @@ export interface ChapterForGetAll {
     contentTitle?:   string;
     createdAt?:      string;
     updatedAt?:      string;
+}
+
+export interface ChapterCreateDto {
+    pathName:       string,
+    icon:           string;
+    iconType:       string;
+    chapterType:    string;
+    label:          string;
+    route:          string;
+    createdAt:      string;
+    updatedAt:      string;
+}
+
+export interface ChapterCreateResponse {
+    id:             string;
+    pathName:       string;
+    icon:           string;
+    iconType:       string;
+    chapterType:    string;
+    label:          string;
+    route:          string;
+    contentTitle:   string;
+    createdAt:      string;
+    updatedAt:      string;
 }

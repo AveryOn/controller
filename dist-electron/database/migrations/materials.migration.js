@@ -1,13 +1,13 @@
 const createChaptersTable = `
     CREATE TABLE IF NOT EXISTS chapters (
         id INTEGER PRIMARY KEY,
-        path_name TEXT NOT NULL,
+        path_name TEXT NOT NULL UNIQUE,
         icon TEXT NOT NULL,
         icon_type TEXT NOT NULL,
         chapter_type TEXT NOT NULL,
         label TEXT NOT NULL,
         route TEXT NOT NULL,
-        content_title TEXT NOT NULL,
+        content_title TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );
@@ -15,7 +15,7 @@ const createChaptersTable = `
 const createSubChaptersTable = `
     CREATE TABLE IF NOT EXISTS sub_chapters (
         id INTEGER PRIMARY KEY,
-        fullpath TEXT NOT NULL,
+        fullpath TEXT NOT NULL UNIQUE,
         path_name TEXT NOT NULL,
         chapter_id INTEGER NOT NULL,
         icon TEXT NOT NULL,
@@ -23,7 +23,7 @@ const createSubChaptersTable = `
         chapter_type TEXT NOT NULL,
         label TEXT NOT NULL,
         route TEXT NOT NULL,
-        content_title TEXT NOT NULL,
+        content_title TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (chapter_id) REFERENCES chapters(id)
