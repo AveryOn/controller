@@ -22,8 +22,8 @@ export function getAppDirname() {
 // Получает корневую директорию работы приложения
 export function getDistProjectDir() {
     return app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar.unpacked')
-    : path.join(__dirname, '..');
+    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'dist-electron')
+    : __dirname;
 }
 
 // Запись в файл

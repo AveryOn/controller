@@ -104,16 +104,14 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(async () => {
+    // Инициалзация кластера баз данных
     const isReadyDB = await DatabaseManager
         .instance()
-        .initOnApp({ migrate: true });
-    if(!isReadyDB) {
-        throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
-    }
+        .initOnApp({ migrate: false });
+    if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
     console.debug('APPLICATION DATABASES ARE READY');
-    
+
     createWindow();
-    
     // Обработчики IPC
     // ==========  SYSTEM  ==========
     // Запрос на подготовки хранилища пользователя

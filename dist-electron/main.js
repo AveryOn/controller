@@ -498,7 +498,7 @@ function getAppDirname() {
   return path$1.join(app.getPath("appData"), "controller");
 }
 function getDistProjectDir() {
-  return app.isPackaged ? path$1.join(process.resourcesPath, "app.asar.unpacked") : path$1.join(__dirname$1, "..");
+  return app.isPackaged ? path$1.join(process.resourcesPath, "app.asar.unpacked", "dist-electron") : __dirname$1;
 }
 async function writeFile(data, config2) {
   try {
@@ -5263,7 +5263,7 @@ const _InstanceDatabase = class _InstanceDatabase {
     } else {
       this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
     }
-    this.processPath = path$1.join(getDistProjectDir(), "dist-electron/database/init.js");
+    this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
     this.process = fork(this.processPath);
     this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }).then(({ status }) => state && state(status === "ok")).catch(() => {
       state && state(false);
@@ -5386,13 +5386,18 @@ const _DatabaseManager = class _DatabaseManager {
       throw err;
     }
   }
-  // Инициализация Баз Данных
-  async initOnUser(username) {
+  // Инициализация Баз Данных уровня пользователя
+  async initOnUser(username, config2) {
     try {
       this.username = username;
-      return await this.executeAllInitDB(username, [
+      const promise = this.executeAllInitDB(username, [
         { dbname: "materials", isGeneral: false }
       ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        await this.executeMigrations();
+        console.debug("initOnUser>> migrations were applied");
+      }
+      return await promise;
     } catch (err) {
       console.error("[DatabaseManager.initOnUser]>> ", err);
       throw err;
@@ -5403,8 +5408,8 @@ const _DatabaseManager = class _DatabaseManager {
     try {
       for (let key in this.instanceDatabaseList) {
         if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
-          const ins = this.instanceDatabaseList[key];
-          await ins.migrate();
+          const db = this.instanceDatabaseList[key];
+          await db.migrate();
         }
       }
     } catch (err) {
@@ -5466,9 +5471,7 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   const isReadyDB = await DatabaseManager.instance().initOnApp({ migrate: true });
-  if (!isReadyDB) {
-    throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
-  }
+  if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
   ipcMain.handle("prepare-user-storage", async (event, params) => {
