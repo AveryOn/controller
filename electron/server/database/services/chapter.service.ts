@@ -35,9 +35,7 @@ export default class ChapterService {
         }
         else correctFieldsSql = Object.values(this.allFields).join(',');
         const rows = await this.instanceDb!.all(`
-            SELECT 
-                ${correctFieldsSql}
-            FROM chapters;
+            SELECT ${correctFieldsSql} FROM chapters;
         `);
         return rows.payload as Array<ChapterForGetAll>;
     }
