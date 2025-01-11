@@ -167,24 +167,23 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
         // Получение экземпляра сервиса
         const userService = new UserService();
         // Извлечение пользователей
-        const users: User[] = await readFile(FSCONFIG);
+        // const users: User[] = await readFile(FSCONFIG);
         
         // Поиск пользователя по username
-        const fnus = await userService.findByUsername({ username: params.username })
-        console.log('FINDED', fnus.payload);
-        const findedUser: User | undefined = users.find((user: User) => user.username === params.username);
-        if (!findedUser) {
+        const user = await userService.findByUsername({ username: params.username })
+        // const user: User | undefined = users.find((user: User) => user.username === params.username);
+        if (!user) {
             throw '[loginUser]>> NOT_EXISTS_RECORD';
         }
-        console.log(findedUser);
+        console.log(user);
         
         // Проверка пароля
-        const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
+        const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
             console.log('[loginUser]>> INTERNAL_ERROR', err);
         });
         // Если пароль верный то выписываем токен
         if (isVerifyPassword === true) {
-            const readyUser = { ...findedUser };
+            const readyUser = { ...user };
             Reflect.deleteProperty(readyUser, 'hash_salt');
             Reflect.deleteProperty(readyUser, 'password');
             // Формируем токен доступа
@@ -211,28 +210,36 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
 export async function updatePassword(params: UpdatePasswordParams): Promise<boolean> {
     try {
         if(params.newPassword === params.oldPassword) throw '[updatePassword]>> INVALID_DATA';
+        if(!params.username) throw '[updatePassword]>> INVALID_DATA';
         // Извлечение пользователей
-        let users: User[] = await getUsers();
+        // let users: User[] = await getUsers();
+        // Получение экземпляра сервиса
+        const userService = new UserService();
+        const user = await userService.findByUsername({ username: params.username });
         // Поиск пользователя по username
-        const findedUser: User | undefined = users.find((user: User) => user.username === params.username);
-        if (!findedUser) {
+        // const user: User | undefined = users.find((user: User) => user.username === params.username);
+        if (!user) {
             throw '[updatePassword]>> NOT_EXISTS_RECORD';
         }
         // Проверка паролей
-        if(!await verify(params.oldPassword, findedUser.password)) {
+        if(!await verify(params.oldPassword, user.password)) {
             throw '[updatePassword]>> INVALID_CREDENTIALS';
         }
         // Хеширование нового пароля
         const hash = await encrypt(params.newPassword);
-        findedUser.password = hash;
+        // user.password = hash;
         // Обновление записи пользователя в БД
-        users = users.map((user: User) => {
-            if(user.id === findedUser.id) {
-                return findedUser;
-            } 
-            return user;
+        await userService.updatePassword({ 
+            username: params.username, 
+            password: hash 
         });
-        await writeUsersDataFs(users);
+        // users = users.map((user: User) => {
+        //     if(user.id === user.id) {
+        //         return user;
+        //     } 
+        //     return user;
+        // });
+        // await writeUsersDataFs(users);
         return true;
     } catch (err) {
         console.error(err);

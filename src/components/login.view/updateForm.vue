@@ -21,6 +21,7 @@
 import Fluid from 'primevue/fluid';
 import { ref, defineEmits } from 'vue';
 import useNotices from '../../composables/notices';
+import { updateUserPasswordApi } from '../../api/users.api';
 const notices = useNotices();
 
 const emit = defineEmits({
@@ -38,7 +39,8 @@ const form = ref({
 
 async function submit() {
     try {
-        const isSuccess: boolean = await window.electron.updatePassword({
+        isLoading.value = true;
+        const isSuccess: boolean = await updateUserPasswordApi({
             username: form.value.username,
             oldPassword: form.value.oldPassword,
             newPassword: form.value.newPassword,
@@ -50,6 +52,7 @@ async function submit() {
             newPassword: '',
             confirmPassword: '',
         };
+        if(isSuccess) notices.show({ detail: 'Success', severity: 'success' });
     } catch (err) {
         emit('confirm:update', false);
         notices.show({ detail: 'Error', severity: 'error' });

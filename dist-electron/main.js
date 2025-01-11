@@ -748,15 +748,31 @@ class UserService {
             VALUES (?, ?, ?, ?, ?);
         `, [username, password, avatar, createdAt, updatedAt]);
   }
-  // Найти пользователя по username пользователя
+  // Найти пользователя по username
   async findByUsername(dto) {
     const res = await this.instanceDb.get(`
-            SELECT * FROM users
+            SELECT 
+                id, 
+                username, 
+                password, 
+                avatar, 
+                created_at AS createdAt, 
+                updated_at AS updatedAt  
+            FROM users
             WHERE username = ?;
 
         `, [dto.username]);
     if (!res || !(res == null ? void 0 : res.payload)) throw "[UserService.findByUsername] > user not found";
     return res.payload;
+  }
+  // Обновление пароля
+  async updatePassword(dto) {
+    await this.instanceDb.run(`
+            UPDATE users SET password = ? 
+            WHERE username = ?;
+
+        `, [dto.password, dto.username]);
+    return null;
   }
 }
 const FILENAME = "users.json";
@@ -766,14 +782,6 @@ const FSCONFIG$1 = {
   filename: FILENAME,
   format: "json"
 };
-async function writeUsersDataFs(data) {
-  try {
-    return void await writeFile(JSON.stringify(data), FSCONFIG$1);
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
 async function prepareUsersStore() {
   return readFile(FSCONFIG$1).then((data) => {
     return true;
@@ -877,19 +885,16 @@ async function loginUser(params) {
   try {
     if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
     const userService = new UserService();
-    const users = await readFile(FSCONFIG$1);
-    const fnus = await userService.findByUsername({ username: params.username });
-    console.log("FINDED", fnus.payload);
-    const findedUser = users.find((user) => user.username === params.username);
-    if (!findedUser) {
+    const user = await userService.findByUsername({ username: params.username });
+    if (!user) {
       throw "[loginUser]>> NOT_EXISTS_RECORD";
     }
-    console.log(findedUser);
-    const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
+    console.log(user);
+    const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
       console.log("[loginUser]>> INTERNAL_ERROR", err);
     });
     if (isVerifyPassword === true) {
-      const readyUser = { ...findedUser };
+      const readyUser = { ...user };
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const token2 = await createAccessToken({
@@ -911,23 +916,20 @@ async function loginUser(params) {
 async function updatePassword(params) {
   try {
     if (params.newPassword === params.oldPassword) throw "[updatePassword]>> INVALID_DATA";
-    let users = await getUsers();
-    const findedUser = users.find((user) => user.username === params.username);
-    if (!findedUser) {
+    if (!params.username) throw "[updatePassword]>> INVALID_DATA";
+    const userService = new UserService();
+    const user = await userService.findByUsername({ username: params.username });
+    if (!user) {
       throw "[updatePassword]>> NOT_EXISTS_RECORD";
     }
-    if (!await verify(params.oldPassword, findedUser.password)) {
+    if (!await verify(params.oldPassword, user.password)) {
       throw "[updatePassword]>> INVALID_CREDENTIALS";
     }
     const hash = await encrypt(params.newPassword);
-    findedUser.password = hash;
-    users = users.map((user) => {
-      if (user.id === findedUser.id) {
-        return findedUser;
-      }
-      return user;
+    await userService.updatePassword({
+      username: params.username,
+      password: hash
     });
-    await writeUsersDataFs(users);
     return true;
   } catch (err) {
     console.error(err);

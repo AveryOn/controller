@@ -21,6 +21,12 @@ export interface CreateUserParamsApi {
     password: string;
 }
 
+export interface UpdUserPasswordApi {
+    username: string;
+    oldPassword: string;
+    newPassword: string;
+}
+
 export interface UserCreateResponseApi {
     id: number;
     username: string;
