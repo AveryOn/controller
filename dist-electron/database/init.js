@@ -1,6 +1,6 @@
 import pkg from 'sqlite3';
 const { verbose } = pkg;
-import materialsMigration from '../../server/database/migrations/materials.migration.js';
+import materialsMigration from './migrations/materials.migration.js';
 
 const migrations = {
     "migrate:materials": materialsMigration,
@@ -51,7 +51,6 @@ process.on("message", async (msg) => {
                     }
                 }
             })
-            process.send({ action: msg.action, payload: null, status: 'ok' });
         }
         // для all запросов 
         if(msg.action.includes('all')) {

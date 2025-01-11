@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { app } from 'electron';
+import { fileURLToPath } from 'url';
 
 export type UserDirectory = "home" | "appData" | "userData" | "sessionData" | "temp" | "exe" | "module" | "desktop" | "documents" | "downloads" | "music" | "pictures" | "videos" | "recent" | "logs" | "crashDumps";
 export type FormatData = 'text' | 'json';
@@ -11,9 +12,18 @@ export interface FsOperationConfig {
     encoding: BufferEncoding;
 }
 
-// Получает корневую директорию приложения
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Получает корневую директорию приложения (для хранения данных приложения)
 export function getAppDirname() {
     return path.join(app.getPath('appData'), 'controller');
+}
+
+// Получает корневую директорию работы приложения
+export function getDistProjectDir() {
+    return app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar.unpacked')
+    : path.join(__dirname, '..');
 }
 
 // Запись в файл

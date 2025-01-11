@@ -10,8 +10,8 @@ import { createRequire } from "node:module";
 import { fileURLToPath as fileURLToPath$1 } from "node:url";
 import path$2 from "node:path";
 import fs$1 from "fs/promises";
-import { fork } from "child_process";
 import { fileURLToPath } from "url";
+import { fork } from "child_process";
 var main$1 = { exports: {} };
 const name = "dotenv";
 const version$1 = "16.4.7";
@@ -493,8 +493,12 @@ async function createAccessToken(payload, expires) {
     throw err;
   }
 }
+const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
 function getAppDirname() {
   return path$1.join(app.getPath("appData"), "controller");
+}
+function getDistProjectDir() {
+  return app.isPackaged ? path$1.join(process.resourcesPath, "app.asar.unpacked") : path$1.join(__dirname$1, "..");
 }
 async function writeFile(data, config2) {
   try {
@@ -5235,8 +5239,8 @@ async function deleteChapterBlock(params) {
   }
 }
 const __filename = fileURLToPath(import.meta.url);
-const __dirname$1 = dirname(__filename);
-class InstanceDatabase {
+dirname(__filename);
+const _InstanceDatabase = class _InstanceDatabase {
   constructor(dbname, username, state) {
     __publicField(this, "dbname", null);
     __publicField(this, "dbpath", null);
@@ -5247,11 +5251,19 @@ class InstanceDatabase {
     this.init(dbname, username, (isReliable) => {
       state && state(isReliable);
     });
+    if (!_InstanceDatabase.instanceDB) {
+      _InstanceDatabase.instanceDB = this;
+    }
   }
+  // Инициализация базы данных
   init(dbname, username, state) {
     this.dbname = dbname;
-    this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
-    this.processPath = path$1.join(__dirname$1, "../electron/server/database/init.js");
+    if (username !== "--") {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
+    } else {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
+    }
+    this.processPath = path$1.join(getDistProjectDir(), "dist-electron/database/init.js");
     this.process = fork(this.processPath);
     this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }).then(({ status }) => state && state(status === "ok")).catch(() => {
       state && state(false);
@@ -5313,16 +5325,19 @@ class InstanceDatabase {
       return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: null });
     } else throw new Error("exec => process is not defined");
   }
-}
+};
+__publicField(_InstanceDatabase, "instanceDB", null);
+let InstanceDatabase = _InstanceDatabase;
 const _DatabaseManager = class _DatabaseManager {
   constructor() {
-    __publicField(this, "materials");
+    __publicField(this, "instanceDatabaseList", {});
     __publicField(this, "username", null);
     __publicField(this, "stateConnectManager", true);
   }
   // получение экземпляра менеджера
   static instance() {
     if (!_DatabaseManager.instanceManager) {
+      console.log("DatabaseManager > Создан новый экземпляр менеджера");
       const instance = new _DatabaseManager();
       _DatabaseManager.instanceManager = instance;
     }
@@ -5335,7 +5350,7 @@ const _DatabaseManager = class _DatabaseManager {
       for (const item of items) {
         const isReliable = await new Promise((resolve, reject) => {
           const dbname = item.dbname;
-          this[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+          this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
             resolve(enabled);
           });
         });
@@ -5347,15 +5362,34 @@ const _DatabaseManager = class _DatabaseManager {
       throw err;
     }
   }
+  // Залутать инстанс БД
+  getDatabase(dbname) {
+    const ins = this.instanceDatabaseList[dbname];
+    if (!ins || !(ins instanceof InstanceDatabase)) {
+      throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
+    }
+    return ins;
+  }
+  // Инициализация Баз Данных уровня приложения
+  async initOnApp() {
+    try {
+      return await this.executeAllInitDB("--", [
+        { dbname: "users", isGeneral: true }
+      ]);
+    } catch (err) {
+      console.error("[DatabaseManager.initOnApp]>> ", err);
+      throw err;
+    }
+  }
   // Инициализация Баз Данных
-  async init(username) {
+  async initOnUser(username) {
     try {
       this.username = username;
       return await this.executeAllInitDB(username, [
-        { dbname: "materials" }
+        { dbname: "materials", isGeneral: false }
       ]);
     } catch (err) {
-      console.error("[DatabaseManager.init]>> ", err);
+      console.error("[DatabaseManager.initOnUser]>> ", err);
       throw err;
     }
   }
@@ -5367,7 +5401,7 @@ async function prepareUserStore(win2, params) {
   try {
     let isReliableStores = true;
     const manager = DatabaseManager.instance();
-    if (!await manager.init(params.username)) isReliableStores = false;
+    if (!await manager.initOnUser(params.username)) isReliableStores = false;
     if (!await prepareUsersStore()) isReliableStores = false;
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
     win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
@@ -5412,8 +5446,12 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(async () => {
+  const isReadyDB = await DatabaseManager.instance().initOnApp();
+  if (!isReadyDB) {
+    throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
+  }
+  console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
-  await prepareUserStore(win, { username: "alex" });
   ipcMain.handle("prepare-user-storage", async (event, params) => {
     return await prepareUserStore(win, params);
   });

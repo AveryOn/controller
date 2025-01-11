@@ -39,13 +39,14 @@ import { createChapter,
 } from './server/controllers/materials'
 import { PrepareUserStorageParams } from './server/types/controllers/system.types';
 import { resetAllDB } from './server/controllers';
-import { readDir, readFile } from './server/services/fs.service';
+import { getDistProjectDir, isExistFileOrDir, readDir, readFile } from './server/services/fs.service';
 import { prepareUserStore } from './server/controllers/system.controller';
 import { initUserDataBases } from './server/services/db.service';
 import Database from 'better-sqlite3';
 import { verbose } from 'sqlite3';
 import { execProcess } from './server/services/process.service';
 import { DatabaseManager } from './server/database/manager';
+import fs from 'fs/promises';
 
 
 const require = createRequire(import.meta.url);
@@ -73,11 +74,7 @@ function createWindow() {
 
     // Test active push message to Renderer-process.
     win.webContents.on('did-finish-load', async () => {
-        // Сброс БД materials
-        // await resetAllDB({ exclude: ['materials'] });
-        // const result = await readFile({ directory: 'appData', encoding: 'utf-8', filename: 'user_tom/user_tom.json', 'format': 'json'});
-        // const files = await readDir('/')
-        // console.log('FILES', files);
+
     })
 
     if (VITE_DEV_SERVER_URL) {
@@ -107,10 +104,14 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(async () => {
+    const isReadyDB = await DatabaseManager.instance().initOnApp();
+    if(!isReadyDB) {
+        throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
+    }
+    console.debug('APPLICATION DATABASES ARE READY');
     createWindow();
-    // createSubChapter().then((res) => console.log('RESULT FIND SUBCHAPTER', res))
+    
     // Обработчики IPC
-    await prepareUserStore(win, { username: 'alex' });
     // ==========  SYSTEM  ==========
     // Запрос на подготовки хранилища пользователя
     ipcMain.handle("prepare-user-storage", async (event, params: PrepareUserStorageParams) => {

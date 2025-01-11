@@ -10,14 +10,12 @@ export async function prepareUserStore(win: BrowserWindow | null, params: Prepar
     try {
         let isReliableStores: boolean = true;
         const manager = DatabaseManager.instance();
-        if(!await manager.init(params.username)) isReliableStores = false;
+        if(!await manager.initOnUser(params.username)) isReliableStores = false;
         if(!await prepareUsersStore()) isReliableStores = false;
         // if(!await prepareMaterialsStore()) isReliableStores = false;
         // if(!await prepareMaterialsStoreForMenu()) isReliableStores = false;
+        
         if(!win) console.debug('[prepareUserStore]>> win is null', win);
-        // const result = await manager.materials.migrate();
-        
-        
         win?.webContents.send('main-process-message', isReliableStores);
         console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
     } catch (err) {

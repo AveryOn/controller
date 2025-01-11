@@ -3,11 +3,12 @@ import { app } from 'electron';
 import path from 'path'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
+import { getDistProjectDir } from '../services/fs.service';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-type DbNamesType = 'materials';
+type DbNamesType = 'materials' | 'users';
+type UsernameType =  '--' | (string & {});
 
 // контракт запроса
 interface IpcContractReq {
@@ -27,23 +28,36 @@ export interface InstanceDatabaseDoc {
 
 // Экземпляр базы данных
 export class InstanceDatabase implements InstanceDatabaseDoc {
-    private dbname: DbNamesType | null      = null;
-    private dbpath: string | null           = null;
-    private processPath: string | null      = null;
-    private process: ChildProcess | null    = null;
+    static instanceDB: InstanceDatabase | null  = null;
+    private dbname: DbNamesType | null          = null;
+    private dbpath: string | null               = null;
+    private processPath: string | null          = null;
+    private process: ChildProcess | null        = null;
 
-    constructor (dbname: DbNamesType, username: string, state?: (enabled: boolean) => void) {
+    constructor (dbname: DbNamesType, username: UsernameType, state?: (enabled: boolean) => void) {
         if(!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
         if(!username || typeof username !== 'string') throw new Error("InstanceDatabase > constructor: username is a required");
         this.init(dbname, username, (isReliable) => {
             state && state(isReliable);
-        })
+        });
+        if(!InstanceDatabase.instanceDB) {
+            InstanceDatabase.instanceDB = this;
+        }
     };
 
-    private init(dbname: DbNamesType, username: string, state?: (enabled: boolean) => void) {
+    // Инициализация базы данных
+    private init(dbname: DbNamesType, username: UsernameType, state?: (enabled: boolean) => void) {
         this.dbname = dbname as DbNamesType;
-        this.dbpath = path.join(app.getPath('appData'), 'controller', `user_${username}`, `${dbname}.db`);
-        this.processPath = path.join(__dirname, '../electron/server/database/init.js');
+        // если нужно создать БД для общих целей а не для целевого пользователя 
+        if(username !== '--') {
+            this.dbpath = path.join(app.getPath('appData'), 'controller', `user_${username}`, `${dbname}.db`);
+        }
+        else {
+            this.dbpath = path.join(app.getPath('appData'), 'controller', `${dbname}.db`);
+        }
+        this.processPath = path.join(getDistProjectDir(), 'dist-electron/database/init.js');
+
+        // Инит процесса и ожидание его доступности
         this.process = fork(this.processPath);
         this.requestIPC({ action: 'init', payload: { dbpath: this.dbpath } })
             .then(({ status }) => state && state(status === 'ok'))
@@ -116,11 +130,12 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
 }
 
 interface InitDbItem {
-    dbname: DbNamesType, 
+    dbname: DbNamesType,
+    isGeneral?: boolean,
 }
 // Главный менеджер по управлению базами данных
 export class DatabaseManager {
-    materials!: InstanceDatabase;
+    private instanceDatabaseList: { [key: string]: InstanceDatabase } = {  };
     static instanceManager: DatabaseManager | null  = null;
     private username: string | null                 = null;
     private stateConnectManager: boolean            = true;
@@ -130,6 +145,8 @@ export class DatabaseManager {
     // получение экземпляра менеджера
     static instance() {
         if (!DatabaseManager.instanceManager) {
+            console.log('DatabaseManager > Создан новый экземпляр менеджера');
+            
             const instance = new DatabaseManager();
             DatabaseManager.instanceManager = instance;
         }
@@ -137,13 +154,13 @@ export class DatabaseManager {
     }
 
     // Подключение всех баз данных
-    private async executeAllInitDB(username: string, items: Array<InitDbItem>): Promise<boolean> {
+    private async executeAllInitDB(username: UsernameType, items: Array<InitDbItem>): Promise<boolean> {
         if(!items || !Array.isArray(items)) throw TypeError('[executeAllInitDB]>> invalid items');   
         try {
             for (const item of items) {
                 const isReliable: boolean = await new Promise((resolve, reject) => {
                     const dbname = item.dbname;
-                    this[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+                    this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
                         resolve(enabled);
                     })
                 });
@@ -155,17 +172,39 @@ export class DatabaseManager {
             throw err;
         }
     }
+    
+    // Залутать инстанс БД
+    getDatabase(dbname: DbNamesType): InstanceDatabase {
+        const ins = this.instanceDatabaseList[dbname]
+        if(!ins || !(ins instanceof InstanceDatabase)) {
+            throw new Error(`getDatabase > the instance \"${dbname}\" was not initialized`)
+        }
+        return ins;
+    }
+
+    // Инициализация Баз Данных уровня приложения
+    async initOnApp() {
+        try {
+            // здесь поочередно вызываются иниты баз данных. Порядок важен
+            return await this.executeAllInitDB('--', [
+                { dbname: 'users', isGeneral: true },
+            ]);
+        } catch (err) {
+            console.error('[DatabaseManager.initOnApp]>> ', err);
+            throw err;
+        }
+    }
 
     // Инициализация Баз Данных
-    async init(username: string): Promise<boolean> {
+    async initOnUser(username: string): Promise<boolean> {
         try {
             this.username = username;
             // здесь поочередно вызываются иниты баз данных. Порядок важен
             return await this.executeAllInitDB(username, [
-                { dbname: 'materials' },
+                { dbname: 'materials', isGeneral: false },
             ]);
         } catch (err) {
-            console.error('[DatabaseManager.init]>> ', err);
+            console.error('[DatabaseManager.initOnUser]>> ', err);
             throw err;
         }
     }

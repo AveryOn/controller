@@ -3,7 +3,11 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "YourAppID",
   "asar": true,
-  "productName": "YourAppName",
+  "asarUnpack": [
+    "dist-electron/database/**/*",
+    "*init.js"
+  ],
+  "productName": "Controller",
   "directories": {
     "output": "release/${version}"
   },

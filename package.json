@@ -11,6 +11,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@electron/asar": "^3.2.18",
     "@jamescoyle/vue-icon": "^0.1.2",
     "@mdi/js": "^7.4.47",
     "@primevue/themes": "^4.2.3",
