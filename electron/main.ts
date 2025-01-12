@@ -69,6 +69,14 @@ function createWindow() {
         webPreferences: {
             preload: path.join(__dirname, 'preload.mjs'),
         },
+        titleBarStyle: 'hidden',
+        titleBarOverlay: {
+            color: '#2f3241',
+            symbolColor: '#74b1be',
+            height: 20
+        },
+        // expose window controlls in Windows/Linux
+        // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
     });
 
     // Test active push message to Renderer-process.

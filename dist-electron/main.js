@@ -5628,7 +5628,15 @@ function createWindow() {
     icon: path$2.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path$2.join(__dirname, "preload.mjs")
+    },
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#2f3241",
+      symbolColor: "#74b1be",
+      height: 20
     }
+    // expose window controlls in Windows/Linux
+    // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
   });
   win.webContents.on("did-finish-load", async () => {
   });
