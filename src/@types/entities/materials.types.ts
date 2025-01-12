@@ -196,4 +196,5 @@ export interface GetOneChapterParams {
 export interface GetOneSubChapterParams {
     pathName: string;
     fullpath: string;
+    labels:   string;
 }

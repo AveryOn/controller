@@ -14,6 +14,7 @@
             @submit-form="requestForChapterCreate"
             />
             <wrapperChapter 
+            :full-label="labelChapter"
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => labelChapter = label"
             @quit="labelChapter = null"

@@ -5176,13 +5176,42 @@ class SubChapterService {
   }
   // Найти подраздел по fullpath
   async findByFullpath(fullpath, config2) {
+    var _a;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
-      const res = await this.instanceDb.get(`
-                SELECT ${correctFieldsSql}
-                FROM sub_chapters
-                WHERE fullpath = ?;
-            `, [fullpath]);
+      let res;
+      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        sub_chapters.${this.allFields["id"]}, sub_chapters.${this.allFields["pathName"]},
+                        sub_chapters.${this.allFields["fullpath"]},
+                        sub_chapters.${this.allFields["contentTitle"]}, sub_chapters.${this.allFields["createdAt"]},
+                        sub_chapters.${this.allFields["updatedAt"]},
+                        sub_chapters.${this.allFields["icon"]}, sub_chapters.${this.allFields["iconType"]},
+                        sub_chapters.${this.allFields["label"]}, sub_chapters.${this.allFields["route"]},
+                        sub_chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'subChapterId', blocks.sub_chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM sub_chapters
+                    LEFT JOIN blocks
+                    ON sub_chapters.id = blocks.sub_chapter_id
+                    WHERE sub_chapters.fullpath = ?
+                    GROUP BY sub_chapters.id;
+                `, [fullpath]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM sub_chapters WHERE fullpath = ?;
+                `, [fullpath]);
+      }
       if (!res || !(res == null ? void 0 : res.payload)) return null;
       return res.payload;
     } catch (err) {
@@ -5325,7 +5354,8 @@ async function getOneChapter(params) {
         content: {
           title: findedChapter.contentTitle,
           blocks: []
-        }
+        },
+        items: findedChapter.chapterType === "dir" ? [] : null
       };
       if (findedChapter == null ? void 0 : findedChapter.blocks) {
         let blocks = JSON.parse(findedChapter == null ? void 0 : findedChapter.blocks);
@@ -5347,25 +5377,19 @@ async function getOneChapter(params) {
     throw err;
   }
 }
-const bundleLabels = [];
 function findLevel(items, initPath, config2) {
   if (items.length <= 0) return null;
   const current = initPath.shift();
   for (const chapter of items) {
     const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
     if (selfPath === current) {
-      if ((config2 == null ? void 0 : config2.labels) === true) bundleLabels.push(chapter.label);
       if (initPath.length <= 0) {
-        if ((config2 == null ? void 0 : config2.labels) === true) {
-          const labels = [...bundleLabels];
-          bundleLabels.length = 0;
-          return { chapter, labels };
-        } else {
+        {
           return chapter;
         }
       } else {
         if (chapter.items && chapter.items.length > 0) {
-          return findLevel(chapter.items, initPath, config2);
+          return findLevel(chapter.items, initPath);
         } else {
           throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
         }
@@ -5421,6 +5445,7 @@ async function syncMaterialsStores(username) {
         const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length);
         if (((_a = mappa[correctFullpath[0]]) == null ? void 0 : _a.length) <= 0) {
           subChapter.items = subChapter.chapterType === "dir" ? [] : null;
+          subChapter.pathName = envStack[0];
           return subChapter;
         } else {
           const env = correctFullpath.shift();
@@ -5457,18 +5482,55 @@ async function syncMaterialsStores(username) {
     throw err;
   }
 }
-async function getOneSubChapter(params) {
+async function getOneSubChapter(params, auth) {
   console.log("[getOneSubChapter] => ", params);
   try {
-    const materials = await readFile(FSCONFIG);
-    const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
-    if ((chapter == null ? void 0 : chapter.items) && chapter.items.length) {
-      const correctFullpath = trimPath(params.fullpath, { split: true }).slice(1);
-      const { chapter: findedChapter, labels } = findLevel(chapter == null ? void 0 : chapter.items, correctFullpath, { labels: true });
-      if (!findedChapter) throw "[getOneSubChapter]>> NOT_FOUND";
-      labels.unshift(chapter.label);
-      return { chapter: findedChapter, labels };
-    } else throw "[getOneSubChapter]>> INTERNAL_ERROR";
+    if (!(params == null ? void 0 : params.labels)) throw new Error("[getOneSubChapter]>> invalid labels");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
+    const subChapterService = new SubChapterService();
+    await verifyAccessToken(auth.token);
+    await subChapterService.findByFullpath(params.fullpath);
+    if (params.fullpath) {
+      const findedSubChapter = await subChapterService.findByFullpath(params.fullpath, {
+        includes: {
+          blocks: true
+          // также прикрепить блоки в объект подраздела
+        }
+      });
+      console.log(findedSubChapter);
+      if (!findedSubChapter) throw "[getOneSubChapter]>> NOT_EXISTS_RECORD";
+      const correctSubChapter = {
+        id: findedSubChapter.id,
+        icon: findedSubChapter.icon,
+        fullpath: findedSubChapter.fullpath,
+        chapterType: findedSubChapter.chapterType,
+        createdAt: findedSubChapter.createdAt,
+        label: findedSubChapter.label,
+        pathName: findedSubChapter.pathName,
+        route: findedSubChapter.route,
+        updatedAt: findedSubChapter.updatedAt,
+        iconType: findedSubChapter.iconType,
+        content: {
+          title: findedSubChapter.contentTitle,
+          blocks: []
+        },
+        items: findedSubChapter.chapterType === "dir" ? [] : null
+      };
+      if (findedSubChapter == null ? void 0 : findedSubChapter.blocks) {
+        let blocks = JSON.parse(findedSubChapter == null ? void 0 : findedSubChapter.blocks);
+        if (blocks.length === 1 && !blocks[0].id) {
+          blocks.length = 0;
+        } else if (!!blocks[0].id) {
+          correctSubChapter.content.blocks = blocks;
+        }
+      } else {
+      }
+      findedSubChapter == null ? void 0 : findedSubChapter.blocks;
+      console.log(correctSubChapter);
+      return correctSubChapter;
+    } else {
+      throw "[getOneSubChapter]>> NOT_EXISTS_RECORD";
+    }
   } catch (err) {
     console.error(err);
     throw err;
@@ -5846,8 +5908,8 @@ app.whenReady().then(async () => {
   ipcMain.handle("create-sub-chapter", async (event, params, auth) => {
     return await createSubChapter(params, auth);
   });
-  ipcMain.handle("get-one-sub-chapter", async (event, params) => {
-    return await getOneSubChapter(params);
+  ipcMain.handle("get-one-sub-chapter", async (event, params, auth) => {
+    return await getOneSubChapter(params, auth);
   });
   ipcMain.handle("edit-chapter", async (event, params) => {
     return await editChapter(params);

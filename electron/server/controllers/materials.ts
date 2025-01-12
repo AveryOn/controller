@@ -23,7 +23,7 @@ import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 import { verifyAccessToken } from "../services/tokens.service";
 import ChapterService from "../database/services/chapter.service";
-import { ChapterCreateDto, ChapterGetByPathNameRes, SubChapterCreateResponse } from "../types/services/chapter.service";
+import { ChapterCreateDto, ChapterGetByPathNameRes, SubChapterCreateResponse, SubChapterGetByPathNameRes, SubChapterRawResponse } from "../types/services/chapter.service";
 import { AuthParams } from "../types/controllers/index.types";
 import SubChapterService from "../database/services/subchapter.service";
 
@@ -146,7 +146,8 @@ export async function getOneChapter(params: GetChapterOneParams): Promise<Chapte
                 content: {
                     title: findedChapter.contentTitle,
                     blocks: [],
-                }
+                },
+                items: (findedChapter.chapterType === 'dir')? [] : null,
             }
             if(findedChapter?.blocks) {
                 let blocks: ChapterBlock[] = JSON.parse(findedChapter?.blocks)
@@ -268,6 +269,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                 const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length) as string[];
                 if((mappa[correctFullpath[0]]?.length <= 0)) {
                     subChapter.items = (subChapter.chapterType === 'dir')? [] : null;
+                    subChapter.pathName = envStack[0];
                     return subChapter;
                 }
                 else {
@@ -311,20 +313,59 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
 }
 
 // Получить конкретный ПОДраздел с БД материалов
-export async function getOneSubChapter(params: GetSubChapterOneParams): Promise<LevelWithLabels> {
+export async function getOneSubChapter(params: GetSubChapterOneParams, auth: AuthParams): Promise<SubChapter> {
     console.log('[getOneSubChapter] => ', params);
     try {
-        // Получение материалов с БД
-        const materials: Chapter[] = await readFile(FSCONFIG);
-        const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
-        if (chapter?.items && chapter.items.length) {
-            const correctFullpath = trimPath(params.fullpath, { split: true }).slice(1) as string[];
-            const { chapter: findedChapter, labels } = findLevel(chapter?.items, correctFullpath, { labels: true }) as LevelWithLabels;
-            if (!findedChapter) throw '[getOneSubChapter]>> NOT_FOUND';
-            labels.unshift(chapter.label);
-            return { chapter: findedChapter, labels };
+        if(!params?.labels) throw new Error("[getOneSubChapter]>> invalid labels");
+        if(!auth?.token) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
+        const subChapterService = new SubChapterService();
+        await verifyAccessToken(auth.token);
+        await subChapterService.findByFullpath(params.fullpath);
+        // Получение по имени пути
+        if (params.fullpath) {
+            const findedSubChapter: SubChapterGetByPathNameRes | null = await subChapterService.findByFullpath(params.fullpath, {
+                includes: {
+                    blocks: true // также прикрепить блоки в объект подраздела
+                }
+            });
+            console.log(findedSubChapter);
+            
+            if (!findedSubChapter) throw '[getOneSubChapter]>> NOT_EXISTS_RECORD';
+            const correctSubChapter: SubChapter = {
+                id: findedSubChapter.id,
+                icon: findedSubChapter.icon,
+                fullpath: findedSubChapter.fullpath,
+                chapterType: findedSubChapter.chapterType,
+                createdAt: findedSubChapter.createdAt,
+                label: findedSubChapter.label,
+                pathName: findedSubChapter.pathName,
+                route: findedSubChapter.route,
+                updatedAt: findedSubChapter.updatedAt,
+                iconType: findedSubChapter.iconType,
+                content: {
+                    title: findedSubChapter.contentTitle,
+                    blocks: [],
+                },
+                items: (findedSubChapter.chapterType === 'dir')? [] : null,
+            }
+            if (findedSubChapter?.blocks) {
+                let blocks: ChapterBlock[] = JSON.parse(findedSubChapter?.blocks)
+                // если массив блоков пришел с одной пустой записью то считаем что  для этого подраздела нет блоков
+                if (blocks.length === 1 && !blocks[0].id) {
+                    blocks.length = 0;
+                }
+                else if (!!blocks[0].id) {
+                    correctSubChapter.content.blocks = blocks;
+                }
+            }
+            else { }
+            findedSubChapter?.blocks
+            console.log(correctSubChapter);
+            return correctSubChapter;
         }
-        else throw '[getOneSubChapter]>> INTERNAL_ERROR';
+        else {
+            throw '[getOneSubChapter]>> NOT_EXISTS_RECORD';
+        }
     } catch (err) {
         console.error(err);
         throw err;

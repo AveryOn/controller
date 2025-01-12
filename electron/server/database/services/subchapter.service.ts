@@ -1,5 +1,5 @@
-import { InstanceDatabaseDoc } from "../../types/database/index.types";
-import { SubChapterCreateDto, SubChapterCreateResponse, SubChapterForGetAll, SubChapterRaw, SubChapterRawResponse } from "../../types/services/chapter.service";
+import { InstanceDatabaseDoc, IpcContractRes } from "../../types/database/index.types";
+import { SubChapterCreateDto, SubChapterCreateResponse, SubChapterForGetAll, SubChapterGetByPathNameRes, SubChapterRaw, SubChapterRawResponse } from "../../types/services/chapter.service";
 import { DatabaseManager } from "../manager";
 
 export default class SubChapterService {
@@ -84,16 +84,48 @@ export default class SubChapterService {
     }
 
     // Найти подраздел по fullpath
-    async findByFullpath(fullpath: string, config?: { excludes?: Array<keyof SubChapterRaw> }): Promise<SubChapterRawResponse | null> {
+    async findByFullpath(fullpath: string, config?: { 
+        excludes?: Array<keyof SubChapterRaw>,
+        includes?: { blocks: boolean },
+    }): Promise<SubChapterGetByPathNameRes | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
-            const res = await this.instanceDb!.get(`
-                SELECT ${correctFieldsSql}
-                FROM sub_chapters
-                WHERE fullpath = ?;
-            `, [fullpath]);
-            if (!res || !res?.payload) return null;
-            return res.payload as SubChapterRawResponse;
+            let res: IpcContractRes;
+            if(config?.includes?.blocks === true) {
+                res = await this.instanceDb!.get(`
+                    SELECT 
+                        sub_chapters.${this.allFields['id']}, sub_chapters.${this.allFields['pathName']},
+                        sub_chapters.${this.allFields['fullpath']},
+                        sub_chapters.${this.allFields['contentTitle']}, sub_chapters.${this.allFields['createdAt']},
+                        sub_chapters.${this.allFields['updatedAt']},
+                        sub_chapters.${this.allFields['icon']}, sub_chapters.${this.allFields['iconType']},
+                        sub_chapters.${this.allFields['label']}, sub_chapters.${this.allFields['route']},
+                        sub_chapters.${this.allFields['chapterType']},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'subChapterId', blocks.sub_chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM sub_chapters
+                    LEFT JOIN blocks
+                    ON sub_chapters.id = blocks.sub_chapter_id
+                    WHERE sub_chapters.fullpath = ?
+                    GROUP BY sub_chapters.id;
+                `, [fullpath]);
+            }
+            else {
+                res = await this.instanceDb!.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM sub_chapters WHERE fullpath = ?;
+                `, [fullpath]);
+            }
+            if (!res! || !res?.payload) return null;
+            return res.payload as SubChapterGetByPathNameRes;
         } catch (err) {
             console.error(err);
             return null;

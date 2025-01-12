@@ -181,8 +181,8 @@ app.whenReady().then(async () => {
     // });
 
     // Получить конкретный ПОДраздел с БД материалов
-    ipcMain.handle("get-one-sub-chapter", async (event, params: GetSubChapterOneParams) => {
-        return await getOneSubChapter(params);
+    ipcMain.handle("get-one-sub-chapter", async (event, params: GetSubChapterOneParams, auth: AuthParams) => {
+        return await getOneSubChapter(params, auth);
     });
 
     // Редактирование общих данных раздела/подраздела

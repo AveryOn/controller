@@ -52,6 +52,21 @@ export interface ChapterGetByPathNameRes {
     createdAt:      string;
     updatedAt:      string;
 }
+export interface SubChapterGetByPathNameRes {
+    id:             number;
+    pathName:       string;
+    fullpath:       string;
+    icon:           string;
+    iconType:       "mdi" | "pi" | "img";
+    chapterType:    "dir" | "file";
+    chapterId:      number;
+    label:          string;
+    blocks?:        string;
+    route:          string;
+    contentTitle:   string;
+    createdAt:      string;
+    updatedAt:      string;
+}
 
 export interface SubChapterRawResponse {
     id?:             string;

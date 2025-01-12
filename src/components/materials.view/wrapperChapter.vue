@@ -59,6 +59,10 @@ const emit = defineEmits<{
     (e: 'quit'): void;
 }>();
 
+const props = defineProps<{
+    fullLabel: string | null;
+}>();
+
 const isShowCreateBlock = ref(false);
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
@@ -327,10 +331,12 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
         materialStore.loadingGetChapter = true;
         // Обработка сырого query-параметра вида to>path>name в вид to/path/name
         const correctFullpath = rawQuery.split('>').join('/');
-        const { chapter, labels } = await getOneSubChapter({ pathName, fullpath: correctFullpath });
-        opennedChapter.value = chapter;
+        const chapter = await getOneSubChapter({ pathName, fullpath: correctFullpath, labels: props.fullLabel! });
+        console.log(props.fullLabel, chapter);
+        // opennedChapter.value = chapter;
         // Выкидываем собранную Label строку для подстановки в заголовок
-        emit('openChapter', labels.join(' > '));
+        console.log(props.fullLabel?.split(' > '));
+        emit('openChapter', props.fullLabel + ` > ${chapter.label}`);
     } catch (err) {
         throw err;
     } finally {
@@ -354,6 +360,13 @@ async function initPageData(
             // Если происходит выход из просмотра разделов и подразделов
             else if(!nextChapter) emit('quit');
             // В случае смены подраздела при активном разделе
+            console.log(
+                'nextSubChapter', nextSubChapter, 
+                'nextChapter', nextChapter, 
+                'nextSubChapter !== prevSubChapter', nextSubChapter !== prevSubChapter, 
+                'prevSubChapter', prevSubChapter
+            );
+            
             if(nextSubChapter && nextChapter && nextSubChapter !== prevSubChapter) {
                 await requestGetOneSubChapter(nextChapter, nextSubChapter);
             } 
