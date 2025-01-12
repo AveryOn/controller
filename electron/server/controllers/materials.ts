@@ -25,6 +25,7 @@ import { verifyAccessToken } from "../services/tokens.service";
 import ChapterService from "../database/services/chapter.service";
 import { ChapterCreateDto, ChapterGetByPathNameRes } from "../types/services/chapter.service";
 import { AuthParams } from "../types/controllers/index.types";
+import SubChapterService from "../database/services/subchapter.service";
 
 const MATERIALS_FILENAME = 'materials.json';
 const MATERIALS_MENU_FILENAME = 'materials-menu.json';
@@ -67,15 +68,6 @@ export async function createChapter(params: ChapterCreate, auth: AuthParams) {
         if(!auth?.token) throw new Error("[createChapter]>> 401 UNAUTHORIZATE");
         const { payload } = await verifyAccessToken(auth.token);
         const chapterService = new ChapterService();
-        // Получние материалов с БД
-        // const materials: Chapter[] = await readFile(FSCONFIG);
-        // Проверка на уникальность pathName в БД
-        // materials.forEach((chapter: Chapter) => {
-        //     if (chapter.pathName === params.pathName) {
-        //         throw '[createChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
-        //     }
-        // });
-
         // Создание нового экзепляра раздела
         const timestamp = formatDate();
         const newChapter = await chapterService.create({
@@ -88,9 +80,6 @@ export async function createChapter(params: ChapterCreate, auth: AuthParams) {
             createdAt: timestamp,
             updatedAt: timestamp,
         });
-  
-        // materials.push(newChapter);
-        // await writeFile(materials, FSCONFIG);
         // Вызов синхронизации с меню
         const menu = await syncMaterialsStores(payload.username);
         return newChapter;
@@ -222,55 +211,73 @@ function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: 
 }
 
 // Создание нового подраздела
-export async function createSubChapter(params: SubChapterCreate): Promise<SubChapter> {
+export async function createSubChapter(params: SubChapterCreate, auth: AuthParams): Promise<SubChapter> {
     console.log('[createSubChapter] => ', params);
     try {
-        if (!params) throw '[createSubChapter]>> INVALID_INPUT_DATA';
-        const materials: Chapter[] = await readFile(FSCONFIG);
-        const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
-        if (chapter?.chapterType === 'dir' && chapter.items) {
-            const timestamp = formatDate();
-            const newSubChapter: SubChapter = {
-                id: Date.now(),
-                chapterType: params.chapterType,
-                content: {
-                    blocks: [],
-                    title: null,
-                },
-                icon: params.icon,
-                iconType: params.iconType,
-                fullpath: trimPath(params.fullpath) as string,
-                label: params.label,
-                route: params.route,
-                items: (params.chapterType === 'dir') ? [] : null,
-                createdAt: timestamp,
-                updatedAt: timestamp,
-            }
-            const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
+        if (!params || !params.chapterId) throw '[createSubChapter]>> INVALID_INPUT_DATA';
+        if(!auth?.token) throw '[createSubChapter]>> 401 UNAUTHORIZATE';
+        const { payload: { username } } = await verifyAccessToken(auth.token)
+        const subChapterService = new SubChapterService();
+        const now = formatDate();
+        const res = await subChapterService.create({
+            chapterId: params.chapterId,
+            chapterType: params.chapterType,
+            fullpath: params.fullpath,
+            icon: params.icon,
+            iconType: params.iconType,
+            label: params.label,
+            pathName: params.pathName,
+            route: params.route,
+            createdAt: now,
+            updatedAt: now,
+        });
+        await syncMaterialsStores(username);
+        return res;
+        // const materials: Chapter[] = await readFile(FSCONFIG);
+        // const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
+        // if (chapter?.chapterType === 'dir' && chapter.items) {
+        //     const timestamp = formatDate();
+        //     const newSubChapter: SubChapter = {
+        //         id: Date.now(),
+        //         chapterType: params.chapterType,
+        //         content: {
+        //             blocks: [],
+        //             title: null,
+        //         },
+        //         icon: params.icon,
+        //         iconType: params.iconType,
+        //         fullpath: trimPath(params.fullpath) as string,
+        //         label: params.label,
+        //         route: params.route,
+        //         items: (params.chapterType === 'dir') ? [] : null,
+        //         createdAt: timestamp,
+        //         updatedAt: timestamp,
+        //     }
+        //     const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
             
-            // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
-            if (correctFullPath.length <= 0) {
-                // Проверка на уникальность создаваемого подраздела
-                const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-                if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
-                chapter.items.push(newSubChapter);
-            } else {
-                const needLevel = findLevel(chapter.items, correctFullPath) as SubChapter | null;
-                // Если нужный уровень не найден
-                if (!needLevel) {
-                    throw '[createSubChapter]>> Нужный уровень найти не удалось';
-                }
-                // Проверка на уникальность создаваемого подраздела
-                const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-                if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
-                needLevel.items?.push(newSubChapter);
-            }
-            // Запись изменений в БД
-            await writeFile(materials, FSCONFIG);
-            return newSubChapter;
-        } else {
-            throw '[createSubChapter]>> INVALID_CHAPTER_TYPE';
-        }
+        //     // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
+        //     if (correctFullPath.length <= 0) {
+        //         // Проверка на уникальность создаваемого подраздела
+        //         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
+        //         if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
+        //         chapter.items.push(newSubChapter);
+        //     } else {
+        //         const needLevel = findLevel(chapter.items, correctFullPath) as SubChapter | null;
+        //         // Если нужный уровень не найден
+        //         if (!needLevel) {
+        //             throw '[createSubChapter]>> Нужный уровень найти не удалось';
+        //         }
+        //         // Проверка на уникальность создаваемого подраздела
+        //         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
+        //         if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
+        //         needLevel.items?.push(newSubChapter);
+        //     }
+        //     // Запись изменений в БД
+        //     await writeFile(materials, FSCONFIG);
+        //     return newSubChapter;
+        // } else {
+        //     throw '[createSubChapter]>> INVALID_CHAPTER_TYPE';
+        // }
     } catch (err) {
         console.error(err);
         throw err;

@@ -163,6 +163,7 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
         if(!pathName) throw '[requestForCreateSubChapter]>> pathName не сформирован';
         const currentPath = opennedChapter.value?.pathName? opennedChapter.value?.pathName : opennedChapter.value?.fullpath;
         const correctSubChapter: SubChapterCreate = {
+            chapterId: opennedChapter.value!.id,
             pathName: pathName,
             chapterType: newSubChapter.chapterType,
             fullpath: `${currentPath}/${newSubChapter.pathName}`,

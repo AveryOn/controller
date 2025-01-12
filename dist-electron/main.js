@@ -5103,6 +5103,126 @@ class ChapterService {
     return newChapter;
   }
 }
+class SubChapterService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      pathName: "path_name AS pathName",
+      chapterId: "chapter_id AS chapterId",
+      fullpath: "fullpath",
+      icon: "icon",
+      iconType: "icon_type AS iconType",
+      chapterType: "chapter_type AS chapterType",
+      label: "label",
+      route: "route",
+      contentTitle: "content_title AS contentTitle",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("materials");
+    if (!this.instanceDb) throw new Error("DB materials is not initialized");
+  }
+  // коррекция полей таблицы. Исключает те поля которые приходят в массиве
+  correctFieldsSqlForExclude(excludedFields) {
+    let correctFieldsSql;
+    if ((excludedFields == null ? void 0 : excludedFields.length) > 0) {
+      correctFieldsSql = Object.entries(this.allFields).filter(([key, __]) => {
+        if (!excludedFields.includes(key)) return true;
+        else return false;
+      }).map(([__, value]) => value).join(",");
+    } else correctFieldsSql = Object.values(this.allFields).join(",");
+    return correctFieldsSql;
+  }
+  // Получить массив подразделов
+  async getAll(config2) {
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM sub_chapters;
+        `);
+    return rows.payload;
+  }
+  // Найти подраздел по ID
+  async findById(id, config2) {
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      const res = await this.instanceDb.get(`
+                SELECT ${correctFieldsSql}
+                FROM sub_chapters
+                WHERE id = ?;
+            `, [id]);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Найти подраздел по pathName
+  async findByPathName(pathName, config2) {
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      const res = await this.instanceDb.get(`
+                SELECT ${correctFieldsSql}
+                FROM sub_chapters
+                WHERE path_name = ?;
+            `, [pathName]);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Найти подраздел по fullpath
+  async findByFullpath(fullpath, config2) {
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      const res = await this.instanceDb.get(`
+                SELECT ${correctFieldsSql}
+                FROM sub_chapters
+                WHERE fullpath = ?;
+            `, [fullpath]);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Создать один подраздел
+  async create(dto) {
+    await this.instanceDb.run(`
+            INSERT INTO sub_chapters (
+                path_name,
+                fullpath,    
+                chapter_id,
+                icon,
+                icon_type,
+                chapter_type,
+                label,
+                route,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        `, [
+      dto.pathName,
+      dto.fullpath,
+      dto.chapterId,
+      dto.icon,
+      dto.iconType,
+      dto.chapterType,
+      dto.label,
+      dto.route,
+      dto.createdAt,
+      dto.updatedAt
+    ]);
+    const newSubChapter = await this.findByFullpath(dto.fullpath);
+    if (!newSubChapter) throw new Error("[SubChapterService.create]>> newSubChapter was not created");
+    return newSubChapter;
+  }
+}
 const MATERIALS_FILENAME = "materials.json";
 const MATERIALS_MENU_FILENAME = "materials-menu.json";
 const FSCONFIG = {
@@ -5254,50 +5374,28 @@ function findLevel(items, initPath, config2) {
   }
   return null;
 }
-async function createSubChapter(params) {
-  var _a;
+async function createSubChapter(params, auth) {
   console.log("[createSubChapter] => ", params);
   try {
-    if (!params) throw "[createSubChapter]>> INVALID_INPUT_DATA";
-    const materials = await readFile(FSCONFIG);
-    const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
-    if ((chapter == null ? void 0 : chapter.chapterType) === "dir" && chapter.items) {
-      const timestamp = formatDate();
-      const newSubChapter = {
-        id: Date.now(),
-        chapterType: params.chapterType,
-        content: {
-          blocks: [],
-          title: null
-        },
-        icon: params.icon,
-        iconType: params.iconType,
-        fullpath: trimPath(params.fullpath),
-        label: params.label,
-        route: params.route,
-        items: params.chapterType === "dir" ? [] : null,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      };
-      const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
-      if (correctFullPath.length <= 0) {
-        const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-        if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
-        chapter.items.push(newSubChapter);
-      } else {
-        const needLevel = findLevel(chapter.items, correctFullPath);
-        if (!needLevel) {
-          throw "[createSubChapter]>> Нужный уровень найти не удалось";
-        }
-        const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-        if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
-        (_a = needLevel.items) == null ? void 0 : _a.push(newSubChapter);
-      }
-      await writeFile(materials, FSCONFIG);
-      return newSubChapter;
-    } else {
-      throw "[createSubChapter]>> INVALID_CHAPTER_TYPE";
-    }
+    if (!params || !params.chapterId) throw "[createSubChapter]>> INVALID_INPUT_DATA";
+    if (!(auth == null ? void 0 : auth.token)) throw "[createSubChapter]>> 401 UNAUTHORIZATE";
+    const { payload: { username } } = await verifyAccessToken(auth.token);
+    const subChapterService = new SubChapterService();
+    const now2 = formatDate();
+    const res = await subChapterService.create({
+      chapterId: params.chapterId,
+      chapterType: params.chapterType,
+      fullpath: params.fullpath,
+      icon: params.icon,
+      iconType: params.iconType,
+      label: params.label,
+      pathName: params.pathName,
+      route: params.route,
+      createdAt: now2,
+      updatedAt: now2
+    });
+    await syncMaterialsStores(username);
+    return res;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5745,8 +5843,8 @@ app.whenReady().then(async () => {
   ipcMain.handle("get-one-chapter", async (event, params) => {
     return await getOneChapter(params);
   });
-  ipcMain.handle("create-sub-chapter", async (event, params) => {
-    return await createSubChapter(params);
+  ipcMain.handle("create-sub-chapter", async (event, params, auth) => {
+    return await createSubChapter(params, auth);
   });
   ipcMain.handle("get-one-sub-chapter", async (event, params) => {
     return await getOneSubChapter(params);

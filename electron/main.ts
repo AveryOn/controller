@@ -171,8 +171,8 @@ app.whenReady().then(async () => {
     });
 
     // Создание подраздела
-    ipcMain.handle("create-sub-chapter", async (event, params: SubChapterCreate) => {
-        return await createSubChapter(params);
+    ipcMain.handle("create-sub-chapter", async (event, params: SubChapterCreate, auth: AuthParams) => {
+        return await createSubChapter(params, auth);
     });
 
     // // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных

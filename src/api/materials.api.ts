@@ -66,7 +66,7 @@ export async function createSubChapter(params: SubChapterCreate) {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.createSubChapter(params);
+                const result = await window.electron.createSubChapter(params, { token: localStorage.getItem('token') });
                 // await syncMaterials();  // Синхронизация подразделов с меню
                 resolve(result);
             } catch (err) {
