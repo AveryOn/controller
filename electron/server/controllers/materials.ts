@@ -44,7 +44,7 @@ const FSCONFIG_MENU: FsOperationConfig = {
 export async function prepareMaterialsStoreForMenu(username: string): Promise<boolean> {
     const userDirPath = getAppUserDirname(username);
     console.log('[prepareMaterialsStoreForMenu] => void');
-    return readFile(FSCONFIG_MENU)
+    return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true })
         .then((data) => {
             return true;
         })
@@ -258,29 +258,30 @@ export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
     };
     let pathName: string;
     function sync(chapters: Array<Chapter & SubChapter>): Array<ChapterForMenu> {
-        return chapters.map((chapter) => {
-            if (chapter.pathName && chapter.pathName !== pathName!) {
-                pathName = chapter.pathName;
-            }
-            // Если подраздел является конечным файлом а не директорией
-            if (chapter.chapterType === 'file' && !chapter.items) {
-                return correctChapter(chapter, pathName);
-            }
-            // Если подраздел является директорией
-            else if (chapter.chapterType === 'dir' && chapter.items) {
-                // Если подраздел имеет свои подразделы
-                if (chapter.items.length > 0) {
-                    const syncCh = correctChapter(chapter, pathName);
-                    syncCh.items = sync(chapter.items as Array<Chapter & SubChapter>);
-                    return syncCh;
-                }
-                // Если подраздел не имеет подразделы
-                else {
-                    return correctChapter(chapter, pathName);
-                }
-            }
-            else throw '[syncMaterialsStores]>> INVALID_CHAPTER_TYPE';
-        });
+        return chapters
+        // return chapters.map((chapter) => {
+        //     if (chapter.pathName && chapter.pathName !== pathName!) {
+        //         pathName = chapter.pathName;
+        //     }
+        //     // Если подраздел является конечным файлом а не директорией
+        //     if (chapter.chapterType === 'file' && !chapter.items) {
+        //         return correctChapter(chapter, pathName);
+        //     }
+        //     // Если подраздел является директорией
+        //     else if (chapter.chapterType === 'dir' && chapter.items) {
+        //         // Если подраздел имеет свои подразделы
+        //         if (chapter.items.length > 0) {
+        //             const syncCh = correctChapter(chapter, pathName);
+        //             syncCh.items = sync(chapter.items as Array<Chapter & SubChapter>);
+        //             return syncCh;
+        //         }
+        //         // Если подраздел не имеет подразделы
+        //         else {
+        //             return correctChapter(chapter, pathName);
+        //         }
+        //     }
+        //     else throw '[syncMaterialsStores]>> INVALID_CHAPTER_TYPE';
+        // });
     }
     try {
         // Получение исходных Данных Материалов

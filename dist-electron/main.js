@@ -5066,7 +5066,7 @@ const FSCONFIG_MENU = {
 async function prepareMaterialsStoreForMenu(username) {
   const userDirPath = getAppUserDirname(username);
   console.log("[prepareMaterialsStoreForMenu] => void");
-  return readFile(FSCONFIG_MENU).then((data) => {
+  return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true }).then((data) => {
     return true;
   }).catch(async () => {
     try {
@@ -5223,28 +5223,8 @@ async function createSubChapter(params) {
 }
 async function syncMaterialsStores() {
   console.log("[syncMaterialsStores] => void");
-  function correctChapter(chapter, initPathName) {
-    const { icon, iconType, id, label, pathName: pathName2, fullpath, route, items } = chapter;
-    return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName2, fullpath, route, items };
-  }
-  let pathName;
   function sync(chapters) {
-    return chapters.map((chapter) => {
-      if (chapter.pathName && chapter.pathName !== pathName) {
-        pathName = chapter.pathName;
-      }
-      if (chapter.chapterType === "file" && !chapter.items) {
-        return correctChapter(chapter, pathName);
-      } else if (chapter.chapterType === "dir" && chapter.items) {
-        if (chapter.items.length > 0) {
-          const syncCh = correctChapter(chapter, pathName);
-          syncCh.items = sync(chapter.items);
-          return syncCh;
-        } else {
-          return correctChapter(chapter, pathName);
-        }
-      } else throw "[syncMaterialsStores]>> INVALID_CHAPTER_TYPE";
-    });
+    return chapters;
   }
   try {
     const materials = await readFile(FSCONFIG);

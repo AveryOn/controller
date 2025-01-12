@@ -64,9 +64,10 @@ router.beforeEach(async (to, from, next) => {
         }
         // При первоначальном входе в приложение когда у нас выписан токен и мы на main странице
         // То в этот момент пользовательское хранилище не активно, потому его нужно активировать
-        if(from.name === undefined && to.name === 'main') {
-            await prepareUserStore();
+        if(!from.name && to.name) {
+            await prepareUserStore()
         }
+        
         localStorage.setItem('current_route', JSON.stringify({ 
             name: to.name, 
             params: to.params, 
