@@ -23,7 +23,7 @@ import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 import { verifyAccessToken } from "../services/tokens.service";
 import ChapterService from "../database/services/chapter.service";
-import { ChapterCreateDto, ChapterGetByPathNameRes } from "../types/services/chapter.service";
+import { ChapterCreateDto, ChapterGetByPathNameRes, SubChapterCreateResponse } from "../types/services/chapter.service";
 import { AuthParams } from "../types/controllers/index.types";
 import SubChapterService from "../database/services/subchapter.service";
 
@@ -211,7 +211,7 @@ function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: 
 }
 
 // Создание нового подраздела
-export async function createSubChapter(params: SubChapterCreate, auth: AuthParams): Promise<SubChapter> {
+export async function createSubChapter(params: SubChapterCreate, auth: AuthParams): Promise<SubChapterCreateResponse> {
     console.log('[createSubChapter] => ', params);
     try {
         if (!params || !params.chapterId) throw '[createSubChapter]>> INVALID_INPUT_DATA';
@@ -233,51 +233,6 @@ export async function createSubChapter(params: SubChapterCreate, auth: AuthParam
         });
         await syncMaterialsStores(username);
         return res;
-        // const materials: Chapter[] = await readFile(FSCONFIG);
-        // const chapter = materials.find((chapter) => chapter.pathName === params.pathName);
-        // if (chapter?.chapterType === 'dir' && chapter.items) {
-        //     const timestamp = formatDate();
-        //     const newSubChapter: SubChapter = {
-        //         id: Date.now(),
-        //         chapterType: params.chapterType,
-        //         content: {
-        //             blocks: [],
-        //             title: null,
-        //         },
-        //         icon: params.icon,
-        //         iconType: params.iconType,
-        //         fullpath: trimPath(params.fullpath) as string,
-        //         label: params.label,
-        //         route: params.route,
-        //         items: (params.chapterType === 'dir') ? [] : null,
-        //         createdAt: timestamp,
-        //         updatedAt: timestamp,
-        //     }
-        //     const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1) as string[];
-            
-        //     // Если путь до подраздела пуст, значит, не существует подраздела в корневом разделе и его здесь и нужно создать 
-        //     if (correctFullPath.length <= 0) {
-        //         // Проверка на уникальность создаваемого подраздела
-        //         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-        //         if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
-        //         chapter.items.push(newSubChapter);
-        //     } else {
-        //         const needLevel = findLevel(chapter.items, correctFullPath) as SubChapter | null;
-        //         // Если нужный уровень не найден
-        //         if (!needLevel) {
-        //             throw '[createSubChapter]>> Нужный уровень найти не удалось';
-        //         }
-        //         // Проверка на уникальность создаваемого подраздела
-        //         const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-        //         if (alreadyExists) throw '[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE';
-        //         needLevel.items?.push(newSubChapter);
-        //     }
-        //     // Запись изменений в БД
-        //     await writeFile(materials, FSCONFIG);
-        //     return newSubChapter;
-        // } else {
-        //     throw '[createSubChapter]>> INVALID_CHAPTER_TYPE';
-        // }
     } catch (err) {
         console.error(err);
         throw err;
