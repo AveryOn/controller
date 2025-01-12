@@ -42,6 +42,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
             if(materialChaptersMenu.value[0].type === 'loading') {
                 const token = localStorage.getItem('token') ?? '';
                 const items = await getChapters({ forMenu: true, token: token });
+                console.log(items);
                 updateMenuItems(items);
             } 
         } catch (err) {

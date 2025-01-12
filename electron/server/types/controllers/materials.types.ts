@@ -132,20 +132,22 @@ export interface Chapter {
 export interface SubChapterForMenu {
     id: number;
     fullpath: string;
+    chapterType: 'dir' | 'file';
     icon: string;
     iconType: IconType;
     label: string;
     route: string;
-    items?: SubChapter[] | null;
+    items?: SubChapterForMenu[] | null;
 }
 
 export interface ChapterForMenu {
     id: number;
     pathName?: string;
     fullpath?: string;
+    chapterType: 'dir' | 'file';
     icon: string;
     iconType: IconType;
     label: string;
     route: string;
-    items?: ChapterForMenu[] | null;
+    items?: SubChapterForMenu[] | null;
 }

@@ -35,7 +35,8 @@ import { createChapter,
     editChapterBlock, 
     getChapters, 
     getOneChapter, 
-    getOneSubChapter, 
+    getOneSubChapter,
+    syncMaterialsStores, 
     // syncMaterialsStores 
 } from './server/controllers/materials'
 import { DatabaseManager } from './server/database/manager';
@@ -44,6 +45,7 @@ import { ValidateAccessTokenParams } from './server/types/controllers/auth.types
 import { AuthParams } from './server/types/controllers/index.types';
 import { prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
+import SubChapterService from './server/database/services/subchapter.service';
 
 
 const require = createRequire(import.meta.url);
@@ -109,7 +111,6 @@ app.whenReady().then(async () => {
     
     if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
     console.debug('APPLICATION DATABASES ARE READY');
-
     createWindow();
     // Обработчики IPC
     // ==========  SYSTEM  ==========

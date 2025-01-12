@@ -16,7 +16,8 @@ import { Chapter,
     GetChaptersConfig, 
     GetSubChapterOneParams, 
     SubChapter, 
-    SubChapterCreate 
+    SubChapterCreate, 
+    SubChapterForMenu
 } from "../types/controllers/materials.types";
 import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
@@ -90,6 +91,8 @@ export async function createChapter(params: ChapterCreate, auth: AuthParams) {
   
         // materials.push(newChapter);
         // await writeFile(materials, FSCONFIG);
+        // Вызов синхронизации с меню
+        const menu = await syncMaterialsStores(payload.username);
         return newChapter;
     } catch (err) {
         console.error(err);
@@ -250,47 +253,70 @@ export async function createSubChapter(params: SubChapterCreate): Promise<SubCha
 }
 
 // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
-export async function syncMaterialsStores(): Promise<ChapterForMenu[]> {
-    console.log('[syncMaterialsStores] => void');
-    function correctChapter(chapter: Chapter & SubChapter, initPathName?: string): ChapterForMenu {
-        const { icon, iconType, id, label, pathName, fullpath, route, items } = chapter;
-        return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName, fullpath, route, items }
-    };
-    let pathName: string;
-    function sync(chapters: Array<Chapter & SubChapter>): Array<ChapterForMenu> {
-        return chapters
-        // return chapters.map((chapter) => {
-        //     if (chapter.pathName && chapter.pathName !== pathName!) {
-        //         pathName = chapter.pathName;
-        //     }
-        //     // Если подраздел является конечным файлом а не директорией
-        //     if (chapter.chapterType === 'file' && !chapter.items) {
-        //         return correctChapter(chapter, pathName);
-        //     }
-        //     // Если подраздел является директорией
-        //     else if (chapter.chapterType === 'dir' && chapter.items) {
-        //         // Если подраздел имеет свои подразделы
-        //         if (chapter.items.length > 0) {
-        //             const syncCh = correctChapter(chapter, pathName);
-        //             syncCh.items = sync(chapter.items as Array<Chapter & SubChapter>);
-        //             return syncCh;
-        //         }
-        //         // Если подраздел не имеет подразделы
-        //         else {
-        //             return correctChapter(chapter, pathName);
-        //         }
-        //     }
-        //     else throw '[syncMaterialsStores]>> INVALID_CHAPTER_TYPE';
-        // });
-    }
+export async function syncMaterialsStores(username: string): Promise<Array<ChapterForMenu>> {
+    console.log('[syncMaterialsStores] =>', username);
     try {
-        // Получение исходных Данных Материалов
-        const materials: Array<Chapter & SubChapter> = await readFile(FSCONFIG);
-        // Синхронизация
-        const syncMaterials: Array<ChapterForMenu> = sync(materials);
-        // Запись синхроинзованных данных в БД materials-menu
-        await writeFile(syncMaterials, FSCONFIG_MENU);
-        return syncMaterials;
+        if(!username) throw new Error('[syncMaterialsStores]>> invalid username')
+        function sync(subchapters: Array<SubChapterForMenu>, envStack: string[]): Array<SubChapterForMenu> {
+            /* envStack - массив окружений разделов. начинается от pathName раздела
+                и на каждом последующем вызове в него добавляется новый участок fullpath[0] уже подраздела, на который 
+                была запущена рекурсия.
+            */
+            const mappa: {[key:string]: SubChapterForMenu[]} = {};
+            const baseSubChapters: SubChapterForMenu[] = []
+            for (let i = 0; i < subchapters.length; i++) {
+                const subchapter = subchapters[i];
+                // здесь correctFullpath отделяется от envStack чтобы смещаться по пути в рекурсии
+                const correctFullpath = trimPath(subchapter.fullpath, { split: true }).slice(envStack.length) as string[];
+                const basePath = correctFullpath.shift();
+                if(!mappa[basePath!]) mappa[basePath!] = [];
+                if(correctFullpath.length > 0) {
+                    mappa[basePath!].push(subchapter);
+                }
+                // этот массив нужен для того чтобы определять какие подразделы являются директориями
+                // чтобы по ним вызывать рекурсию
+                else baseSubChapters.push(subchapter);
+            }
+            return baseSubChapters.map((subChapter) => {
+                const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length) as string[];
+                if((mappa[correctFullpath[0]]?.length <= 0)) {
+                    subChapter.items = (subChapter.chapterType === 'dir')? [] : null;
+                    return subChapter;
+                }
+                else {
+                    const env = correctFullpath.shift();
+                    // добавляем текущее название подраздела на котором запускаем рекурсия, для смещения
+                    subChapter.items = sync(mappa[env!], [...envStack, env!]);
+                    return subChapter;
+                }
+            })
+        }
+        // получаем все разделы и подразделы
+        const chapterService = new ChapterService()
+        const result: any[] = await chapterService.getAllForMenu();
+        const mapped = result.map((chapter: ChapterForMenu) => {
+            if(typeof chapter.items === 'string') {
+                chapter.items = JSON.parse(chapter.items);
+            }
+            // если раздел является директорией
+            if(chapter.items && chapter.items.length > 0) {
+                // убираем массив items если он пришел с одним пустым подразделом
+                if(chapter.items?.length === 1 && !chapter.items![0]?.id) {
+                    chapter.items = (chapter.chapterType === 'dir')? [] : null;
+                }
+                if(chapter.items) {
+                    chapter.items = sync(chapter.items, [chapter.pathName!]);
+                }
+            }
+            else {
+                console.error('[syncMaterialsStores]>> chapter.length is NULL');
+            }
+            return chapter;
+        });
+        // Запись в файл
+        const userDirPath = getAppUserDirname(username);
+        await writeFile(mapped, { ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+        return mapped;
     } catch (err) {
         console.error(err);
         throw err;

@@ -670,7 +670,6 @@ const _DatabaseManager = class _DatabaseManager {
   // Залутать инстанс БД
   getDatabase(dbname) {
     const ins = this.instanceDatabaseList[dbname];
-    console.log(this.instanceDatabaseList);
     if (!ins || !(ins instanceof InstanceDatabase)) {
       throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
     }
@@ -4988,6 +4987,33 @@ class ChapterService {
         `);
     return rows.payload;
   }
+  // Получить массив разделов с их подразделами для формирования массива для панели меню
+  async getAllForMenu() {
+    const res = await this.instanceDb.all(`
+            SELECT 
+                chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
+                chapters.${this.allFields["icon"]}, chapters.${this.allFields["iconType"]},
+                chapters.${this.allFields["label"]}, chapters.${this.allFields["route"]},
+                chapters.${this.allFields["chapterType"]},
+                JSON_GROUP_ARRAY(
+                    JSON_OBJECT(
+                        'id', sub_chapters.id,
+                        'fullpath', sub_chapters.fullpath,
+                        'chapterType', sub_chapters.chapter_type,
+                        'icon', sub_chapters.icon,
+                        'iconType', sub_chapters.icon_type,
+                        'label', sub_chapters.label,
+                        'route', sub_chapters.route
+                    )
+                ) AS items
+            FROM chapters
+            LEFT JOIN sub_chapters
+            ON chapters.id = sub_chapters.chapter_id
+            GROUP BY chapters.id;
+        `);
+    if (!res || !(res == null ? void 0 : res.payload)) return null;
+    return res.payload;
+  }
   // Найти раздел по ID
   async findById(id, config2) {
     try {
@@ -5095,6 +5121,7 @@ async function createChapter(params, auth) {
       createdAt: timestamp,
       updatedAt: timestamp
     });
+    const menu = await syncMaterialsStores(payload.username);
     return newChapter;
   } catch (err) {
     console.error(err);
@@ -5216,6 +5243,62 @@ async function createSubChapter(params) {
     } else {
       throw "[createSubChapter]>> INVALID_CHAPTER_TYPE";
     }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function syncMaterialsStores(username) {
+  console.log("[syncMaterialsStores] =>", username);
+  try {
+    let sync = function(subchapters, envStack) {
+      const mappa = {};
+      const baseSubChapters = [];
+      for (let i = 0; i < subchapters.length; i++) {
+        const subchapter = subchapters[i];
+        const correctFullpath = trimPath(subchapter.fullpath, { split: true }).slice(envStack.length);
+        const basePath = correctFullpath.shift();
+        if (!mappa[basePath]) mappa[basePath] = [];
+        if (correctFullpath.length > 0) {
+          mappa[basePath].push(subchapter);
+        } else baseSubChapters.push(subchapter);
+      }
+      return baseSubChapters.map((subChapter) => {
+        var _a;
+        const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length);
+        if (((_a = mappa[correctFullpath[0]]) == null ? void 0 : _a.length) <= 0) {
+          subChapter.items = subChapter.chapterType === "dir" ? [] : null;
+          return subChapter;
+        } else {
+          const env = correctFullpath.shift();
+          subChapter.items = sync(mappa[env], [...envStack, env]);
+          return subChapter;
+        }
+      });
+    };
+    if (!username) throw new Error("[syncMaterialsStores]>> invalid username");
+    const chapterService = new ChapterService();
+    const result = await chapterService.getAllForMenu();
+    const mapped = result.map((chapter) => {
+      var _a, _b;
+      if (typeof chapter.items === "string") {
+        chapter.items = JSON.parse(chapter.items);
+      }
+      if (chapter.items && chapter.items.length > 0) {
+        if (((_a = chapter.items) == null ? void 0 : _a.length) === 1 && !((_b = chapter.items[0]) == null ? void 0 : _b.id)) {
+          chapter.items = chapter.chapterType === "dir" ? [] : null;
+        }
+        if (chapter.items) {
+          chapter.items = sync(chapter.items, [chapter.pathName]);
+        }
+      } else {
+        console.error("[syncMaterialsStores]>> chapter.length is NULL");
+      }
+      return chapter;
+    });
+    const userDirPath = getAppUserDirname(username);
+    await writeFile(mapped, { ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+    return mapped;
   } catch (err) {
     console.error(err);
     throw err;

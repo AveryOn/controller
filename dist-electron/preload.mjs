@@ -14,7 +14,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
   getChapters: (params) => electron.ipcRenderer.invoke("get-menu-chapters", params),
   getChapter: (params) => electron.ipcRenderer.invoke("get-one-chapter", params),
   createSubChapter: (params) => electron.ipcRenderer.invoke("create-sub-chapter", params),
-  syncMaterials: () => electron.ipcRenderer.invoke("sync-materials"),
+  // syncMaterials: () => ipcRenderer.invoke('sync-materials'),
   getOneSubChapter: (params) => electron.ipcRenderer.invoke("get-one-sub-chapter", params),
   editChapter: (params) => electron.ipcRenderer.invoke("edit-chapter", params),
   deleteChapter: (params) => electron.ipcRenderer.invoke("delete-chapter", params),

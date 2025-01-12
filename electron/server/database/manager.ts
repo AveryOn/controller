@@ -151,7 +151,6 @@ export class DatabaseManager {
     // Залутать инстанс БД
     getDatabase(dbname: DbNamesType): InstanceDatabase {
         const ins = this.instanceDatabaseList[dbname]
-        console.log(this.instanceDatabaseList);
         if(!ins || !(ins instanceof InstanceDatabase)) {
             throw new Error(`getDatabase > the instance \"${dbname}\" was not initialized`)
         }

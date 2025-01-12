@@ -47,6 +47,34 @@ export default class ChapterService {
         return rows.payload as Array<ChapterForGetAll>;
     }
 
+    // Получить массив разделов с их подразделами для формирования массива для панели меню
+    async getAllForMenu() {
+        const res = await this.instanceDb!.all(`
+            SELECT 
+                chapters.${this.allFields['id']}, chapters.${this.allFields['pathName']},
+                chapters.${this.allFields['icon']}, chapters.${this.allFields['iconType']},
+                chapters.${this.allFields['label']}, chapters.${this.allFields['route']},
+                chapters.${this.allFields['chapterType']},
+                JSON_GROUP_ARRAY(
+                    JSON_OBJECT(
+                        'id', sub_chapters.id,
+                        'fullpath', sub_chapters.fullpath,
+                        'chapterType', sub_chapters.chapter_type,
+                        'icon', sub_chapters.icon,
+                        'iconType', sub_chapters.icon_type,
+                        'label', sub_chapters.label,
+                        'route', sub_chapters.route
+                    )
+                ) AS items
+            FROM chapters
+            LEFT JOIN sub_chapters
+            ON chapters.id = sub_chapters.chapter_id
+            GROUP BY chapters.id;
+        `)
+        if (!res || !res?.payload) return null;
+        return res.payload;
+    }
+
     // Найти раздел по ID
     async findById(id: number, config?: { excludes?: Array<keyof ChapterRaw> }): Promise<ChapterRawResponse | null> {
         try {
