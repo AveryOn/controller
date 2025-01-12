@@ -45,7 +45,6 @@ import { ValidateAccessTokenParams } from './server/types/controllers/auth.types
 import { AuthParams } from './server/types/controllers/index.types';
 import { prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
-import SubChapterService from './server/database/services/subchapter.service';
 
 
 const require = createRequire(import.meta.url);

@@ -33,10 +33,24 @@ export interface ChapterRawResponse {
     iconType?:       string;
     chapterType?:    string;
     label?:          string;
+    blocks?:         string;
     route?:          string;
     contentTitle?:   string;
     createdAt?:      string;
     updatedAt?:      string;
+}
+export interface ChapterGetByPathNameRes {
+    id:             number;
+    pathName:       string;
+    icon:           string;
+    iconType:       "mdi" | "pi" | "img";
+    chapterType:    "dir" | "file";
+    label:          string;
+    blocks?:        string;
+    route:          string;
+    contentTitle:   string;
+    createdAt:      string;
+    updatedAt:      string;
 }
 
 export interface SubChapterRawResponse {

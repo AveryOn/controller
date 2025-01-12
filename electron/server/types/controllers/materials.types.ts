@@ -87,6 +87,8 @@ export interface EditChapterBlockTitle {
 export interface ChapterBlock {
     id: number;
     title: string;
+    chapterId?: number;
+    subChapterId?: number;
     content: string | null;
     createdAt: string;
     updatedAt: string;

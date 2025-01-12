@@ -23,7 +23,7 @@ import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 import { verifyAccessToken } from "../services/tokens.service";
 import ChapterService from "../database/services/chapter.service";
-import { ChapterCreateDto } from "../types/services/chapter.service";
+import { ChapterCreateDto, ChapterGetByPathNameRes } from "../types/services/chapter.service";
 import { AuthParams } from "../types/controllers/index.types";
 
 const MATERIALS_FILENAME = 'materials.json';
@@ -135,19 +135,44 @@ export async function getChapters(params: GetChaptersConfig): Promise<ChapterFor
 export async function getOneChapter(params: GetChapterOneParams): Promise<Chapter> {
     console.log('[getOneChapter] => ', params);
     try {
-        // Получение materials
-        const materials: Chapter[] = await readFile(FSCONFIG);
-        // Получение по ID
-        if (params.chapterId) {
-            const findedChapter = materials.find((chapter) => chapter.id === params.chapterId);
-            if (!findedChapter) throw '[getOneChapter]>> NOT_EXISTS_RECORD';
-            return findedChapter;
-        }
+        const chapterService = new ChapterService();
         // Получение по имени пути
-        else if (params.pathName) {
-            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+        if (params.pathName) {
+            const findedChapter: ChapterGetByPathNameRes | null = await chapterService.findByPathName(params.pathName, { 
+                includes: { 
+                    blocks: true // также прикрепить блоки в объект раздела
+                } 
+            });
             if (!findedChapter) throw '[getOneChapter]>> NOT_EXISTS_RECORD';
-            return findedChapter;
+            const correctChapter: Chapter = {
+                id: findedChapter.id,
+                icon: findedChapter.icon,
+                chapterType: findedChapter.chapterType,
+                createdAt: findedChapter.createdAt,
+                label: findedChapter.label,
+                pathName: findedChapter.pathName,
+                route: findedChapter.route,
+                updatedAt: findedChapter.updatedAt,
+                iconType: findedChapter.iconType,
+                content: {
+                    title: findedChapter.contentTitle,
+                    blocks: [],
+                }
+            }
+            if(findedChapter?.blocks) {
+                let blocks: ChapterBlock[] = JSON.parse(findedChapter?.blocks)
+                // если массив блоков пришел с одной пустой записью то считаем что  для этого раздела нет блоков
+                if(blocks.length === 1 && !blocks[0].id) {
+                    blocks.length = 0;
+                }
+                else if(!!blocks[0].id) {
+                    correctChapter.content.blocks = blocks;
+                } 
+            }
+            else {  }
+            findedChapter?.blocks
+            console.log(correctChapter);
+            return correctChapter;
         }
         else {
             throw '[getOneChapter]>> NOT_EXISTS_RECORD';

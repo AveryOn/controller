@@ -5032,13 +5032,41 @@ class ChapterService {
   }
   // Найти раздел по pathName
   async findByPathName(pathName, config2) {
+    var _a;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
-      const res = await this.instanceDb.get(`
-                SELECT ${correctFieldsSql}
-                FROM chapters
-                WHERE path_name = ?;
-            `, [pathName]);
+      let res;
+      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
+                        chapters.${this.allFields["contentTitle"]}, chapters.${this.allFields["createdAt"]},
+                        chapters.${this.allFields["updatedAt"]},
+                        chapters.${this.allFields["icon"]}, chapters.${this.allFields["iconType"]},
+                        chapters.${this.allFields["label"]}, chapters.${this.allFields["route"]},
+                        chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM chapters
+                    LEFT JOIN blocks
+                    ON chapters.id = blocks.chapter_id
+                    WHERE chapters.path_name = ?
+                    GROUP BY chapters.id;
+                `, [pathName]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM chapters WHERE path_name = ?;
+                `, [pathName]);
+      }
       if (!res || !(res == null ? void 0 : res.payload)) return null;
       return res.payload;
     } catch (err) {
@@ -5155,15 +5183,42 @@ async function getChapters(params) {
 async function getOneChapter(params) {
   console.log("[getOneChapter] => ", params);
   try {
-    const materials = await readFile(FSCONFIG);
-    if (params.chapterId) {
-      const findedChapter = materials.find((chapter) => chapter.id === params.chapterId);
+    const chapterService = new ChapterService();
+    if (params.pathName) {
+      const findedChapter = await chapterService.findByPathName(params.pathName, {
+        includes: {
+          blocks: true
+          // также прикрепить блоки в объект раздела
+        }
+      });
       if (!findedChapter) throw "[getOneChapter]>> NOT_EXISTS_RECORD";
-      return findedChapter;
-    } else if (params.pathName) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!findedChapter) throw "[getOneChapter]>> NOT_EXISTS_RECORD";
-      return findedChapter;
+      const correctChapter = {
+        id: findedChapter.id,
+        icon: findedChapter.icon,
+        chapterType: findedChapter.chapterType,
+        createdAt: findedChapter.createdAt,
+        label: findedChapter.label,
+        pathName: findedChapter.pathName,
+        route: findedChapter.route,
+        updatedAt: findedChapter.updatedAt,
+        iconType: findedChapter.iconType,
+        content: {
+          title: findedChapter.contentTitle,
+          blocks: []
+        }
+      };
+      if (findedChapter == null ? void 0 : findedChapter.blocks) {
+        let blocks = JSON.parse(findedChapter == null ? void 0 : findedChapter.blocks);
+        if (blocks.length === 1 && !blocks[0].id) {
+          blocks.length = 0;
+        } else if (!!blocks[0].id) {
+          correctChapter.content.blocks = blocks;
+        }
+      } else {
+      }
+      findedChapter == null ? void 0 : findedChapter.blocks;
+      console.log(correctChapter);
+      return correctChapter;
     } else {
       throw "[getOneChapter]>> NOT_EXISTS_RECORD";
     }

@@ -1,5 +1,6 @@
-import { InstanceDatabaseDoc } from "../../types/database/index.types";
-import { ChapterCreateDto, ChapterCreateResponse, ChapterForGetAll, ChapterRaw, ChapterRawResponse } from "../../types/services/chapter.service";
+import { Chapter } from "../../types/controllers/materials.types";
+import { InstanceDatabaseDoc, IpcContractRes } from "../../types/database/index.types";
+import { ChapterCreateDto, ChapterCreateResponse, ChapterForGetAll, ChapterGetByPathNameRes, ChapterRaw, ChapterRawResponse } from "../../types/services/chapter.service";
 import { DatabaseManager } from "../manager";
 
 export default class ChapterService {
@@ -93,16 +94,48 @@ export default class ChapterService {
     }
 
     // Найти раздел по pathName
-    async findByPathName(pathName: string, config?: { excludes?: Array<keyof ChapterRaw> }): Promise<ChapterRawResponse | null> {
+    async findByPathName(pathName: string, config?: { 
+        excludes?: Array<keyof ChapterRaw>, 
+        includes?: { blocks: boolean },
+    }): Promise<ChapterGetByPathNameRes | null> {
+
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
-            const res = await this.instanceDb!.get(`
-                SELECT ${correctFieldsSql}
-                FROM chapters
-                WHERE path_name = ?;
-            `, [pathName]);
-            if (!res || !res?.payload) return null;
-            return res.payload as ChapterRaw;
+            let res: IpcContractRes;
+            if(config?.includes?.blocks === true) {
+                res = await this.instanceDb!.get(`
+                    SELECT 
+                        chapters.${this.allFields['id']}, chapters.${this.allFields['pathName']},
+                        chapters.${this.allFields['contentTitle']}, chapters.${this.allFields['createdAt']},
+                        chapters.${this.allFields['updatedAt']},
+                        chapters.${this.allFields['icon']}, chapters.${this.allFields['iconType']},
+                        chapters.${this.allFields['label']}, chapters.${this.allFields['route']},
+                        chapters.${this.allFields['chapterType']},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM chapters
+                    LEFT JOIN blocks
+                    ON chapters.id = blocks.chapter_id
+                    WHERE chapters.path_name = ?
+                    GROUP BY chapters.id;
+                `, [pathName]);
+            }
+            else {
+                res = await this.instanceDb!.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM chapters WHERE path_name = ?;
+                `, [pathName]);
+            }
+            if (!res! || !res?.payload) return null;
+            return res.payload as ChapterGetByPathNameRes;
         } catch (err) {
             console.error(err);
             return null;
