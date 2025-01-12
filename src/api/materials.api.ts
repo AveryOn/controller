@@ -51,7 +51,7 @@ export async function createChapter(params: ChapterCreate) {
         setTimeout(async () => {
             try {
                 const result = await window.electron.createChapter(params, { token: localStorage.getItem('token') });
-                await syncMaterials();
+                // await syncMaterials();
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -67,7 +67,7 @@ export async function createSubChapter(params: SubChapterCreate) {
         setTimeout(async () => {
             try {
                 const result = await window.electron.createSubChapter(params);
-                await syncMaterials();  // Синхронизация подразделов с меню
+                // await syncMaterials();  // Синхронизация подразделов с меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -100,7 +100,7 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
         setTimeout(async () => {
             try {
                 const result = await window.electron.editChapter(params);
-                await syncMaterials();  // Синзронизация материалов в меню
+                // await syncMaterials();  // Синзронизация материалов в меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -116,7 +116,7 @@ export async function deleteChapterApi(params: DeleteChapterParams): Promise<voi
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteChapter(params);
-                await syncMaterials(); // Синхронизация данных в панели меню
+                // await syncMaterials(); // Синхронизация данных в панели меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -132,7 +132,7 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteSubChapter(params);
-                await syncMaterials();  // Синхронизация панели меню материалов
+                // await syncMaterials();  // Синхронизация панели меню материалов
                 resolve(result);
             } catch (err) {
                 reject(err);

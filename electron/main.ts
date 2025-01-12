@@ -36,7 +36,7 @@ import { createChapter,
     getChapters, 
     getOneChapter, 
     getOneSubChapter, 
-    syncMaterialsStores 
+    // syncMaterialsStores 
 } from './server/controllers/materials'
 import { DatabaseManager } from './server/database/manager';
 import { loginUser, validateAccessToken } from './server/controllers/auth.controller';
@@ -167,10 +167,10 @@ app.whenReady().then(async () => {
         return await createSubChapter(params);
     });
 
-    // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
-    ipcMain.handle("sync-materials", async (event) => {
-        return await syncMaterialsStores();
-    });
+    // // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
+    // ipcMain.handle("sync-materials", async (event) => {
+    //     return await syncMaterialsStores();
+    // });
 
     // Получить конкретный ПОДраздел с БД материалов
     ipcMain.handle("get-one-sub-chapter", async (event, params: GetSubChapterOneParams) => {

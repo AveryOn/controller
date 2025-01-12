@@ -5221,21 +5221,6 @@ async function createSubChapter(params) {
     throw err;
   }
 }
-async function syncMaterialsStores() {
-  console.log("[syncMaterialsStores] => void");
-  function sync(chapters) {
-    return chapters;
-  }
-  try {
-    const materials = await readFile(FSCONFIG);
-    const syncMaterials = sync(materials);
-    await writeFile(syncMaterials, FSCONFIG_MENU);
-    return syncMaterials;
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
 async function getOneSubChapter(params) {
   console.log("[getOneSubChapter] => ", params);
   try {
@@ -5616,9 +5601,6 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("create-sub-chapter", async (event, params) => {
     return await createSubChapter(params);
-  });
-  ipcMain.handle("sync-materials", async (event) => {
-    return await syncMaterialsStores();
   });
   ipcMain.handle("get-one-sub-chapter", async (event, params) => {
     return await getOneSubChapter(params);
