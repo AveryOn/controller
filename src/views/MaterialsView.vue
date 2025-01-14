@@ -2,7 +2,7 @@
     <div class="materials-view">
         <header class="materials-header">
             <svg-icon class="head-icon" type="mdi" :path="mdiSpaceInvaders" :size="18"></svg-icon>
-            <span class="flex head-label">Materials {{ openChapterName }}</span> 
+            <span class="flex head-label">Materials {{ labelChapter }}</span> 
             <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate" style="height: 2px"></ProgressBar>
             <svg-icon class="close-btn" type="mdi" :path="mdiCloseBoxOutline" :size="18" @click="toDefaultPage"></svg-icon>
         </header>
@@ -16,7 +16,7 @@
             <wrapperChapter 
             :full-label="labelChapter"
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
-            @open-chapter="(label) => labelChapter = label"
+            @open-chapter="(label) => updateLabel(label)"
             @quit="labelChapter = null"
             />
         </div>
@@ -38,13 +38,13 @@ const router = useRouter();
 const labelChapter: Ref<string | null> = ref(null);
 const materialStore = useMaterialsStore();
 
-const openChapterName = computed(() => {
-    if(labelChapter.value !== 'add-chapter') {
-        if(labelChapter.value) return `> ${labelChapter.value}`;
-        else return '';
-    }
-    else return '> New Chapter';
-});
+// const openChapterName = computed(() => {
+//     if(labelChapter.value !== 'add-chapter') {
+//         if(labelChapter.value) return `> ${labelChapter.value}`;
+//         else return '';
+//     }
+//     else return '> New Chapter';
+// });
 
 // запрос на создание раздела
 async function requestForChapterCreate(newChapter: ChapterCreate) {
@@ -64,6 +64,13 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
 function toDefaultPage() {
     localStorage.removeItem('current_route');
     router.push({ name: 'default' });
+}
+
+// обновление label при переключении подраздела 
+function updateLabel(label: string) {
+    console.log(label);
+    // labelChapter.value = labelChapter.value || '';
+    // labelChapter.value += ` > ${label}`
 }
 </script>
 

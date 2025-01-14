@@ -34,7 +34,7 @@ export interface GetChapterOneParams {
 export interface GetSubChapterOneParams {
     pathName: string;
     fullpath: string;
-    labels: string;
+    // labels: string;
 }
 
 // Данные приходят с запросом на редактирование раздела/подраздела
@@ -138,6 +138,7 @@ export interface SubChapterForMenu {
     fullpath: string;
     pathName?: string;
     chapterType: 'dir' | 'file';
+    fullLabel: string[];
     icon: string;
     iconType: IconType;
     label: string;

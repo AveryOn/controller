@@ -67,12 +67,6 @@ router.beforeEach(async (to, from, next) => {
         if(!from.name && to.name) {
             await prepareUserStore()
         }
-        console.log({ 
-            name: to.name, 
-            params: to.params, 
-            query: to.query 
-        });
-        
         localStorage.setItem('current_route', JSON.stringify({ 
             name: to.name, 
             params: to.params, 

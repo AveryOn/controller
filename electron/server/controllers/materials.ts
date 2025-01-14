@@ -245,7 +245,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
     console.log('[syncMaterialsStores] =>', username);
     try {
         if(!username) throw new Error('[syncMaterialsStores]>> invalid username')
-        function sync(subchapters: Array<SubChapterForMenu>, envStack: string[]): Array<SubChapterForMenu> {
+        function sync(subchapters: Array<SubChapterForMenu>, envStack: string[], labelStack: string[]): Array<SubChapterForMenu> {
             /* envStack - массив окружений разделов. начинается от pathName раздела
                 и на каждом последующем вызове в него добавляется новый участок fullpath[0] уже подраздела, на который 
                 была запущена рекурсия.
@@ -259,6 +259,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                 const basePath = correctFullpath.shift();
                 if(!mappa[basePath!]) mappa[basePath!] = [];
                 if(correctFullpath.length > 0) {
+                    
                     mappa[basePath!].push(subchapter);
                 }
                 // этот массив нужен для того чтобы определять какие подразделы являются директориями
@@ -294,7 +295,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                     chapter.items = (chapter.chapterType === 'dir')? [] : null;
                 }
                 if(chapter.items) {
-                    chapter.items = sync(chapter.items, [chapter.pathName!]);
+                    chapter.items = sync(chapter.items, [chapter.pathName!], [chapter.label]);
                 }
             }
             else {
@@ -316,7 +317,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
 export async function getOneSubChapter(params: GetSubChapterOneParams, auth: AuthParams): Promise<SubChapter> {
     console.log('[getOneSubChapter] => ', params);
     try {
-        if(!params?.labels) throw new Error("[getOneSubChapter]>> invalid labels");
+        // if(!params?.labels) throw new Error("[getOneSubChapter]>> invalid labels");
         if(!auth?.token) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
         const subChapterService = new SubChapterService();
         await verifyAccessToken(auth.token);

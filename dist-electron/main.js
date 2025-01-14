@@ -5428,7 +5428,7 @@ async function createSubChapter(params, auth) {
 async function syncMaterialsStores(username) {
   console.log("[syncMaterialsStores] =>", username);
   try {
-    let sync = function(subchapters, envStack) {
+    let sync = function(subchapters, envStack, labelStack) {
       const mappa = {};
       const baseSubChapters = [];
       for (let i = 0; i < subchapters.length; i++) {
@@ -5467,7 +5467,7 @@ async function syncMaterialsStores(username) {
           chapter.items = chapter.chapterType === "dir" ? [] : null;
         }
         if (chapter.items) {
-          chapter.items = sync(chapter.items, [chapter.pathName]);
+          chapter.items = sync(chapter.items, [chapter.pathName], [chapter.label]);
         }
       } else {
         console.error("[syncMaterialsStores]>> chapter.length is NULL");
@@ -5485,7 +5485,6 @@ async function syncMaterialsStores(username) {
 async function getOneSubChapter(params, auth) {
   console.log("[getOneSubChapter] => ", params);
   try {
-    if (!(params == null ? void 0 : params.labels)) throw new Error("[getOneSubChapter]>> invalid labels");
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
     const subChapterService = new SubChapterService();
     await verifyAccessToken(auth.token);
