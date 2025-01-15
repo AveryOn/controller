@@ -61,6 +61,8 @@ const isShowMaterialsIcon = computed(() => {
 function selectItem(item: any) {
     if(item.route === 'materials') {
         let querySubChapter: string | undefined = undefined; 
+        // Запись fullLabels в локал стор
+        localStorage.setItem('materials-full-label', JSON.stringify(item.fullLabels))
         
         if(item.fullpath) {
             querySubChapter = replacePathForMaterials(item.fullpath);
