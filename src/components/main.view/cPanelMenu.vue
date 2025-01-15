@@ -38,11 +38,9 @@ import { useRouter } from 'vue-router';
 import { replacePathForMaterials } from '../../utils/strings.utils';
 import { useMainStore } from '../../stores/main.store';
 import { computed } from 'vue';
-import { useMaterialsStore } from '../../stores/materials.store';
 
 const router = useRouter();
 const mainStore = useMainStore();
-const materialsStore = useMaterialsStore();
 
 const isShowMaterialsIcon = computed(() => {
     return (item: any) => {
@@ -63,11 +61,9 @@ const isShowMaterialsIcon = computed(() => {
 function selectItem(item: any) {
     if(item.route === 'materials') {
         let querySubChapter: string | undefined = undefined; 
-        if(item.pathName && item.label) {
-            materialsStore.setLabelsInfoInLocalStorage(item.pathName, item.fullpath ?? item.pathName, item.label);
-            if(item.fullpath) {
-                querySubChapter = replacePathForMaterials(item.fullpath);
-            }
+        
+        if(item.fullpath) {
+            querySubChapter = replacePathForMaterials(item.fullpath);
         }
         router.push({ 
             name: item.route, 

@@ -245,7 +245,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
     console.log('[syncMaterialsStores] =>', username);
     try {
         if(!username) throw new Error('[syncMaterialsStores]>> invalid username')
-        function sync(subchapters: Array<SubChapterForMenu>, envStack: string[], labelStack: string[]): Array<SubChapterForMenu> {
+        function sync(pathName: string, subchapters: Array<SubChapterForMenu>, envStack: string[], stackLabels: string[]): Array<SubChapterForMenu> {
             /* envStack - массив окружений разделов. начинается от pathName раздела
                 и на каждом последующем вызове в него добавляется новый участок fullpath[0] уже подраздела, на который 
                 была запущена рекурсия.
@@ -253,20 +253,24 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
             const mappa: {[key:string]: SubChapterForMenu[]} = {};
             const baseSubChapters: SubChapterForMenu[] = []
             for (let i = 0; i < subchapters.length; i++) {
-                const subchapter = subchapters[i];
+                const subChapter = subchapters[i];
+                if(!subChapter.pathName) subChapter.pathName = pathName;
                 // здесь correctFullpath отделяется от envStack чтобы смещаться по пути в рекурсии
-                const correctFullpath = trimPath(subchapter.fullpath, { split: true }).slice(envStack.length) as string[];
+                const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length) as string[];
                 const basePath = correctFullpath.shift();
                 if(!mappa[basePath!]) mappa[basePath!] = [];
+                subChapter.fullLabels = [...stackLabels, subChapter.label]; // собираем полный label. Берем стек лэйблов предыдущего пути + текщий лэйбл 
                 if(correctFullpath.length > 0) {
-                    
-                    mappa[basePath!].push(subchapter);
+                    mappa[basePath!].push(subChapter);
                 }
                 // этот массив нужен для того чтобы определять какие подразделы являются директориями
                 // чтобы по ним вызывать рекурсию
-                else baseSubChapters.push(subchapter);
+                else {
+                    baseSubChapters.push(subChapter);
+                }
             }
             return baseSubChapters.map((subChapter) => {
+   
                 const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length) as string[];
                 if((mappa[correctFullpath[0]]?.length <= 0)) {
                     subChapter.items = (subChapter.chapterType === 'dir')? [] : null;
@@ -274,9 +278,14 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                     return subChapter;
                 }
                 else {
-                    const env = correctFullpath.shift();
+                    // подраздел который обрабатывается в этом условии имеет несколько items
+                    // и этот подраздел по сути является некотрым узлом, и его label является некоторым неймспейсом
+                    // для всех находящихся в нем подразделов, и потому, его лэйбл нужно поместить в текущий стек (трассу) лэйблов,
+                    // чтобы каждый из его дочерних разделов знал вс. трассу лэйблов + свой лэйбл (для формирования fullLabel каждого подраздела)
+                    stackLabels.push(subChapter.label);  
                     // добавляем текущее название подраздела на котором запускаем рекурсия, для смещения
-                    subChapter.items = sync(mappa[env!], [...envStack, env!]);
+                    const env = correctFullpath.shift();
+                    subChapter.items = sync(pathName, mappa[env!], [...envStack, env!], stackLabels);
                     return subChapter;
                 }
             })
@@ -295,7 +304,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                     chapter.items = (chapter.chapterType === 'dir')? [] : null;
                 }
                 if(chapter.items) {
-                    chapter.items = sync(chapter.items, [chapter.pathName!], [chapter.label]);
+                    chapter.items = sync(chapter.pathName, chapter.items, [chapter.pathName!], [chapter.label]);
                 }
             }
             else {

@@ -138,7 +138,7 @@ export interface SubChapterForMenu {
     fullpath: string;
     pathName?: string;
     chapterType: 'dir' | 'file';
-    fullLabel: string[];
+    fullLabels: string[];
     icon: string;
     iconType: IconType;
     label: string;
@@ -148,7 +148,7 @@ export interface SubChapterForMenu {
 
 export interface ChapterForMenu {
     id: number;
-    pathName?: string;
+    pathName: string;
     fullpath?: string;
     chapterType: 'dir' | 'file';
     icon: string;

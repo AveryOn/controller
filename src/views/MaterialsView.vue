@@ -16,7 +16,7 @@
             <wrapperChapter 
             :full-label="labelChapter"
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
-            @open-chapter="(label) => updateLabel(label)"
+            @open-chapter="(label) => console.log(label)"
             @quit="labelChapter = null"
             />
         </div>
@@ -38,14 +38,6 @@ const router = useRouter();
 const labelChapter: Ref<string | null> = ref(null);
 const materialStore = useMaterialsStore();
 
-// const openChapterName = computed(() => {
-//     if(labelChapter.value !== 'add-chapter') {
-//         if(labelChapter.value) return `> ${labelChapter.value}`;
-//         else return '';
-//     }
-//     else return '> New Chapter';
-// });
-
 // запрос на создание раздела
 async function requestForChapterCreate(newChapter: ChapterCreate) {
     try {
@@ -66,12 +58,6 @@ function toDefaultPage() {
     router.push({ name: 'default' });
 }
 
-// обновление label при переключении подраздела 
-function updateLabel(label: string) {
-    console.log(label);
-    // labelChapter.value = labelChapter.value || '';
-    // labelChapter.value += ` > ${label}`
-}
 </script>
 
 <style scoped>

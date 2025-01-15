@@ -33,14 +33,11 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
 // Получить конкретный ПОДраздел
 export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<Chapter> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
-        setTimeout(async () => {
-            try {
-                resolve(await window.electron.getOneSubChapter(params, { token: localStorage.getItem('token') }));
-            } catch (err) {
-                reject(err);
-            }
-        }, 0);
+        try {
+            resolve(window.electron.getOneSubChapter(params, { token: localStorage.getItem('token') }));
+        } catch (err) {
+            reject(err);
+        }
     });
 }
 

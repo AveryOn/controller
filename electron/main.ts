@@ -119,6 +119,11 @@ app.whenReady().then(async () => {
     if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
     console.debug('APPLICATION DATABASES ARE READY');
     createWindow();
+
+    // await DatabaseManager
+    // .instance().initOnUser('root')
+    // syncMaterialsStores('root')
+
     // Обработчики IPC
     // ==========  SYSTEM  ==========
 

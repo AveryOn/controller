@@ -5428,17 +5428,21 @@ async function createSubChapter(params, auth) {
 async function syncMaterialsStores(username) {
   console.log("[syncMaterialsStores] =>", username);
   try {
-    let sync = function(subchapters, envStack, labelStack) {
+    let sync = function(pathName, subchapters, envStack, stackLabels) {
       const mappa = {};
       const baseSubChapters = [];
       for (let i = 0; i < subchapters.length; i++) {
-        const subchapter = subchapters[i];
-        const correctFullpath = trimPath(subchapter.fullpath, { split: true }).slice(envStack.length);
+        const subChapter = subchapters[i];
+        if (!subChapter.pathName) subChapter.pathName = pathName;
+        const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length);
         const basePath = correctFullpath.shift();
         if (!mappa[basePath]) mappa[basePath] = [];
+        subChapter.fullLabels = [...stackLabels, subChapter.label];
         if (correctFullpath.length > 0) {
-          mappa[basePath].push(subchapter);
-        } else baseSubChapters.push(subchapter);
+          mappa[basePath].push(subChapter);
+        } else {
+          baseSubChapters.push(subChapter);
+        }
       }
       return baseSubChapters.map((subChapter) => {
         var _a;
@@ -5448,8 +5452,9 @@ async function syncMaterialsStores(username) {
           subChapter.pathName = envStack[0];
           return subChapter;
         } else {
+          stackLabels.push(subChapter.label);
           const env = correctFullpath.shift();
-          subChapter.items = sync(mappa[env], [...envStack, env]);
+          subChapter.items = sync(pathName, mappa[env], [...envStack, env], stackLabels);
           return subChapter;
         }
       });
@@ -5467,7 +5472,7 @@ async function syncMaterialsStores(username) {
           chapter.items = chapter.chapterType === "dir" ? [] : null;
         }
         if (chapter.items) {
-          chapter.items = sync(chapter.items, [chapter.pathName], [chapter.label]);
+          chapter.items = sync(chapter.pathName, chapter.items, [chapter.pathName], [chapter.label]);
         }
       } else {
         console.error("[syncMaterialsStores]>> chapter.length is NULL");

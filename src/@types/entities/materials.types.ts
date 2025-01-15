@@ -129,6 +129,7 @@ export interface SubChapterForMenu {
     id: number;
     queryName: string;
     pathName: string;
+    fullLabels: string[];
     icon: string;
     iconType: IconType;
     label: string;

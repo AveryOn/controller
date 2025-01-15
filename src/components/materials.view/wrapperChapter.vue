@@ -59,10 +59,6 @@ const emit = defineEmits<{
     (e: 'quit'): void;
 }>();
 
-const props = defineProps<{
-    fullLabel: string | null;
-}>();
-
 const isShowCreateBlock = ref(false);
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
@@ -98,7 +94,11 @@ const items = ref([
 
 const itemsCorrect = computed(() => {
     return items.value.filter((item) => {
-        if(opennedChapter.value?.chapterType !== 'dir' && item.forType === 'dir') return false;
+        if (item.forType === 'dir') {
+            if(opennedChapter.value?.chapterType !== 'dir') {
+                return false;
+            }
+        }
         return true;
     })
 });
@@ -332,10 +332,7 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
         // Обработка сырого query-параметра вида to>path>name в вид to/path/name
         const correctFullpath = rawQuery.split('>').join('/');
         const chapter = await getOneSubChapter({ pathName, fullpath: correctFullpath });
-        console.log(props.fullLabel, chapter);
-        // opennedChapter.value = chapter;
-        // Выкидываем собранную Label строку для подстановки в заголовок
-        console.log(props.fullLabel?.split(' > '));
+        opennedChapter.value = chapter;
         emit('openChapter', chapter.label);
     } catch (err) {
         throw err;
