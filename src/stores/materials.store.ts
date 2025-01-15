@@ -1,8 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, type Ref, ref } from "vue";
-import { Chapter, ChapterForMenu, LabelsInfoStorage } from "../@types/entities/materials.types";
+import { Chapter, ChapterForMenu } from "../@types/entities/materials.types";
 import { getChapters } from "../api/materials.api";
-import { trimPath } from "../utils/strings.utils";
 
 export const useMaterialsStore = defineStore('materialsStored', () => {
     const addChapterItem = {
@@ -20,6 +19,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     const loadingCreateChapter = ref(false);
     const loadingEditChapter = ref(false);
     const loadingDeleteChapter = ref(false);
+    const materialsLabel: Ref<Array<string>> = ref([]);
 
     // Состояние определяет какую либо асинхронную операцию для отображение прогресс бара в заголовке стр materials
     const globalLoadingMaterials = computed(() => {
@@ -54,7 +54,26 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         }
     }
 
+    // Обновить полный лэйбл для материалов
+    function updateMaterialsFullLabels(labels: string[]): void {
+        materialsLabel.value = labels;
+        localStorage.setItem('materials-full-label', JSON.stringify(labels))
+    }
+
+    // Получить полный лэйбл материалов
+    function getMaterialsFullLabels(): string[] {
+        if(materialsLabel.value.length > 0) {
+           return materialsLabel.value;
+        }
+        return JSON.parse(localStorage.getItem('materials-full-label')!) ?? [];
+    }
+    function removeMaterialsFullLabels() {
+        materialsLabel.value.length = 0;
+        localStorage.removeItem('materials-full-label');
+    }
+
     return {
+        materialsLabel,
         materialChaptersMenu,
         materialChapters,
         loadingGetChapter,
@@ -64,5 +83,8 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         loadingDeleteChapter,
         getMaterialsMenu,
         updateMenuItems,
+        updateMaterialsFullLabels,
+        getMaterialsFullLabels,
+        removeMaterialsFullLabels,
     }
 });

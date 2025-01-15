@@ -2,7 +2,7 @@
     <div class="materials-view">
         <header class="materials-header">
             <svg-icon class="head-icon" type="mdi" :path="mdiSpaceInvaders" :size="18"></svg-icon>
-            <span class="flex head-label">Materials {{ labelChapter }}</span> 
+            <span class="flex head-label">Materials {{ correctLabelChapter }}</span> 
             <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate" style="height: 2px"></ProgressBar>
             <svg-icon class="close-btn" type="mdi" :path="mdiCloseBoxOutline" :size="18" @click="toDefaultPage"></svg-icon>
         </header>
@@ -17,14 +17,14 @@
             :full-label="labelChapter"
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => console.log(label)"
-            @quit="labelChapter = null"
+            @quit="handlerQuitChapter"
             />
         </div>
     </div>
 </template>
 
 <script setup lang=ts>
-import { computed, ref, type Ref } from 'vue';
+import { computed, onMounted, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 import SvgIcon from '@jamescoyle/vue-icon';
@@ -35,8 +35,15 @@ import { useMaterialsStore } from '../stores/materials.store';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const labelChapter: Ref<string | null> = ref(null);
+const labelChapter: Ref<string> = ref('');
 const materialStore = useMaterialsStore();
+
+const correctLabelChapter = computed(() => {
+    if(materialStore.materialsLabel.length > 0) {
+        return ' > '+ materialStore.materialsLabel.join(' > ');
+    }
+    return labelChapter.value;
+})
 
 // запрос на создание раздела
 async function requestForChapterCreate(newChapter: ChapterCreate) {
@@ -56,7 +63,19 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
 function toDefaultPage() {
     localStorage.removeItem('current_route');
     router.push({ name: 'default' });
+    labelChapter.value = '';
+    materialStore.removeMaterialsFullLabels();
 }
+
+// Обработка закрытия раздела/подраздела
+function handlerQuitChapter() {
+    labelChapter.value = '';
+    materialStore.removeMaterialsFullLabels();
+}
+
+onMounted(() => {
+    labelChapter.value = ' > ' + materialStore.getMaterialsFullLabels().join(' > ');
+})
 
 </script>
 
