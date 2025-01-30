@@ -4965,6 +4965,15 @@ class ChapterService {
       createdAt: "created_at AS createdAt",
       updatedAt: "updated_at AS updatedAt"
     });
+    __publicField(this, "allFieldsForRec", {
+      pathName: "path_name",
+      icon: "icon",
+      iconType: "icon_type",
+      chapterType: "chapter_type",
+      label: "label",
+      contentTitle: "content_title",
+      updatedAt: "updated_at"
+    });
     this.instanceDb = DatabaseManager.instance().getDatabase("materials");
     if (!this.instanceDb) throw new Error("DB materials is not initialized");
   }
@@ -4979,6 +4988,24 @@ class ChapterService {
     } else correctFieldsSql = Object.values(this.allFields).join(",");
     return correctFieldsSql;
   }
+  // корректировка полей таблицы для выполнения записи данных sql
+  correctFieldsSqlForRec(dto) {
+    if (!dto || typeof dto !== "object")
+      throw new Error("[ChapterService.correctFieldsSqlForRec]>> dto is not defined");
+    const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+      if (Object.prototype.hasOwnProperty.call(dto, key)) {
+        return true;
+      } else return false;
+    });
+    const args = correctFieldsEntries.map(([k, __]) => {
+      return dto[k];
+    });
+    return {
+      keys: correctFieldsEntries.map(([__, val]) => val + " = ?").join(", "),
+      args
+    };
+  }
+  // region READ
   // Получить массив разделов
   async getAll(config2) {
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
@@ -5074,6 +5101,8 @@ class ChapterService {
       return null;
     }
   }
+  // end region
+  // region CREATE
   // Создать один раздел
   async create(dto) {
     await this.instanceDb.run(`
@@ -5102,6 +5131,23 @@ class ChapterService {
     if (!newChapter) throw new Error("[ChapterService.create]>> newChapter was not created");
     return newChapter;
   }
+  // end region
+  // region UPDATE
+  // Создать один раздел
+  async update(id, dto) {
+    if (!id) throw new Error("[ChapterService.updateByPathName]>> id is not defined");
+    const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
+    await this.instanceDb.run(`
+            UPDATE chapters
+            SET
+                ${keys2}
+            WHERE id = ?;
+        `, [...args, id]);
+    const newChapter = await this.findById(id);
+    if (!newChapter) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
+    return newChapter;
+  }
+  // end region
 }
 class SubChapterService {
   constructor() {
@@ -5491,8 +5537,8 @@ async function getOneSubChapter(params, auth) {
   console.log("[getOneSubChapter] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
-    const subChapterService = new SubChapterService();
     await verifyAccessToken(auth.token);
+    const subChapterService = new SubChapterService();
     await subChapterService.findByFullpath(params.fullpath);
     if (params.fullpath) {
       const findedSubChapter = await subChapterService.findByFullpath(params.fullpath, {
@@ -5540,13 +5586,20 @@ async function getOneSubChapter(params, auth) {
     throw err;
   }
 }
-async function editChapter(input) {
+async function editChapter(input, auth) {
   console.log("[editChapter] => ", input);
   try {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapter]>> 401 UNAUTHORIZATE");
+    const { payload: { username } } = await verifyAccessToken(auth.token);
     const { params, fullpath, pathName } = input;
     if (!fullpath && pathName) {
       const chapterService = new ChapterService();
-      chapterService.findByPathName(pathName);
+      const findedChapter = await chapterService.findByPathName(pathName);
+      if (findedChapter) {
+        const updatedChapter = await chapterService.update(findedChapter.id, params);
+        console.log("USERNAME", username);
+        console.log("RESULT UPDATE CHAPTER", updatedChapter);
+      } else throw "[editChapter]>> NOT_FOUND";
     } else if (fullpath && pathName) {
     } else throw "[editChapter]>> INTERNAL_ERROR[3]";
   } catch (err) {
@@ -5876,8 +5929,8 @@ app.whenReady().then(async () => {
   ipcMain.handle("get-one-sub-chapter", async (event, params, auth) => {
     return await getOneSubChapter(params, auth);
   });
-  ipcMain.handle("edit-chapter", async (event, params) => {
-    return await editChapter(params);
+  ipcMain.handle("edit-chapter", async (event, params, auth) => {
+    return await editChapter(params, auth);
   });
   ipcMain.handle("delete-chapter", async (event, params) => {
     return await deleteChapter(params);

@@ -180,10 +180,12 @@ app.whenReady().then(async () => {
         return await createSubChapter(params, auth);
     });
 
-    // // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
-    // ipcMain.handle("sync-materials", async (event) => {
-    //     return await syncMaterialsStores();
-    // });
+    // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
+    ipcMain.handle("sync-materials", async (event, auth: AuthParams) => {
+        if(!auth?.token) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZATE");
+        const { payload: { username } } = await verifyAccessToken(auth.token);
+        return await syncMaterialsStores(username);
+    });
 
     // Получить конкретный ПОДраздел с БД материалов
     ipcMain.handle("get-one-sub-chapter", async (event, params: GetSubChapterOneParams, auth: AuthParams) => {
@@ -191,8 +193,8 @@ app.whenReady().then(async () => {
     });
 
     // Редактирование общих данных раздела/подраздела
-    ipcMain.handle("edit-chapter", async (event, params: EditChapterParams) => {
-        return await editChapter(params);
+    ipcMain.handle("edit-chapter", async (event, params: EditChapterParams, auth: AuthParams) => {
+        return await editChapter(params, auth);
     });
 
     // Удаление раздела

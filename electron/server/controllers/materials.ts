@@ -326,10 +326,9 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
 export async function getOneSubChapter(params: GetSubChapterOneParams, auth: AuthParams): Promise<SubChapter> {
     console.log('[getOneSubChapter] => ', params);
     try {
-        // if(!params?.labels) throw new Error("[getOneSubChapter]>> invalid labels");
         if(!auth?.token) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
-        const subChapterService = new SubChapterService();
         await verifyAccessToken(auth.token);
+        const subChapterService = new SubChapterService();
         await subChapterService.findByFullpath(params.fullpath);
         // Получение по имени пути
         if (params.fullpath) {
@@ -382,46 +381,38 @@ export async function getOneSubChapter(params: GetSubChapterOneParams, auth: Aut
     }
 }
 
-// Обновить Раздел/Подраздел данными из входных параметров
-function updateChapter(chapter: Chapter | SubChapter, params: EditChapterParams['params']) {
-    try {
-        if(params.chapterType) chapter.chapterType = params.chapterType;
-        if(params.icon) chapter.icon = params.icon;
-        if(params.iconType) chapter.iconType = params.iconType;
-        if(params.label) chapter.label = params.label;
-        if(params.pathName && chapter.pathName) chapter.pathName = params.pathName;
-    } catch (err) {
-        console.error('[editChapter]>> Ошибка при обновлении раздела/подраздела');
-        throw err
-    }
-}
 // Редактирование общих данных раздела/подраздела
-export async function editChapter(input: EditChapterParams): Promise<Chapter | SubChapter> {
+export async function editChapter(input: EditChapterParams, auth: AuthParams): Promise<Chapter | SubChapter> {
     console.log('[editChapter] => ', input);
     try {
+        if(!auth?.token) throw new Error("[editChapter]>> 401 UNAUTHORIZATE");
+        const { payload: { username } } = await verifyAccessToken(auth.token);
         const { params, fullpath, pathName } = input;
         // Редактирование раздела
         if (!fullpath && pathName) {
             const chapterService = new ChapterService();
-            chapterService.findByPathName(pathName)
-            // let findedChapter = materials.find((chapter) => chapter.pathName === pathName);
-            // if (findedChapter) {
-            //     // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
-            //     if (params.chapterType === 'file' && findedChapter.chapterType === 'dir') {
-            //         throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
-            //     }
-            //     updateChapter(findedChapter, params);
-            //     if (params.chapterType === 'dir') findedChapter.items = [];
-            //     // Обновляем updatedAt
-            //     findedChapter.updatedAt = new Date().toISOString();
-            //     // запись изменений в БД
-            //     await writeFile(materials, FSCONFIG);
-            //     return findedChapter;
-            // }
-            // else throw '[editChapter]>> NOT_FOUND';
+            const findedChapter: ChapterGetByPathNameRes | null  = await chapterService.findByPathName(pathName)
+            if (findedChapter) {
+                const updatedChapter = await chapterService.update(findedChapter.id, params)
+                console.log('USERNAME', username);
+                console.log('RESULT UPDATE CHAPTER', updatedChapter);
+                // // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
+                // if (params.chapterType === 'file' && findedChapter.chapterType === 'dir') {
+                //     throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
+                // }
+                // updateChapter(findedChapter, params);
+                // if (params.chapterType === 'dir') findedChapter.items = [];
+                // // Обновляем updatedAt
+                // findedChapter.updatedAt = new Date().toISOString();
+                // // запись изменений в БД
+                // await writeFile(materials, FSCONFIG);
+                // return findedChapter;
+            }
+            else throw '[editChapter]>> NOT_FOUND';
         }
         // Редактирование ПОДразделов
         else if (fullpath && pathName) {
+            
             // const correctPath = trimPath(fullpath, { split: true }) as string[];
             // const root: string = correctPath[0];
             // const findedChapter = materials.find((chapter) => chapter.pathName === root);

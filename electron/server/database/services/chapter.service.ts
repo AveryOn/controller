@@ -1,6 +1,6 @@
 import { Chapter } from "../../types/controllers/materials.types";
 import { InstanceDatabaseDoc, IpcContractRes } from "../../types/database/index.types";
-import { ChapterCreateDto, ChapterCreateResponse, ChapterForGetAll, ChapterGetByPathNameRes, ChapterRaw, ChapterRawResponse } from "../../types/services/chapter.service";
+import { ChapterCreateDto, ChapterCreateResponse, ChapterForGetAll, ChapterGetByPathNameRes, ChapterRaw, ChapterRawResponse, ChapterUpdateDto } from "../../types/services/chapter.service";
 import { DatabaseManager } from "../manager";
 
 export default class ChapterService {
@@ -16,6 +16,15 @@ export default class ChapterService {
         contentTitle:   'content_title AS contentTitle',
         createdAt:      'created_at AS createdAt',
         updatedAt:      'updated_at AS updatedAt',
+    }
+    private allFieldsForRec = {
+        pathName:       'path_name',
+        icon:           'icon',
+        iconType:       'icon_type',
+        chapterType:    'chapter_type',
+        label:          'label',
+        contentTitle:   'content_title',
+        updatedAt:      'updated_at',
     }
 
     constructor() {
@@ -38,6 +47,26 @@ export default class ChapterService {
         return correctFieldsSql;
     }
 
+    // корректировка полей таблицы для выполнения записи данных sql
+    private correctFieldsSqlForRec<T>(dto: T): { keys: string, args: any[] } {
+        if(!dto || typeof dto !== 'object') 
+            throw new Error('[ChapterService.correctFieldsSqlForRec]>> dto is not defined');
+        const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+            if(Object.prototype.hasOwnProperty.call(dto, key)) {
+                return true;
+            }
+            else return false;
+        })
+        const args = correctFieldsEntries.map(([k, __]) => {
+            return dto[k as keyof T]
+        })
+        return {
+            keys: correctFieldsEntries.map(([__, val]) => val + ' = ?').join(', '),
+            args,
+        }
+    }
+
+    // region READ
     // Получить массив разделов
     async getAll(config?: { excludes?: Array<keyof ChapterRaw> }): Promise<Array<ChapterForGetAll>> {
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes)
@@ -94,10 +123,10 @@ export default class ChapterService {
     }
 
     // Найти раздел по pathName
-    async findByPathName(pathName: string, config?: { 
+    async findByPathName<T>(pathName: string, config?: { 
         excludes?: Array<keyof ChapterRaw>, 
         includes?: { blocks: boolean },
-    }): Promise<ChapterGetByPathNameRes | null> {
+    }): Promise<ChapterGetByPathNameRes | T | null> {
 
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
@@ -141,7 +170,9 @@ export default class ChapterService {
             return null;
         }
     }
+    // end region
 
+    // region CREATE
     // Создать один раздел
     async create(dto: ChapterCreateDto): Promise<ChapterCreateResponse> {
         await this.instanceDb!.run(`
@@ -166,8 +197,27 @@ export default class ChapterService {
             dto.createdAt,
             dto.updatedAt,
         ]);
-        const newChapter: ChapterCreateResponse | null = await this.findByPathName(dto.pathName) as ChapterCreateResponse;
+        const newChapter: ChapterCreateResponse | null = await this.findByPathName<ChapterCreateResponse>(dto.pathName) as ChapterCreateResponse;
         if(!newChapter) throw new Error('[ChapterService.create]>> newChapter was not created');
         return newChapter;
     }
+    // end region
+
+    // region UPDATE
+    // Создать один раздел
+    async update(id: number, dto: ChapterUpdateDto): Promise<ChapterRawResponse> {
+        if(!id) throw new Error('[ChapterService.updateByPathName]>> id is not defined');
+        const { args, keys } = this.correctFieldsSqlForRec<ChapterUpdateDto>(dto);
+        await this.instanceDb!.run(`
+            UPDATE chapters
+            SET
+                ${keys}
+            WHERE id = ?;
+        `, [...args, id]);
+        const newChapter: ChapterRawResponse | null = await this.findById(id) as ChapterRawResponse;
+        if(!newChapter) throw new Error('[ChapterService.updateByPathName]>> newChapter was not created');
+        return newChapter;
+    }
+
+    // end region
 } 

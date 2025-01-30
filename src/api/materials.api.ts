@@ -96,7 +96,7 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.editChapter(params);
+                const result = await window.electron.editChapter(params, { token: localStorage.getItem('token') });
                 // await syncMaterials();  // Синзронизация материалов в меню
                 resolve(result);
             } catch (err) {

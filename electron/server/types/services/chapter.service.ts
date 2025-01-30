@@ -159,3 +159,13 @@ export interface SubChapterCreateResponse {
     createdAt:      string;
     updatedAt:      string;
 }
+
+
+export interface ChapterUpdateDto {
+    pathName?:       string;
+    icon?:           string;
+    iconType?:       "pi"  | "mdi" | "img";
+    chapterType?:    "dir" | "file";
+    label?:          string;
+    updatedAt?:      string;
+}
