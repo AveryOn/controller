@@ -64,7 +64,7 @@ function selectItem(item: any) {
     if(item.route === 'materials') {
         let querySubChapter: string | undefined = undefined; 
         if(item.pathName || item.fullLabels) {
-            materialsStore.updateMaterialsFullLabels(item.fullLabels ?? [item.pathName]);
+            materialsStore.updateMaterialsFullLabels(item.fullLabels ?? [item.label]);
         }
         
         if(item.fullpath) {

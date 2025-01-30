@@ -5540,53 +5540,14 @@ async function getOneSubChapter(params, auth) {
     throw err;
   }
 }
-function updateChapter(chapter, params) {
-  try {
-    if (params.chapterType) chapter.chapterType = params.chapterType;
-    if (params.icon) chapter.icon = params.icon;
-    if (params.iconType) chapter.iconType = params.iconType;
-    if (params.label) chapter.label = params.label;
-    if (params.pathName && chapter.pathName) chapter.pathName = params.pathName;
-  } catch (err) {
-    console.error("[editChapter]>> Ошибка при обновлении раздела/подраздела");
-    throw err;
-  }
-}
 async function editChapter(input) {
   console.log("[editChapter] => ", input);
   try {
     const { params, fullpath, pathName } = input;
-    const materials = await readFile(FSCONFIG);
     if (!fullpath && pathName) {
-      let findedChapter = materials.find((chapter) => chapter.pathName === pathName);
-      if (findedChapter) {
-        if (params.chapterType === "file" && findedChapter.chapterType === "dir") {
-          throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
-        }
-        updateChapter(findedChapter, params);
-        if (params.chapterType === "dir") findedChapter.items = [];
-        findedChapter.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-        await writeFile(materials, FSCONFIG);
-        return findedChapter;
-      } else throw "[editChapter]>> NOT_FOUND";
+      const chapterService = new ChapterService();
+      chapterService.findByPathName(pathName);
     } else if (fullpath && pathName) {
-      const correctPath = trimPath(fullpath, { split: true });
-      const root = correctPath[0];
-      const findedChapter = materials.find((chapter) => chapter.pathName === root);
-      const lastPath = correctPath.slice(1);
-      if (findedChapter == null ? void 0 : findedChapter.items) {
-        let subchapter = findLevel(findedChapter.items, lastPath);
-        if (params.chapterType === "file" && subchapter.chapterType === "dir") {
-          throw "[editChapter]>> INVALID_CHAPTER_TYPE[2]";
-        }
-        if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
-        updateChapter(subchapter, params);
-        subchapter.fullpath = correctPath.join("/");
-        if (params.chapterType === "dir" && !subchapter.items) subchapter.items = [];
-        subchapter.updatedAt = formatDate(Date.now());
-        await writeFile(materials, FSCONFIG);
-        return subchapter;
-      } else throw "[editChapter]>> INTERNAL_ERROR[2]";
     } else throw "[editChapter]>> INTERNAL_ERROR[3]";
   } catch (err) {
     console.error(err);

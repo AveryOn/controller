@@ -400,51 +400,51 @@ export async function editChapter(input: EditChapterParams): Promise<Chapter | S
     console.log('[editChapter] => ', input);
     try {
         const { params, fullpath, pathName } = input;
-        // Получение материалов с БД
-        const materials: Chapter[] = await readFile(FSCONFIG);
         // Редактирование раздела
         if (!fullpath && pathName) {
-            let findedChapter = materials.find((chapter) => chapter.pathName === pathName);
-            if (findedChapter) {
-                // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
-                if (params.chapterType === 'file' && findedChapter.chapterType === 'dir') {
-                    throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
-                }
-                updateChapter(findedChapter, params);
-                if (params.chapterType === 'dir') findedChapter.items = [];
-                // Обновляем updatedAt
-                findedChapter.updatedAt = new Date().toISOString();
-                // запись изменений в БД
-                await writeFile(materials, FSCONFIG);
-                return findedChapter;
-            }
-            else throw '[editChapter]>> NOT_FOUND';
+            const chapterService = new ChapterService();
+            chapterService.findByPathName(pathName)
+            // let findedChapter = materials.find((chapter) => chapter.pathName === pathName);
+            // if (findedChapter) {
+            //     // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
+            //     if (params.chapterType === 'file' && findedChapter.chapterType === 'dir') {
+            //         throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
+            //     }
+            //     updateChapter(findedChapter, params);
+            //     if (params.chapterType === 'dir') findedChapter.items = [];
+            //     // Обновляем updatedAt
+            //     findedChapter.updatedAt = new Date().toISOString();
+            //     // запись изменений в БД
+            //     await writeFile(materials, FSCONFIG);
+            //     return findedChapter;
+            // }
+            // else throw '[editChapter]>> NOT_FOUND';
         }
         // Редактирование ПОДразделов
         else if (fullpath && pathName) {
-            const correctPath = trimPath(fullpath, { split: true }) as string[];
-            const root: string = correctPath[0];
-            const findedChapter = materials.find((chapter) => chapter.pathName === root);
-            const lastPath: string[] = correctPath.slice(1);
-            if (findedChapter?.items) {
-                let subchapter = findLevel(findedChapter.items, lastPath) as SubChapter;
-                // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
-                if (params.chapterType === 'file' && subchapter.chapterType === 'dir') {
-                    throw '[editChapter]>> INVALID_CHAPTER_TYPE[2]';
-                }
-                // Обновление fullpath так как он может изменяться для разделов типа file
-                if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
-                updateChapter(subchapter, params);
-                subchapter.fullpath = correctPath.join('/');
-                // Добавляем массив items если 
-                if (params.chapterType === 'dir' && !subchapter.items) subchapter.items = [];
-                // Обновляем updatedAt
-                subchapter.updatedAt = formatDate(Date.now());
-                // запись изменений в БД
-                await writeFile(materials, FSCONFIG);
-                return subchapter;
-            }
-            else throw '[editChapter]>> INTERNAL_ERROR[2]';
+            // const correctPath = trimPath(fullpath, { split: true }) as string[];
+            // const root: string = correctPath[0];
+            // const findedChapter = materials.find((chapter) => chapter.pathName === root);
+            // const lastPath: string[] = correctPath.slice(1);
+            // if (findedChapter?.items) {
+            //     let subchapter = findLevel(findedChapter.items, lastPath) as SubChapter;
+            //     // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
+            //     if (params.chapterType === 'file' && subchapter.chapterType === 'dir') {
+            //         throw '[editChapter]>> INVALID_CHAPTER_TYPE[2]';
+            //     }
+            //     // Обновление fullpath так как он может изменяться для разделов типа file
+            //     if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
+            //     updateChapter(subchapter, params);
+            //     subchapter.fullpath = correctPath.join('/');
+            //     // Добавляем массив items если 
+            //     if (params.chapterType === 'dir' && !subchapter.items) subchapter.items = [];
+            //     // Обновляем updatedAt
+            //     subchapter.updatedAt = formatDate(Date.now());
+            //     // запись изменений в БД
+            //     await writeFile(materials, FSCONFIG);
+            //     return subchapter;
+            // }
+            // else throw '[editChapter]>> INTERNAL_ERROR[2]';
         }
         else throw '[editChapter]>> INTERNAL_ERROR[3]';
     } catch (err) {
