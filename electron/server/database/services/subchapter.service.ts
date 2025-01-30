@@ -1,5 +1,5 @@
 import { InstanceDatabaseDoc, IpcContractRes } from "../../types/database/index.types";
-import { SubChapterCreateDto, SubChapterCreateResponse, SubChapterForGetAll, SubChapterGetByPathNameRes, SubChapterRaw, SubChapterRawResponse } from "../../types/services/chapter.service";
+import { SubChapterCreateDto, SubChapterCreateResponse, SubChapterForGetAll, SubChapterGetByPathNameRes, SubChapterRaw, SubChapterRawResponse, SubChapterUpdateDto } from "../../types/services/chapter.service";
 import { DatabaseManager } from "../manager";
 
 export default class SubChapterService {
@@ -18,6 +18,14 @@ export default class SubChapterService {
         createdAt:      'created_at AS createdAt',
         updatedAt:      'updated_at AS updatedAt',
     }
+    private allFieldsForRec = {
+        icon:           'icon',
+        iconType:       'icon_type',
+        chapterType:    'chapter_type',
+        label:          'label',
+        contentTitle:   'content_title',
+        updatedAt:      'updated_at',
+    }
 
     constructor() {
         this.instanceDb = DatabaseManager
@@ -29,14 +37,33 @@ export default class SubChapterService {
     // коррекция полей таблицы. Исключает те поля которые приходят в массиве
     private correctFieldsSqlForExclude(excludedFields?: Array<keyof SubChapterRaw>): string {
         let correctFieldsSql;
-        if(excludedFields?.length! > 0) {
+        if (excludedFields?.length! > 0) {
             correctFieldsSql = Object.entries(this.allFields).filter(([key, __]) => {
-                if(!excludedFields!.includes(key as keyof SubChapterRaw)) return true;
+                if (!excludedFields!.includes(key as keyof SubChapterRaw)) return true;
                 else return false;
             }).map(([__, value]) => value).join(',');
         }
         else correctFieldsSql = Object.values(this.allFields).join(',');
         return correctFieldsSql;
+    }
+
+    // корректировка полей таблицы для выполнения записи данных sql
+    private correctFieldsSqlForRec<T>(dto: T): { keys: string, args: any[] } {
+        if (!dto || typeof dto !== 'object')
+            throw new Error('[SubChapterService.correctFieldsSqlForRec]>> dto is not defined');
+        const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+            if (Object.prototype.hasOwnProperty.call(dto, key)) {
+                return true;
+            }
+            else return false;
+        })
+        const args = correctFieldsEntries.map(([k, __]) => {
+            return dto[k as keyof T];
+        })
+        return {
+            keys: correctFieldsEntries.map(([__, val]) => val + ' = ?').join(', '),
+            args,
+        }
     }
 
     // Получить массив подразделов
@@ -84,10 +111,10 @@ export default class SubChapterService {
     }
 
     // Найти подраздел по fullpath
-    async findByFullpath(fullpath: string, config?: { 
+    async findByFullpath<T>(fullpath: string, config?: { 
         excludes?: Array<keyof SubChapterRaw>,
         includes?: { blocks: boolean },
-    }): Promise<SubChapterGetByPathNameRes | null> {
+    }): Promise<SubChapterGetByPathNameRes | T | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
             let res: IpcContractRes;
@@ -161,7 +188,24 @@ export default class SubChapterService {
             dto.updatedAt,
         ]);
         const newSubChapter: SubChapterCreateResponse | null = await this.findByFullpath(dto.fullpath) as SubChapterCreateResponse;
-        if(!newSubChapter) throw new Error('[SubChapterService.create]>> newSubChapter was not created');
+        if (!newSubChapter) throw new Error('[SubChapterService.create]>> newSubChapter was not created');
         return newSubChapter;
     }
+    // region UPDATE
+    // Обновление данных ПОДраздела
+    async update(id: number, dto: SubChapterUpdateDto): Promise<SubChapterRawResponse> {
+        if (!id) throw new Error('[SubChapterService.update]>> id is not defined');
+        const { args, keys } = this.correctFieldsSqlForRec<SubChapterUpdateDto>(dto);
+        await this.instanceDb!.run(`
+                UPDATE sub_chapters
+                SET
+                    ${keys}
+                WHERE id = ?;
+            `, [...args, id]);
+        const updatedSubChapter: SubChapterRawResponse | null = await this.findById(id) as SubChapterRawResponse;
+        if (!updatedSubChapter) throw new Error('[SubChapterService.update]>> subChapter was not updated');
+        return updatedSubChapter;
+    }
+
+    // end region
 } 

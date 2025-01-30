@@ -1,7 +1,9 @@
 <template>
     <div class="materials-view">
         <header class="materials-header">
-            <svg-icon class="head-icon" type="mdi" :path="mdiSpaceInvaders" :size="18"></svg-icon>
+            <span class="refresh-sync-btn" @click="calledSyncMaterialsMenu" title="sync menu">
+                <svg-icon class="refresh-sync-icon" type="mdi" :path="mdiRefresh" :size="18"></svg-icon>
+            </span>
             <span class="flex head-label">Materials {{ correctLabelChapter }}</span> 
             <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate" style="height: 2px"></ProgressBar>
             <svg-icon class="close-btn" type="mdi" :path="mdiCloseBoxOutline" :size="18" @click="toDefaultPage"></svg-icon>
@@ -28,9 +30,9 @@ import { computed, onMounted, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 import SvgIcon from '@jamescoyle/vue-icon';
-import { mdiSpaceInvaders, mdiCloseBoxOutline } from '@mdi/js';
+import { mdiRefresh, mdiCloseBoxOutline } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
-import { createChapter } from '../api/materials.api';
+import { createChapter, syncMaterials } from '../api/materials.api';
 import { useMaterialsStore } from '../stores/materials.store';
 import { useRouter } from 'vue-router';
 
@@ -73,6 +75,20 @@ function handlerQuitChapter() {
     materialStore.removeMaterialsFullLabels();
 }
 
+// Запустить синхронизацию меню материалов вручную
+async function calledSyncMaterialsMenu() {
+    try {
+        materialStore.loadingGetMenuChapters = true;
+        await syncMaterials();
+    } catch (err) {
+        console.error('[calledSyncMaterialsMenu]>> не удалось выполнить синхронизацию меню материалов');
+    }
+    finally {
+        materialStore.loadingGetMenuChapters = false;
+    }
+
+}
+
 onMounted(() => {
     labelChapter.value = ' > ' + materialStore.getMaterialsFullLabels().join(' > ');
 })
@@ -94,6 +110,7 @@ onMounted(() => {
     position: relative;
     width: 100%;
     height: max-content;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     font-family: var(--font);
@@ -123,9 +140,25 @@ onMounted(() => {
     width: 100%;
     position: absolute;
 }
-.head-icon {
+.refresh-sync-btn {
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.1);
     position: absolute;
     left: 1rem;
+    cursor: pointer;
+}
+.refresh-sync-btn:hover {
+    background-color: rgba(0, 0, 0, 0.17);
+    transition: all 0.3s ease;
+}
+.refresh-sync-btn:hover .refresh-sync-icon {
+    color: rgb(0, 157, 255);
+    transform: rotate(360deg);
+    transition: all 0.3s ease;
+}
+.refresh-sync-icon {
+    color: rgb(131, 195, 235);
+    transition: all 0.3s ease-in; 
 }
 .head-label {
     user-select: none;

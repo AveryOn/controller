@@ -14,7 +14,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     const loadingChapterItem = { type: 'loading', meta: true }
     const materialChaptersMenu: Ref<ChapterForMenu[]> = ref([loadingChapterItem, addChapterItem]);
     const materialChapters: Ref<Chapter[]> = ref([]);
-    const loadingGetMenuChapters = ref(true);
+    const loadingGetMenuChapters = ref(false);
     const loadingGetChapter = ref(false);
     const loadingCreateChapter = ref(false);
     const loadingEditChapter = ref(false);
@@ -24,6 +24,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     // Состояние определяет какую либо асинхронную операцию для отображение прогресс бара в заголовке стр materials
     const globalLoadingMaterials = computed(() => {
         const deps = [
+            loadingGetMenuChapters.value,
             loadingGetChapter.value,
             loadingCreateChapter.value,
         ]
@@ -78,6 +79,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         materialChapters,
         loadingGetChapter,
         globalLoadingMaterials,
+        loadingGetMenuChapters,
         loadingCreateChapter,
         loadingEditChapter,
         loadingDeleteChapter,

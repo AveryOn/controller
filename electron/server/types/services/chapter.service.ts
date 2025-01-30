@@ -169,3 +169,11 @@ export interface ChapterUpdateDto {
     label?:          string;
     updatedAt?:      string;
 }
+
+export interface SubChapterUpdateDto {
+    icon?:           string;
+    iconType?:       "pi"  | "mdi" | "img";
+    chapterType?:    "dir" | "file";
+    label?:          string;
+    updatedAt?:      string;
+}

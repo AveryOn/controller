@@ -204,7 +204,7 @@ export default class ChapterService {
     // end region
 
     // region UPDATE
-    // Создать один раздел
+    // Обновление данных раздела
     async update(id: number, dto: ChapterUpdateDto): Promise<ChapterRawResponse> {
         if(!id) throw new Error('[ChapterService.updateByPathName]>> id is not defined');
         const { args, keys } = this.correctFieldsSqlForRec<ChapterUpdateDto>(dto);

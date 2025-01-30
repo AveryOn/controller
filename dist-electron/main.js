@@ -521,8 +521,8 @@ async function readFile(config2) {
 }
 async function mkDir(dirName) {
   try {
-    const root = getAppDirname();
-    const filePath = path$1.join(root, dirName);
+    const root2 = getAppDirname();
+    const filePath = path$1.join(root2, dirName);
     await fs$1.mkdir(filePath, { recursive: true });
   } catch (err) {
     throw err;
@@ -531,11 +531,11 @@ async function mkDir(dirName) {
 async function isExistFileOrDir(pathName, config2) {
   if (!pathName) throw new Error("[isExistFileOrDir]>> pathName обязательный аргумент");
   try {
-    let root;
+    let root2;
     let fullPath;
     if (!(config2 == null ? void 0 : config2.custom)) {
-      root = getAppDirname();
-      fullPath = path$1.join(root, pathName);
+      root2 = getAppDirname();
+      fullPath = path$1.join(root2, pathName);
     }
     await fs$1.access(fullPath, fs$1.constants.F_OK);
     return true;
@@ -5596,11 +5596,29 @@ async function editChapter(input, auth) {
       const chapterService = new ChapterService();
       const findedChapter = await chapterService.findByPathName(pathName);
       if (findedChapter) {
+        if (params.chapterType === "file" && findedChapter.chapterType === "dir") {
+          throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
+        }
         const updatedChapter = await chapterService.update(findedChapter.id, params);
-        console.log("USERNAME", username);
-        console.log("RESULT UPDATE CHAPTER", updatedChapter);
+        await syncMaterialsStores(username);
+        return updatedChapter;
       } else throw "[editChapter]>> NOT_FOUND";
     } else if (fullpath && pathName) {
+      const findedChapter = materials.find((chapter) => chapter.pathName === root);
+      const lastPath = correctPath.slice(1);
+      if (findedChapter == null ? void 0 : findedChapter.items) {
+        let subchapter = findLevel(findedChapter.items, lastPath);
+        if (params.chapterType === "file" && subchapter.chapterType === "dir") {
+          throw "[editChapter]>> INVALID_CHAPTER_TYPE[2]";
+        }
+        if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
+        updateChapter(subchapter, params);
+        subchapter.fullpath = correctPath.join("/");
+        if (params.chapterType === "dir" && !subchapter.items) subchapter.items = [];
+        subchapter.updatedAt = formatDate(Date.now());
+        await writeFile(materials, FSCONFIG);
+        return subchapter;
+      } else throw "[editChapter]>> INTERNAL_ERROR[2]";
     } else throw "[editChapter]>> INTERNAL_ERROR[3]";
   } catch (err) {
     console.error(err);
@@ -5611,15 +5629,15 @@ async function deleteChapter(params) {
   console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
-    let materials = await readFile(FSCONFIG);
+    let materials2 = await readFile(FSCONFIG);
     if (params.pathName) {
-      materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
+      materials2 = materials2.filter((chapter) => chapter.pathName !== params.pathName);
     } else if (params.chapterId) {
-      materials = materials.filter((chapter) => chapter.id !== params.chapterId);
+      materials2 = materials2.filter((chapter) => chapter.id !== params.chapterId);
     } else {
       return "failed";
     }
-    await writeFile(materials, FSCONFIG);
+    await writeFile(materials2, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
@@ -5654,18 +5672,18 @@ async function deleteSubChapter(params) {
   console.log("[deleteSubChapter] => ", params);
   try {
     if (!params || !params.fullpath) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
-    let materials = await readFile(FSCONFIG);
-    let correctPath = trimPath(params.fullpath, { split: true });
-    const rootName = correctPath[0];
-    const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
+    let materials2 = await readFile(FSCONFIG);
+    let correctPath2 = trimPath(params.fullpath, { split: true });
+    const rootName = correctPath2[0];
+    const rootChapter = materials2.find((chapter) => chapter.pathName === rootName);
     if (!rootChapter) throw new Error("[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER");
     if (!rootChapter.items) throw new Error("[deleteSubChapter]>> INVALID_CHAPTER_TYPE");
-    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1));
+    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath2.slice(1));
     if (Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
     else {
       throw new Error("[deleteSubChapter]>> INTERNAL_ERROR");
     }
-    await writeFile(materials, FSCONFIG);
+    await writeFile(materials2, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
@@ -5678,7 +5696,7 @@ async function createChapterBlock(params) {
     if (!params || !params.pathName || !params.title || params.title.length < 3) {
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
     }
-    const materials = await readFile(FSCONFIG);
+    const materials2 = await readFile(FSCONFIG);
     const timestamp = formatDate();
     const newBlock = {
       id: Date.now(),
@@ -5688,20 +5706,20 @@ async function createChapterBlock(params) {
       updatedAt: timestamp
     };
     if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[createChapterBlock]>> Ключа content не существует!");
       findedChapter.content.blocks.push(newBlock);
     } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
+      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath2 = trimPath(params.fullpath, { split: true });
       if (!findedChapter || !findedChapter.items) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      const subChapter = findLevel(findedChapter.items, correctPath2.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[2]!");
       subChapter.content.blocks.push(newBlock);
     } else {
       throw new Error("[createChapterBlock]>> INTERNAL_ERROR[3]");
     }
-    await writeFile(materials, FSCONFIG);
+    await writeFile(materials2, FSCONFIG);
     return newBlock;
   } catch (err) {
     console.error(err);
@@ -5720,11 +5738,11 @@ async function editChapterBlock(params) {
     if (!params || !params.pathName) {
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
     }
-    const materials = await readFile(FSCONFIG);
+    const materials2 = await readFile(FSCONFIG);
     const blockId = ((_a = params == null ? void 0 : params.block) == null ? void 0 : _a.id) || (params == null ? void 0 : params.blockId);
     const timestamp = formatDate();
     if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
       const findedBlock = findedChapter.content.blocks.find((block) => block.id === blockId);
       if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
@@ -5736,10 +5754,10 @@ async function editChapterBlock(params) {
       findedChapter.updatedAt = timestamp;
       findedBlock.updatedAt = timestamp;
     } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
+      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath2 = trimPath(params.fullpath, { split: true });
       if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      const subChapter = findLevel(findedChapter.items, correctPath2.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
       const findedBlock = subChapter.content.blocks.find((block) => block.id === blockId);
       if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
@@ -5753,8 +5771,8 @@ async function editChapterBlock(params) {
     } else {
       throw new Error("[editChapterBlock]>> INTERNAL_ERROR[3]");
     }
-    await writeFile(materials, FSCONFIG);
-    return materials;
+    await writeFile(materials2, FSCONFIG);
+    return materials2;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5766,21 +5784,21 @@ async function deleteChapterBlock(params) {
     if (!params || !params.pathName) {
       throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
     }
-    const materials = await readFile(FSCONFIG);
+    const materials2 = await readFile(FSCONFIG);
     if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[deleteChapterBlock]>> Ключа content не существует!");
       findedChapter.content.blocks = findedChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials, FSCONFIG);
+      await writeFile(materials2, FSCONFIG);
       return findedChapter;
     } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
+      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath2 = trimPath(params.fullpath, { split: true });
       if (!findedChapter || !findedChapter.items) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
+      const subChapter = findLevel(findedChapter.items, correctPath2.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[2]!");
       subChapter.content.blocks = subChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials, FSCONFIG);
+      await writeFile(materials2, FSCONFIG);
       return subChapter;
     } else {
       throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[3]");
@@ -5925,6 +5943,11 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("create-sub-chapter", async (event, params, auth) => {
     return await createSubChapter(params, auth);
+  });
+  ipcMain.handle("sync-materials", async (event, auth) => {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZATE");
+    const { payload: { username } } = await verifyAccessToken(auth.token);
+    return await syncMaterialsStores(username);
   });
   ipcMain.handle("get-one-sub-chapter", async (event, params, auth) => {
     return await getOneSubChapter(params, auth);
