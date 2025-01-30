@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electron', {
     getChapters: (params: GetChaptersConfig) => ipcRenderer.invoke('get-menu-chapters', params),
     getChapter: (params: GetChapterOneParams) => ipcRenderer.invoke('get-one-chapter', params),
     createSubChapter: (params: SubChapterCreate, auth: AuthParams) => ipcRenderer.invoke('create-sub-chapter', params, auth),
-    // syncMaterials: () => ipcRenderer.invoke('sync-materials'),
+    syncMaterials: (auth: AuthParams) => ipcRenderer.invoke('sync-materials', auth),
     getOneSubChapter: (params: GetSubChapterOneParams, auth: AuthParams) => ipcRenderer.invoke('get-one-sub-chapter', params, auth),
     editChapter: (params: EditChapterParams, auth: AuthParams) => ipcRenderer.invoke('edit-chapter', params, auth),
     deleteChapter: (params: DeleteChapterParams) => ipcRenderer.invoke('delete-chapter', params),

@@ -80,7 +80,7 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const items: ChapterForMenu[] = await window.electron.syncMaterials();
+                const items: ChapterForMenu[] = await window.electron.syncMaterials({ token: localStorage.getItem('token') });
                 materialStore.updateMenuItems(items); // Обновить состояние меню панели
                 resolve(items);
             } catch (err) {
