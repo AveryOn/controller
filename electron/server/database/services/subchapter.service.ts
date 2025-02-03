@@ -248,6 +248,16 @@ export default class SubChapterService {
         if (!updatedSubChapter) throw new Error('[SubChapterService.update]>> subChapter was not updated');
         return updatedSubChapter;
     }
+    // end region
 
+    // region DELETE
+    async deleteOneByFullpath(fullpath: string): Promise<void> {
+        if(!fullpath) throw new Error('[SubChapterService.deleteOneByFullpath]>> fullpath is not defined');
+        await this.instanceDb!.run(`
+            DELETE FROM sub_chapters 
+            WHERE fullpath LIKE ? || '%';
+        `, [fullpath]);
+        return void 0;
+    }
     // end region
 } 

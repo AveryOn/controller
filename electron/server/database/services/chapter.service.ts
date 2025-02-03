@@ -265,7 +265,7 @@ export default class ChapterService {
     // region DELETE
     // Удаление раздела по pathName
     async deleteOneByPathName(pathName: string): Promise<void> {
-        if(!pathName) throw new Error('[ChapterService.updateByPathName]>> pathName is not defined');
+        if(!pathName) throw new Error('[ChapterService.deleteOneByPathName]>> pathName is not defined');
         // удалить все подразделы текущего раздела
         await this.instanceDb!.run(`
             DELETE FROM sub_chapters 

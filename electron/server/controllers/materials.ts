@@ -457,7 +457,6 @@ export async function deleteChapter(params: DeleteChapterParams): Promise<Delete
         else {
             return 'failed';
         }
-        // Сохранение изменений в БД
         return 'success';
     } catch (err) {
         console.error(err);
@@ -466,69 +465,27 @@ export async function deleteChapter(params: DeleteChapterParams): Promise<Delete
 }
 
 
-// Поиск и удаление нужного подраздела по полному пути
-function findAndDeleteLevel(items: SubChapter[], initPath: string[]): Array<SubChapter> | boolean {
-    if (items.length <= 0) return false;
-    const current = initPath.shift();
-    for (let i = 0; i < items.length; i++) {
-        const chapter = items[i];
-        const selfPath = trimPath(chapter!.fullpath, { split: true }).at(-1);
-        // Нашли нужный уровень
-        if (selfPath === current) {
-            // если исчерпан, то мы нашли искомый подраздел
-            if (initPath.length <= 0) {
-                return items.filter((ch) => ch.id !== chapter.id);
-            }
-            // Если путь еще не пуст, то продолжаем проходить по нему
-            else {
-                if (chapter!.items && chapter!.items.length > 0) {
-                    const updateItems = findAndDeleteLevel(chapter!.items, initPath) as Array<SubChapter>;
-                    if(updateItems && Array.isArray(updateItems)) {
-                        chapter.items = updateItems;
-                    }
-                    return items;
-                }
-                else {
-                    throw `[Materials/findAndDeleteLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
-                }
-            }
-        }
-    }
-    return false;
-}
 // Удаление подраздела из materials
 export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<DeleteResponseMessage> {
-    console.log('[deleteSubChapter] => ', params);
+    console.log('[deleteChapter] => ', params);
     try {
-        if(!params || !params.fullpath) throw new Error('[deleteSubChapter]>> INVALID_INPUT');
-        // Получение всех materials 
-        let materials: Chapter[] = await readFile(FSCONFIG);
-        
-        // Подготовить маршрут для поиска уровня
-        let correctPath = trimPath(params.fullpath, { split: true }) as string[];
-        // Поиск корневого раздела с которого идет поиск целевого подраздела
-        const rootName = correctPath[0];
-        const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
+        if(!params) throw new Error('[deleteChapter]>> INVALID_INPUT');
 
-        // Если корневой раздел не найден то ошибка
-        if(!rootChapter) throw new Error('[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER');
-        if(!rootChapter.items) throw new Error('[deleteSubChapter]>> INVALID_CHAPTER_TYPE');
-
-        // Поиск нужного уровня подраздела
-        const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1))
-        if(Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
-        else {
-            throw new Error('[deleteSubChapter]>> INTERNAL_ERROR')
+        const subChapterService = new SubChapterService();
+        // Удаление по pathName если указано в параметрах
+        if(params.fullpath) {
+            await subChapterService.deleteOneByFullpath(params.fullpath);
         }
-        // Сохранение изменений в БД
-        await writeFile(materials, FSCONFIG);
+        // Если нужные параметры не были переданы 
+        else {
+            return 'failed';
+        }
         return 'success';
     } catch (err) {
         console.error(err);
-        throw err;
+        return 'failed';
     }
 }
-
 
 // Создание нового блока для раздела
 export async function createChapterBlock(params: CreateChapterBlock) {

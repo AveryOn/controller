@@ -5116,7 +5116,7 @@ class ChapterService {
   // region DELETE
   // Удаление раздела по pathName
   async deleteOneByPathName(pathName) {
-    if (!pathName) throw new Error("[ChapterService.updateByPathName]>> pathName is not defined");
+    if (!pathName) throw new Error("[ChapterService.deleteOneByPathName]>> pathName is not defined");
     await this.instanceDb.run(`
             DELETE FROM sub_chapters 
             WHERE path_name = ?;
@@ -5353,6 +5353,16 @@ class SubChapterService {
     });
     if (!updatedSubChapter) throw new Error("[SubChapterService.update]>> subChapter was not updated");
     return updatedSubChapter;
+  }
+  // end region
+  // region DELETE
+  async deleteOneByFullpath(fullpath) {
+    if (!fullpath) throw new Error("[SubChapterService.deleteOneByFullpath]>> fullpath is not defined");
+    await this.instanceDb.run(`
+            DELETE FROM sub_chapters 
+            WHERE fullpath LIKE ? || '%';
+        `, [fullpath]);
+    return void 0;
   }
   // end region
 }
@@ -5709,50 +5719,20 @@ async function deleteChapter(params) {
     return "failed";
   }
 }
-function findAndDeleteLevel(items, initPath) {
-  if (items.length <= 0) return false;
-  const current = initPath.shift();
-  for (let i = 0; i < items.length; i++) {
-    const chapter = items[i];
-    const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
-    if (selfPath === current) {
-      if (initPath.length <= 0) {
-        return items.filter((ch) => ch.id !== chapter.id);
-      } else {
-        if (chapter.items && chapter.items.length > 0) {
-          const updateItems = findAndDeleteLevel(chapter.items, initPath);
-          if (updateItems && Array.isArray(updateItems)) {
-            chapter.items = updateItems;
-          }
-          return items;
-        } else {
-          throw `[Materials/findAndDeleteLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
-        }
-      }
-    }
-  }
-  return false;
-}
 async function deleteSubChapter(params) {
-  console.log("[deleteSubChapter] => ", params);
+  console.log("[deleteChapter] => ", params);
   try {
-    if (!params || !params.fullpath) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
-    let materials = await readFile(FSCONFIG);
-    let correctPath = trimPath(params.fullpath, { split: true });
-    const rootName = correctPath[0];
-    const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
-    if (!rootChapter) throw new Error("[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER");
-    if (!rootChapter.items) throw new Error("[deleteSubChapter]>> INVALID_CHAPTER_TYPE");
-    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1));
-    if (Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
-    else {
-      throw new Error("[deleteSubChapter]>> INTERNAL_ERROR");
+    if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
+    const subChapterService = new SubChapterService();
+    if (params.fullpath) {
+      await subChapterService.deleteOneByFullpath(params.fullpath);
+    } else {
+      return "failed";
     }
-    await writeFile(materials, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
-    throw err;
+    return "failed";
   }
 }
 async function createChapterBlock(params) {
