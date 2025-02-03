@@ -5113,6 +5113,21 @@ class ChapterService {
     return newChapter;
   }
   // end region
+  // region DELETE
+  // Удаление раздела по pathName
+  async deleteOneByPathName(pathName) {
+    if (!pathName) throw new Error("[ChapterService.updateByPathName]>> pathName is not defined");
+    await this.instanceDb.run(`
+            DELETE FROM sub_chapters 
+            WHERE path_name = ?;
+        `, [pathName]);
+    await this.instanceDb.run(`
+            DELETE FROM chapters
+            WHERE path_name = ?;
+        `, [pathName]);
+    return void 0;
+  }
+  // end region
 }
 class SubChapterService {
   constructor() {
@@ -5680,19 +5695,18 @@ async function deleteChapter(params) {
   console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
-    let materials = await readFile(FSCONFIG);
+    const chapterService = new ChapterService();
     if (params.pathName) {
-      materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
+      await chapterService.deleteOneByPathName(params.pathName);
     } else if (params.chapterId) {
-      materials = materials.filter((chapter) => chapter.id !== params.chapterId);
+      return "success";
     } else {
       return "failed";
     }
-    await writeFile(materials, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
-    throw err;
+    return "failed";
   }
 }
 function findAndDeleteLevel(items, initPath) {

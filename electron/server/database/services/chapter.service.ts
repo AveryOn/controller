@@ -260,6 +260,23 @@ export default class ChapterService {
         if(!newChapter) throw new Error('[ChapterService.updateByPathName]>> newChapter was not created');
         return newChapter;
     }
+    // end region
 
+    // region DELETE
+    // Удаление раздела по pathName
+    async deleteOneByPathName(pathName: string): Promise<void> {
+        if(!pathName) throw new Error('[ChapterService.updateByPathName]>> pathName is not defined');
+        // удалить все подразделы текущего раздела
+        await this.instanceDb!.run(`
+            DELETE FROM sub_chapters 
+            WHERE path_name = ?;
+        `, [pathName]);
+        // удалить текущий раздел
+        await this.instanceDb!.run(`
+            DELETE FROM chapters
+            WHERE path_name = ?;
+        `, [pathName]);
+        return void 0;
+    }
     // end region
 } 

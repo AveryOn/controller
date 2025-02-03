@@ -443,26 +443,25 @@ export async function deleteChapter(params: DeleteChapterParams): Promise<Delete
     console.log('[deleteChapter] => ', params);
     try {
         if(!params) throw new Error('[deleteChapter]>> INVALID_INPUT');
-        // Получение всех materials 
-        let materials: Chapter[] = await readFile(FSCONFIG);
-        // Фильтрация по pathName если указано в параметрах
+
+        const chapterService = new ChapterService();
+        // Удаление по pathName если указано в параметрах
         if(params.pathName) {
-            materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
+            await chapterService.deleteOneByPathName(params.pathName);
         }
-        // Фильтрация по chapter.id если указано в параметрах
+        // Удаление по chapter.id если указано в параметрах
         else if (params.chapterId) {
-            materials = materials.filter((chapter) => chapter.id !== params.chapterId);
+            return 'success';
         }
         // Если нужные параметры не были переданы 
         else {
             return 'failed';
         }
         // Сохранение изменений в БД
-        await writeFile(materials, FSCONFIG);
         return 'success';
     } catch (err) {
         console.error(err);
-        throw err;
+        return 'failed';
     }
 }
 
