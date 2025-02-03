@@ -432,6 +432,7 @@ function controllerKeys(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+    console.log('asdasdsdasdsdw');
     window.addEventListener('keydown', controllerKeys);
 });
 

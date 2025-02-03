@@ -12,82 +12,10 @@ import path$2 from "node:path";
 import fs$1 from "fs/promises";
 import { fileURLToPath } from "url";
 import { fork } from "child_process";
-var main$1 = { exports: {} };
-const name = "dotenv";
+var main = { exports: {} };
 const version$1 = "16.4.7";
-const description = "Loads environment variables from .env file";
-const main = "lib/main.js";
-const types = "lib/main.d.ts";
-const exports = {
-  ".": {
-    types: "./lib/main.d.ts",
-    require: "./lib/main.js",
-    "default": "./lib/main.js"
-  },
-  "./config": "./config.js",
-  "./config.js": "./config.js",
-  "./lib/env-options": "./lib/env-options.js",
-  "./lib/env-options.js": "./lib/env-options.js",
-  "./lib/cli-options": "./lib/cli-options.js",
-  "./lib/cli-options.js": "./lib/cli-options.js",
-  "./package.json": "./package.json"
-};
-const scripts = {
-  "dts-check": "tsc --project tests/types/tsconfig.json",
-  lint: "standard",
-  pretest: "npm run lint && npm run dts-check",
-  test: "tap run --allow-empty-coverage --disable-coverage --timeout=60000",
-  "test:coverage": "tap run --show-full-coverage --timeout=60000 --coverage-report=lcov",
-  prerelease: "npm test",
-  release: "standard-version"
-};
-const repository = {
-  type: "git",
-  url: "git://github.com/motdotla/dotenv.git"
-};
-const funding = "https://dotenvx.com";
-const keywords = [
-  "dotenv",
-  "env",
-  ".env",
-  "environment",
-  "variables",
-  "config",
-  "settings"
-];
-const readmeFilename = "README.md";
-const license = "BSD-2-Clause";
-const devDependencies = {
-  "@types/node": "^18.11.3",
-  decache: "^4.6.2",
-  sinon: "^14.0.1",
-  standard: "^17.0.0",
-  "standard-version": "^9.5.0",
-  tap: "^19.2.0",
-  typescript: "^4.8.4"
-};
-const engines = {
-  node: ">=12"
-};
-const browser = {
-  fs: false
-};
 const require$$4 = {
-  name,
-  version: version$1,
-  description,
-  main,
-  types,
-  exports,
-  scripts,
-  repository,
-  funding,
-  keywords,
-  readmeFilename,
-  license,
-  devDependencies,
-  engines,
-  browser
+  version: version$1
 };
 const fs = require$$0;
 const path = path$1;
@@ -342,15 +270,15 @@ const DotenvModule = {
   parse,
   populate
 };
-main$1.exports.configDotenv = DotenvModule.configDotenv;
-main$1.exports._configVault = DotenvModule._configVault;
-main$1.exports._parseVault = DotenvModule._parseVault;
-main$1.exports.config = DotenvModule.config;
-main$1.exports.decrypt = DotenvModule.decrypt;
-main$1.exports.parse = DotenvModule.parse;
-main$1.exports.populate = DotenvModule.populate;
-main$1.exports = DotenvModule;
-var mainExports = main$1.exports;
+main.exports.configDotenv = DotenvModule.configDotenv;
+main.exports._configVault = DotenvModule._configVault;
+main.exports._parseVault = DotenvModule._parseVault;
+main.exports.config = DotenvModule.config;
+main.exports.decrypt = DotenvModule.decrypt;
+main.exports.parse = DotenvModule.parse;
+main.exports.populate = DotenvModule.populate;
+main.exports = DotenvModule;
+var mainExports = main.exports;
 const options = {};
 if (process.env.DOTENV_CONFIG_ENCODING != null) {
   options.encoding = process.env.DOTENV_CONFIG_ENCODING;
@@ -433,7 +361,7 @@ async function verify(input, hash) {
 }
 async function encryptJsonData(data, signature) {
   if (!data) throw new Error("[Services.encryptJsonData]>> NOT_DATA");
-  if (!signature || typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
+  if (typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
@@ -458,7 +386,7 @@ async function encryptJsonData(data, signature) {
 }
 async function decryptJsonData(data, signature) {
   if (!data) throw new Error("[Services.decryptJsonData]>> NOT_DATA");
-  if (!signature || typeof signature !== "string") throw new Error("[Services.decryptJsonData]>> INVALID_SIGNATURE");
+  if (typeof signature !== "string") throw new Error("[Services.decryptJsonData]>> INVALID_SIGNATURE");
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
@@ -521,8 +449,8 @@ async function readFile(config2) {
 }
 async function mkDir(dirName) {
   try {
-    const root2 = getAppDirname();
-    const filePath = path$1.join(root2, dirName);
+    const root = getAppDirname();
+    const filePath = path$1.join(root, dirName);
     await fs$1.mkdir(filePath, { recursive: true });
   } catch (err) {
     throw err;
@@ -531,11 +459,11 @@ async function mkDir(dirName) {
 async function isExistFileOrDir(pathName, config2) {
   if (!pathName) throw new Error("[isExistFileOrDir]>> pathName обязательный аргумент");
   try {
-    let root2;
+    let root;
     let fullPath;
     if (!(config2 == null ? void 0 : config2.custom)) {
-      root2 = getAppDirname();
-      fullPath = path$1.join(root2, pathName);
+      root = getAppDirname();
+      fullPath = path$1.join(root, pathName);
     }
     await fs$1.access(fullPath, fs$1.constants.F_OK);
     return true;
@@ -1021,13 +949,13 @@ function deprecate(msg, fn) {
   }, fn);
 }
 var deprecations = {};
-function deprecateSimple(name2, msg) {
+function deprecateSimple(name, msg) {
   if (hooks.deprecationHandler != null) {
-    hooks.deprecationHandler(name2, msg);
+    hooks.deprecationHandler(name, msg);
   }
-  if (!deprecations[name2]) {
+  if (!deprecations[name]) {
     warn(msg);
-    deprecations[name2] = true;
+    deprecations[name] = true;
   }
 }
 hooks.suppressDeprecationWarnings = false;
@@ -2304,22 +2232,22 @@ function chooseLocale(names) {
   }
   return globalLocale;
 }
-function isLocaleNameSane(name2) {
-  return !!(name2 && name2.match("^[^/\\\\]*$"));
+function isLocaleNameSane(name) {
+  return !!(name && name.match("^[^/\\\\]*$"));
 }
-function loadLocale(name2) {
+function loadLocale(name) {
   var oldLocale = null, aliasedRequire;
-  if (locales[name2] === void 0 && typeof module !== "undefined" && module && module.exports && isLocaleNameSane(name2)) {
+  if (locales[name] === void 0 && typeof module !== "undefined" && module && module.exports && isLocaleNameSane(name)) {
     try {
       oldLocale = globalLocale._abbr;
       aliasedRequire = require;
-      aliasedRequire("./locale/" + name2);
+      aliasedRequire("./locale/" + name);
       getSetGlobalLocale(oldLocale);
     } catch (e) {
-      locales[name2] = null;
+      locales[name] = null;
     }
   }
-  return locales[name2];
+  return locales[name];
 }
 function getSetGlobalLocale(key, values) {
   var data;
@@ -2341,16 +2269,16 @@ function getSetGlobalLocale(key, values) {
   }
   return globalLocale._abbr;
 }
-function defineLocale(name2, config2) {
+function defineLocale(name, config2) {
   if (config2 !== null) {
     var locale2, parentConfig = baseConfig;
-    config2.abbr = name2;
-    if (locales[name2] != null) {
+    config2.abbr = name;
+    if (locales[name] != null) {
       deprecateSimple(
         "defineLocaleOverride",
         "use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."
       );
-      parentConfig = locales[name2]._config;
+      parentConfig = locales[name]._config;
     } else if (config2.parentLocale != null) {
       if (locales[config2.parentLocale] != null) {
         parentConfig = locales[config2.parentLocale]._config;
@@ -2363,58 +2291,58 @@ function defineLocale(name2, config2) {
             localeFamilies[config2.parentLocale] = [];
           }
           localeFamilies[config2.parentLocale].push({
-            name: name2,
+            name,
             config: config2
           });
           return null;
         }
       }
     }
-    locales[name2] = new Locale(mergeConfigs(parentConfig, config2));
-    if (localeFamilies[name2]) {
-      localeFamilies[name2].forEach(function(x) {
+    locales[name] = new Locale(mergeConfigs(parentConfig, config2));
+    if (localeFamilies[name]) {
+      localeFamilies[name].forEach(function(x) {
         defineLocale(x.name, x.config);
       });
     }
-    getSetGlobalLocale(name2);
-    return locales[name2];
+    getSetGlobalLocale(name);
+    return locales[name];
   } else {
-    delete locales[name2];
+    delete locales[name];
     return null;
   }
 }
-function updateLocale(name2, config2) {
+function updateLocale(name, config2) {
   if (config2 != null) {
     var locale2, tmpLocale, parentConfig = baseConfig;
-    if (locales[name2] != null && locales[name2].parentLocale != null) {
-      locales[name2].set(mergeConfigs(locales[name2]._config, config2));
+    if (locales[name] != null && locales[name].parentLocale != null) {
+      locales[name].set(mergeConfigs(locales[name]._config, config2));
     } else {
-      tmpLocale = loadLocale(name2);
+      tmpLocale = loadLocale(name);
       if (tmpLocale != null) {
         parentConfig = tmpLocale._config;
       }
       config2 = mergeConfigs(parentConfig, config2);
       if (tmpLocale == null) {
-        config2.abbr = name2;
+        config2.abbr = name;
       }
       locale2 = new Locale(config2);
-      locale2.parentLocale = locales[name2];
-      locales[name2] = locale2;
+      locale2.parentLocale = locales[name];
+      locales[name] = locale2;
     }
-    getSetGlobalLocale(name2);
+    getSetGlobalLocale(name);
   } else {
-    if (locales[name2] != null) {
-      if (locales[name2].parentLocale != null) {
-        locales[name2] = locales[name2].parentLocale;
-        if (name2 === getSetGlobalLocale()) {
-          getSetGlobalLocale(name2);
+    if (locales[name] != null) {
+      if (locales[name].parentLocale != null) {
+        locales[name] = locales[name].parentLocale;
+        if (name === getSetGlobalLocale()) {
+          getSetGlobalLocale(name);
         }
-      } else if (locales[name2] != null) {
-        delete locales[name2];
+      } else if (locales[name] != null) {
+        delete locales[name];
       }
     }
   }
-  return locales[name2];
+  return locales[name];
 }
 function getLocale(key) {
   var locale2;
@@ -3320,13 +3248,13 @@ function momentsDifference(base, other) {
   }
   return res;
 }
-function createAdder(direction, name2) {
+function createAdder(direction, name) {
   return function(val, period) {
     var dur, tmp;
     if (period !== null && !isNaN(+period)) {
       deprecateSimple(
-        name2,
-        "moment()." + name2 + "(period, number) is deprecated. Please use moment()." + name2 + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
+        name,
+        "moment()." + name + "(period, number) is deprecated. Please use moment()." + name + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
       );
       tmp = val;
       val = period;
@@ -3900,10 +3828,10 @@ function localeEras(m, format2) {
   return eras;
 }
 function localeErasParse(eraName, format2, strict) {
-  var i, l, eras = this.eras(), name2, abbr, narrow;
+  var i, l, eras = this.eras(), name, abbr, narrow;
   eraName = eraName.toUpperCase();
   for (i = 0, l = eras.length; i < l; ++i) {
-    name2 = eras[i].name.toUpperCase();
+    name = eras[i].name.toUpperCase();
     abbr = eras[i].abbr.toUpperCase();
     narrow = eras[i].narrow.toUpperCase();
     if (strict) {
@@ -3916,7 +3844,7 @@ function localeErasParse(eraName, format2, strict) {
           }
           break;
         case "NNNN":
-          if (name2 === eraName) {
+          if (name === eraName) {
             return eras[i];
           }
           break;
@@ -3926,7 +3854,7 @@ function localeErasParse(eraName, format2, strict) {
           }
           break;
       }
-    } else if ([name2, abbr, narrow].indexOf(eraName) >= 0) {
+    } else if ([name, abbr, narrow].indexOf(eraName) >= 0) {
       return eras[i];
     }
   }
@@ -4563,9 +4491,9 @@ function get$2(units) {
   units = normalizeUnits(units);
   return this.isValid() ? this[units + "s"]() : NaN;
 }
-function makeGetter(name2) {
+function makeGetter(name) {
   return function() {
-    return this.isValid() ? this._data[name2] : NaN;
+    return this.isValid() ? this._data[name] : NaN;
   };
 }
 var milliseconds = makeGetter("milliseconds"), seconds = makeGetter("seconds"), minutes = makeGetter("minutes"), hours = makeGetter("hours"), days = makeGetter("days"), months = makeGetter("months"), years = makeGetter("years");
@@ -5043,15 +4971,48 @@ class ChapterService {
   }
   // Найти раздел по ID
   async findById(id, config2) {
+    var _a, _b;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
-      const res = await this.instanceDb.get(`
-                SELECT ${correctFieldsSql}
-                FROM chapters
-                WHERE id = ?;
-            `, [id]);
+      let res;
+      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
+                        chapters.${this.allFields["contentTitle"]}, chapters.${this.allFields["createdAt"]},
+                        chapters.${this.allFields["updatedAt"]},
+                        chapters.${this.allFields["icon"]}, chapters.${this.allFields["iconType"]},
+                        chapters.${this.allFields["label"]}, chapters.${this.allFields["route"]},
+                        chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM chapters
+                    LEFT JOIN blocks
+                    ON chapters.id = blocks.chapter_id
+                    WHERE chapters.id = ?
+                    GROUP BY chapters.id;
+                `, [id]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM chapters WHERE path_name = ?;
+                `, [id]);
+      }
       if (!res || !(res == null ? void 0 : res.payload)) return null;
-      return res.payload;
+      const data = res.payload;
+      if (data.blocks && typeof data.blocks === "string") {
+        data.blocks = JSON.parse(data.blocks);
+        data.blocks = !!((_b = data.blocks[0]) == null ? void 0 : _b.id) ? data.blocks : [];
+      }
+      return data;
     } catch (err) {
       console.error(err);
       return null;
@@ -5133,7 +5094,7 @@ class ChapterService {
   }
   // end region
   // region UPDATE
-  // Создать один раздел
+  // Обновление данных раздела
   async update(id, dto) {
     if (!id) throw new Error("[ChapterService.updateByPathName]>> id is not defined");
     const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
@@ -5143,7 +5104,11 @@ class ChapterService {
                 ${keys2}
             WHERE id = ?;
         `, [...args, id]);
-    const newChapter = await this.findById(id);
+    const newChapter = await this.findById(id, {
+      includes: {
+        blocks: true
+      }
+    });
     if (!newChapter) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
     return newChapter;
   }
@@ -5166,6 +5131,14 @@ class SubChapterService {
       createdAt: "created_at AS createdAt",
       updatedAt: "updated_at AS updatedAt"
     });
+    __publicField(this, "allFieldsForRec", {
+      icon: "icon",
+      iconType: "icon_type",
+      chapterType: "chapter_type",
+      label: "label",
+      contentTitle: "content_title",
+      updatedAt: "updated_at"
+    });
     this.instanceDb = DatabaseManager.instance().getDatabase("materials");
     if (!this.instanceDb) throw new Error("DB materials is not initialized");
   }
@@ -5180,6 +5153,23 @@ class SubChapterService {
     } else correctFieldsSql = Object.values(this.allFields).join(",");
     return correctFieldsSql;
   }
+  // корректировка полей таблицы для выполнения записи данных sql
+  correctFieldsSqlForRec(dto) {
+    if (!dto || typeof dto !== "object")
+      throw new Error("[SubChapterService.correctFieldsSqlForRec]>> dto is not defined");
+    const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+      if (Object.prototype.hasOwnProperty.call(dto, key)) {
+        return true;
+      } else return false;
+    });
+    const args = correctFieldsEntries.map(([k, __]) => {
+      return dto[k];
+    });
+    return {
+      keys: correctFieldsEntries.map(([__, val]) => val + " = ?").join(", "),
+      args
+    };
+  }
   // Получить массив подразделов
   async getAll(config2) {
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
@@ -5190,15 +5180,48 @@ class SubChapterService {
   }
   // Найти подраздел по ID
   async findById(id, config2) {
+    var _a, _b;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
-      const res = await this.instanceDb.get(`
-                SELECT ${correctFieldsSql}
-                FROM sub_chapters
-                WHERE id = ?;
-            `, [id]);
+      let res;
+      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        sub_chapters.${this.allFields["id"]}, sub_chapters.${this.allFields["pathName"]},
+                        sub_chapters.${this.allFields["contentTitle"]}, sub_chapters.${this.allFields["createdAt"]},
+                        sub_chapters.${this.allFields["updatedAt"]}, sub_chapters.${this.allFields["fullpath"]},
+                        sub_chapters.${this.allFields["icon"]}, sub_chapters.${this.allFields["iconType"]},
+                        sub_chapters.${this.allFields["label"]}, sub_chapters.${this.allFields["route"]},
+                        sub_chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.sub_chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM sub_chapters
+                    LEFT JOIN blocks
+                    ON sub_chapters.id = blocks.sub_chapter_id
+                    WHERE sub_chapters.id = ?
+                    GROUP BY sub_chapters.id;
+                `, [id]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM sub_chapters WHERE path_name = ?;
+                `, [id]);
+      }
       if (!res || !(res == null ? void 0 : res.payload)) return null;
-      return res.payload;
+      const data = res.payload;
+      if (data.blocks && typeof data.blocks === "string") {
+        data.blocks = JSON.parse(data.blocks);
+        data.blocks = !!((_b = data.blocks[0]) == null ? void 0 : _b.id) ? data.blocks : [];
+      }
+      return data;
     } catch (err) {
       console.error(err);
       return null;
@@ -5297,6 +5320,26 @@ class SubChapterService {
     if (!newSubChapter) throw new Error("[SubChapterService.create]>> newSubChapter was not created");
     return newSubChapter;
   }
+  // region UPDATE
+  // Обновление данных ПОДраздела
+  async update(id, dto) {
+    if (!id) throw new Error("[SubChapterService.update]>> id is not defined");
+    const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
+    await this.instanceDb.run(`
+                UPDATE sub_chapters
+                SET
+                    ${keys2}
+                WHERE id = ?;
+            `, [...args, id]);
+    const updatedSubChapter = await this.findById(id, {
+      includes: {
+        blocks: true
+      }
+    });
+    if (!updatedSubChapter) throw new Error("[SubChapterService.update]>> subChapter was not updated");
+    return updatedSubChapter;
+  }
+  // end region
 }
 const MATERIALS_FILENAME = "materials.json";
 const MATERIALS_MENU_FILENAME = "materials-menu.json";
@@ -5547,7 +5590,6 @@ async function getOneSubChapter(params, auth) {
           // также прикрепить блоки в объект подраздела
         }
       });
-      console.log(findedSubChapter);
       if (!findedSubChapter) throw "[getOneSubChapter]>> NOT_EXISTS_RECORD";
       const correctSubChapter = {
         id: findedSubChapter.id,
@@ -5575,8 +5617,6 @@ async function getOneSubChapter(params, auth) {
         }
       } else {
       }
-      findedSubChapter == null ? void 0 : findedSubChapter.blocks;
-      console.log(correctSubChapter);
       return correctSubChapter;
     } else {
       throw "[getOneSubChapter]>> NOT_EXISTS_RECORD";
@@ -5601,24 +5641,35 @@ async function editChapter(input, auth) {
         }
         const updatedChapter = await chapterService.update(findedChapter.id, params);
         await syncMaterialsStores(username);
-        return updatedChapter;
-      } else throw "[editChapter]>> NOT_FOUND";
+        const resultChapter = {
+          ...updatedChapter,
+          content: {
+            title: updatedChapter.contentTitle ?? null,
+            blocks: Array.isArray(updatedChapter.blocks) ? updatedChapter.blocks : []
+          }
+        };
+        Reflect.deleteProperty(resultChapter, "blocks");
+        return resultChapter;
+      } else throw "[editChapter]>> NOT_FOUND [1]";
     } else if (fullpath && pathName) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === root);
-      const lastPath = correctPath.slice(1);
-      if (findedChapter == null ? void 0 : findedChapter.items) {
-        let subchapter = findLevel(findedChapter.items, lastPath);
-        if (params.chapterType === "file" && subchapter.chapterType === "dir") {
-          throw "[editChapter]>> INVALID_CHAPTER_TYPE[2]";
+      const subChapterService = new SubChapterService();
+      const findedSubChapter = await subChapterService.findByFullpath(fullpath);
+      if (findedSubChapter) {
+        if (params.chapterType === "file" && findedSubChapter.chapterType === "dir") {
+          throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
         }
-        if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
-        updateChapter(subchapter, params);
-        subchapter.fullpath = correctPath.join("/");
-        if (params.chapterType === "dir" && !subchapter.items) subchapter.items = [];
-        subchapter.updatedAt = formatDate(Date.now());
-        await writeFile(materials, FSCONFIG);
-        return subchapter;
-      } else throw "[editChapter]>> INTERNAL_ERROR[2]";
+        const updatedSubChapter = await subChapterService.update(findedSubChapter.id, params);
+        await syncMaterialsStores(username);
+        const resultSubChapter = {
+          ...updatedSubChapter,
+          content: {
+            title: updatedSubChapter.contentTitle ?? null,
+            blocks: Array.isArray(updatedSubChapter.blocks) ? updatedSubChapter.blocks : []
+          }
+        };
+        Reflect.deleteProperty(resultSubChapter, "blocks");
+        return resultSubChapter;
+      } else throw "[editChapter]>> NOT_FOUND [2]";
     } else throw "[editChapter]>> INTERNAL_ERROR[3]";
   } catch (err) {
     console.error(err);
@@ -5629,15 +5680,15 @@ async function deleteChapter(params) {
   console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
-    let materials2 = await readFile(FSCONFIG);
+    let materials = await readFile(FSCONFIG);
     if (params.pathName) {
-      materials2 = materials2.filter((chapter) => chapter.pathName !== params.pathName);
+      materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
     } else if (params.chapterId) {
-      materials2 = materials2.filter((chapter) => chapter.id !== params.chapterId);
+      materials = materials.filter((chapter) => chapter.id !== params.chapterId);
     } else {
       return "failed";
     }
-    await writeFile(materials2, FSCONFIG);
+    await writeFile(materials, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
@@ -5672,18 +5723,18 @@ async function deleteSubChapter(params) {
   console.log("[deleteSubChapter] => ", params);
   try {
     if (!params || !params.fullpath) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
-    let materials2 = await readFile(FSCONFIG);
-    let correctPath2 = trimPath(params.fullpath, { split: true });
-    const rootName = correctPath2[0];
-    const rootChapter = materials2.find((chapter) => chapter.pathName === rootName);
+    let materials = await readFile(FSCONFIG);
+    let correctPath = trimPath(params.fullpath, { split: true });
+    const rootName = correctPath[0];
+    const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
     if (!rootChapter) throw new Error("[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER");
     if (!rootChapter.items) throw new Error("[deleteSubChapter]>> INVALID_CHAPTER_TYPE");
-    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath2.slice(1));
+    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1));
     if (Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
     else {
       throw new Error("[deleteSubChapter]>> INTERNAL_ERROR");
     }
-    await writeFile(materials2, FSCONFIG);
+    await writeFile(materials, FSCONFIG);
     return "success";
   } catch (err) {
     console.error(err);
@@ -5696,7 +5747,7 @@ async function createChapterBlock(params) {
     if (!params || !params.pathName || !params.title || params.title.length < 3) {
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
     }
-    const materials2 = await readFile(FSCONFIG);
+    const materials = await readFile(FSCONFIG);
     const timestamp = formatDate();
     const newBlock = {
       id: Date.now(),
@@ -5706,20 +5757,20 @@ async function createChapterBlock(params) {
       updatedAt: timestamp
     };
     if (params.pathName && !params.fullpath) {
-      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[createChapterBlock]>> Ключа content не существует!");
       findedChapter.content.blocks.push(newBlock);
     } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath2 = trimPath(params.fullpath, { split: true });
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
       if (!findedChapter || !findedChapter.items) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath2.slice(1));
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[2]!");
       subChapter.content.blocks.push(newBlock);
     } else {
       throw new Error("[createChapterBlock]>> INTERNAL_ERROR[3]");
     }
-    await writeFile(materials2, FSCONFIG);
+    await writeFile(materials, FSCONFIG);
     return newBlock;
   } catch (err) {
     console.error(err);
@@ -5738,11 +5789,11 @@ async function editChapterBlock(params) {
     if (!params || !params.pathName) {
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
     }
-    const materials2 = await readFile(FSCONFIG);
+    const materials = await readFile(FSCONFIG);
     const blockId = ((_a = params == null ? void 0 : params.block) == null ? void 0 : _a.id) || (params == null ? void 0 : params.blockId);
     const timestamp = formatDate();
     if (params.pathName && !params.fullpath) {
-      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
       const findedBlock = findedChapter.content.blocks.find((block) => block.id === blockId);
       if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
@@ -5754,10 +5805,10 @@ async function editChapterBlock(params) {
       findedChapter.updatedAt = timestamp;
       findedBlock.updatedAt = timestamp;
     } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath2 = trimPath(params.fullpath, { split: true });
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
       if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath2.slice(1));
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
       const findedBlock = subChapter.content.blocks.find((block) => block.id === blockId);
       if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
@@ -5771,8 +5822,8 @@ async function editChapterBlock(params) {
     } else {
       throw new Error("[editChapterBlock]>> INTERNAL_ERROR[3]");
     }
-    await writeFile(materials2, FSCONFIG);
-    return materials2;
+    await writeFile(materials, FSCONFIG);
+    return materials;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5784,21 +5835,21 @@ async function deleteChapterBlock(params) {
     if (!params || !params.pathName) {
       throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
     }
-    const materials2 = await readFile(FSCONFIG);
+    const materials = await readFile(FSCONFIG);
     if (params.pathName && !params.fullpath) {
-      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
       if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[deleteChapterBlock]>> Ключа content не существует!");
       findedChapter.content.blocks = findedChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials2, FSCONFIG);
+      await writeFile(materials, FSCONFIG);
       return findedChapter;
     } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials2.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath2 = trimPath(params.fullpath, { split: true });
+      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
+      const correctPath = trimPath(params.fullpath, { split: true });
       if (!findedChapter || !findedChapter.items) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath2.slice(1));
+      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
       if (!subChapter || !subChapter.content) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[2]!");
       subChapter.content.blocks = subChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials2, FSCONFIG);
+      await writeFile(materials, FSCONFIG);
       return subChapter;
     } else {
       throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[3]");

@@ -251,13 +251,14 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                 была запущена рекурсия.
             */
             const mappa: {[key:string]: SubChapterForMenu[]} = {};
-            const baseSubChapters: SubChapterForMenu[] = []
+            const baseSubChapters: SubChapterForMenu[] = [];
             for (let i = 0; i < subchapters.length; i++) {
                 const subChapter = subchapters[i];
                 if(!subChapter.pathName) subChapter.pathName = pathName;
                 // здесь correctFullpath отделяется от envStack чтобы смещаться по пути в рекурсии
                 const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length) as string[];
                 const basePath = correctFullpath.shift();
+                
                 if(!mappa[basePath!]) mappa[basePath!] = [];
                 subChapter.fullLabels = [...stackLabels, subChapter.label]; // собираем полный label. Берем стек лэйблов предыдущего пути + текщий лэйбл 
                 if(correctFullpath.length > 0) {
@@ -337,8 +338,6 @@ export async function getOneSubChapter(params: GetSubChapterOneParams, auth: Aut
                     blocks: true // также прикрепить блоки в объект подраздела
                 }
             });
-            console.log(findedSubChapter);
-            
             if (!findedSubChapter) throw '[getOneSubChapter]>> NOT_EXISTS_RECORD';
             const correctSubChapter: SubChapter = {
                 id: findedSubChapter.id,
@@ -368,8 +367,6 @@ export async function getOneSubChapter(params: GetSubChapterOneParams, auth: Aut
                 }
             }
             else { }
-            findedSubChapter?.blocks
-            console.log(correctSubChapter);
             return correctSubChapter;
         }
         else {
@@ -382,7 +379,7 @@ export async function getOneSubChapter(params: GetSubChapterOneParams, auth: Aut
 }
 
 // Редактирование общих данных раздела/подраздела
-export async function editChapter(input: EditChapterParams, auth: AuthParams): Promise<ChapterRawResponse | SubChapterRawResponse> {
+export async function editChapter(input: EditChapterParams, auth: AuthParams): Promise<Chapter> {
     console.log('[editChapter] => ', input);
     try {
         if(!auth?.token) throw new Error("[editChapter]>> 401 UNAUTHORIZATE");
@@ -399,7 +396,15 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
                 }
                 const updatedChapter = await chapterService.update(findedChapter.id, params) as ChapterRawResponse;
                 await syncMaterialsStores(username);
-                return updatedChapter;
+                const resultChapter = { 
+                    ...updatedChapter,
+                    content: {
+                        title: updatedChapter.contentTitle ?? null,
+                        blocks: (Array.isArray(updatedChapter.blocks)) ? updatedChapter.blocks : []
+                    }
+                }
+                Reflect.deleteProperty(resultChapter, 'blocks');
+                return resultChapter as any as Chapter;
             }
             else throw '[editChapter]>> NOT_FOUND [1]';
         }
@@ -412,29 +417,19 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
                 if (params.chapterType === 'file' && findedSubChapter.chapterType === 'dir') {
                     throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
                 }
+                const updatedSubChapter = await subChapterService.update(findedSubChapter.id, params) as SubChapterRawResponse;
+                await syncMaterialsStores(username);
+                const resultSubChapter = { 
+                    ...updatedSubChapter,
+                    content: {
+                        title: updatedSubChapter.contentTitle ?? null,
+                        blocks: (Array.isArray(updatedSubChapter.blocks)) ? updatedSubChapter.blocks : [],
+                    }
+                }
+                Reflect.deleteProperty(resultSubChapter, 'blocks');
+                return resultSubChapter as any as Chapter;
             }
             else throw '[editChapter]>> NOT_FOUND [2]';
-            // const findedChapter = materials.find((chapter) => chapter.pathName === root);
-            // const lastPath: string[] = correctPath.slice(1);
-            // if (findedChapter?.items) {
-            //     let subchapter = findLevel(findedChapter.items, lastPath) as SubChapter;
-            //     // Доп защита для избежания изменения типа раздела с dir на file. Чтобы директория не лишилась данных 
-            //     if (params.chapterType === 'file' && subchapter.chapterType === 'dir') {
-            //         throw '[editChapter]>> INVALID_CHAPTER_TYPE[2]';
-            //     }
-            //     // Обновление fullpath так как он может изменяться для разделов типа file
-            //     if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
-            //     updateChapter(subchapter, params);
-            //     subchapter.fullpath = correctPath.join('/');
-            //     // Добавляем массив items если 
-            //     if (params.chapterType === 'dir' && !subchapter.items) subchapter.items = [];
-            //     // Обновляем updatedAt
-            //     subchapter.updatedAt = formatDate(Date.now());
-            //     // запись изменений в БД
-            //     await writeFile(materials, FSCONFIG);
-            //     return subchapter;
-            // }
-            // else throw '[editChapter]>> INTERNAL_ERROR[2]';
         }
         else throw '[editChapter]>> INTERNAL_ERROR[3]';
     } catch (err) {

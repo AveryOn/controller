@@ -77,16 +77,54 @@ export default class SubChapterService {
     }
 
     // Найти подраздел по ID
-    async findById(id: number, config?: { excludes?: Array<keyof SubChapterRaw> }): Promise<SubChapterRawResponse | null> {
+    async findById(
+        id: number, 
+        config?: { 
+            excludes?: Array<keyof SubChapterRaw>; 
+            includes?: { blocks: boolean },
+        }): Promise<SubChapterRawResponse | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
-            const res = await this.instanceDb!.get(`
-                SELECT ${correctFieldsSql}
-                FROM sub_chapters
-                WHERE id = ?;
-            `, [id]);
+            let res: IpcContractRes;
+            if(config?.includes?.blocks === true) {
+                res = await this.instanceDb!.get(`
+                    SELECT 
+                        sub_chapters.${this.allFields['id']}, sub_chapters.${this.allFields['pathName']},
+                        sub_chapters.${this.allFields['contentTitle']}, sub_chapters.${this.allFields['createdAt']},
+                        sub_chapters.${this.allFields['updatedAt']}, sub_chapters.${this.allFields['fullpath']},
+                        sub_chapters.${this.allFields['icon']}, sub_chapters.${this.allFields['iconType']},
+                        sub_chapters.${this.allFields['label']}, sub_chapters.${this.allFields['route']},
+                        sub_chapters.${this.allFields['chapterType']},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.sub_chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM sub_chapters
+                    LEFT JOIN blocks
+                    ON sub_chapters.id = blocks.sub_chapter_id
+                    WHERE sub_chapters.id = ?
+                    GROUP BY sub_chapters.id;
+                `, [id]);
+            }
+            else {
+                res = await this.instanceDb!.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM sub_chapters WHERE path_name = ?;
+                `, [id]);
+            }
             if (!res || !res?.payload) return null;
-            return res.payload as SubChapterRawResponse;
+            const data = res.payload as SubChapterRawResponse;
+            if(data.blocks && typeof data.blocks === 'string') {
+                data.blocks = JSON.parse(data.blocks) as any[];
+                data.blocks = !!data.blocks[0]?.id ? data.blocks : [];
+            }
+            return data;
         } catch (err) {
             console.error(err);
             return null;
@@ -202,7 +240,11 @@ export default class SubChapterService {
                     ${keys}
                 WHERE id = ?;
             `, [...args, id]);
-        const updatedSubChapter: SubChapterRawResponse | null = await this.findById(id) as SubChapterRawResponse;
+        const updatedSubChapter: SubChapterRawResponse | null = await this.findById(id, { 
+            includes: {
+                blocks: true,
+            }
+        }) as SubChapterRawResponse;
         if (!updatedSubChapter) throw new Error('[SubChapterService.update]>> subChapter was not updated');
         return updatedSubChapter;
     }

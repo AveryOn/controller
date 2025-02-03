@@ -106,16 +106,54 @@ export default class ChapterService {
     }
 
     // Найти раздел по ID
-    async findById(id: number, config?: { excludes?: Array<keyof ChapterRaw> }): Promise<ChapterRawResponse | null> {
+    async findById(
+        id: number, 
+        config?: { 
+            excludes?: Array<keyof ChapterRaw>; 
+            includes?: { blocks: boolean },
+        }): Promise<ChapterRawResponse | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
-            const res = await this.instanceDb!.get(`
-                SELECT ${correctFieldsSql}
-                FROM chapters
-                WHERE id = ?;
-            `, [id]);
+            let res: IpcContractRes;
+            if(config?.includes?.blocks === true) {
+                res = await this.instanceDb!.get(`
+                    SELECT 
+                        chapters.${this.allFields['id']}, chapters.${this.allFields['pathName']},
+                        chapters.${this.allFields['contentTitle']}, chapters.${this.allFields['createdAt']},
+                        chapters.${this.allFields['updatedAt']},
+                        chapters.${this.allFields['icon']}, chapters.${this.allFields['iconType']},
+                        chapters.${this.allFields['label']}, chapters.${this.allFields['route']},
+                        chapters.${this.allFields['chapterType']},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM chapters
+                    LEFT JOIN blocks
+                    ON chapters.id = blocks.chapter_id
+                    WHERE chapters.id = ?
+                    GROUP BY chapters.id;
+                `, [id]);
+            }
+            else {
+                res = await this.instanceDb!.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM chapters WHERE path_name = ?;
+                `, [id]);
+            }
             if (!res || !res?.payload) return null;
-            return res.payload as ChapterRaw;
+            const data = res.payload as ChapterRawResponse;
+            if(data.blocks && typeof data.blocks === 'string') {
+                data.blocks = JSON.parse(data.blocks) as any[];
+                data.blocks = !!data.blocks[0]?.id ? data.blocks : [];
+            }
+            return data;
         } catch (err) {
             console.error(err);
             return null;
@@ -214,7 +252,11 @@ export default class ChapterService {
                 ${keys}
             WHERE id = ?;
         `, [...args, id]);
-        const newChapter: ChapterRawResponse | null = await this.findById(id) as ChapterRawResponse;
+        const newChapter: ChapterRawResponse | null = await this.findById(id, { 
+            includes: { 
+                blocks: true 
+            } 
+        }) as ChapterRawResponse;
         if(!newChapter) throw new Error('[ChapterService.updateByPathName]>> newChapter was not created');
         return newChapter;
     }

@@ -1,3 +1,4 @@
+import { ChapterBlock } from "../controllers/materials.types";
 
 export interface ChapterRaw { 
     id:             string;
@@ -33,7 +34,7 @@ export interface ChapterRawResponse {
     iconType?:       string;
     chapterType?:    string;
     label?:          string;
-    blocks?:         string;
+    blocks?:         string | any[] | ChapterBlock;
     route?:          string;
     contentTitle?:   string;
     createdAt?:      string;
@@ -76,6 +77,7 @@ export interface SubChapterRawResponse {
     icon?:           string;
     iconType?:       string;
     chapterType?:    string;
+    blocks?:         string | any[] | ChapterBlock;
     label?:          string;
     route?:          string;
     contentTitle?:   string;

@@ -17,8 +17,10 @@
             />
             <wrapperChapter 
             :full-label="labelChapter"
+            :root-chapter-id="rootChapterId"
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => console.log(label)"
+            @update-root-chapter-id="(id: number) => rootChapterId = id"
             @quit="handlerQuitChapter"
             />
         </div>
@@ -39,6 +41,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const labelChapter: Ref<string> = ref('');
 const materialStore = useMaterialsStore();
+const rootChapterId: Ref<number | null> = ref(null);
 
 const correctLabelChapter = computed(() => {
     if(materialStore.materialsLabel.length > 0) {
