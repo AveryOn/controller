@@ -37,7 +37,7 @@ contextBridge.exposeInMainWorld('electron', {
 });
 
 
-ipcRenderer.on('main-process-message', (event, message) => {
+ipcRenderer.on('main-process-message', (_, message) => {
     console.log('Сообщение от основного процесса:', message);
     // Вы можете обновить UI или выполнить другие действия с полученными данными
 });

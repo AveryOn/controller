@@ -1,5 +1,5 @@
 import { writeFile, readFile, type FsOperationConfig, getAppUserDirname } from "../services/fs.service";
-import { encrypt, verify } from '../services/crypto.service';
+// import { encrypt, verify } from '../services/crypto.service';
 import { Chapter, 
     ChapterBlock, 
     ChapterCreate, 
@@ -24,7 +24,7 @@ import { trimPath } from "../services/string.service";
 import { formatDate } from "../services/date.service";
 import { verifyAccessToken } from "../services/tokens.service";
 import ChapterService from "../database/services/chapter.service";
-import { ChapterCreateDto, ChapterGetByPathNameRes, ChapterRawResponse, SubChapterCreateResponse, SubChapterGetByPathNameRes, SubChapterRawResponse } from "../types/services/chapter.service";
+import { ChapterGetByPathNameRes, ChapterRawResponse, SubChapterCreateResponse, SubChapterGetByPathNameRes, SubChapterRawResponse } from "../types/services/chapter.service";
 import { AuthParams } from "../types/controllers/index.types";
 import SubChapterService from "../database/services/subchapter.service";
 import BlocksService from "../database/services/blocks.service";
@@ -49,7 +49,7 @@ export async function prepareMaterialsStoreForMenu(username: string): Promise<bo
     const userDirPath = getAppUserDirname(username);
     console.log('[prepareMaterialsStoreForMenu] => void');
     return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true })
-        .then((data) => {
+        .then((_) => {
             return true;
         })
         .catch(async () => {
@@ -83,7 +83,7 @@ export async function createChapter(params: ChapterCreate, auth: AuthParams) {
             updatedAt: timestamp,
         });
         // Вызов синхронизации с меню
-        const menu = await syncMaterialsStores(payload.username);
+        await syncMaterialsStores(payload.username);
         return newChapter;
     } catch (err) {
         console.error(err);

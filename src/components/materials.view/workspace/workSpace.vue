@@ -184,10 +184,10 @@ const sortedBlocks = computed(() => {
     return sortedMerge(blocks.value, 'updatedAt', 'least');
 });
 
-// Видимость инпута для label блока
-const isShowInputBlockTitle = computed(() => {
-    return opennedStateEditor.value.isActive === true;
-});
+// // Видимость инпута для label блока
+// const isShowInputBlockTitle = computed(() => {
+//     return opennedStateEditor.value.isActive === true;
+// });
 
 const isShowTextEditor = computed(() => {
     return (block: any) => {
@@ -390,7 +390,7 @@ async function reqDeleteBlockMaterial() {
             pathName: pathName.value,
             fullpath: fullpath,
         }
-        const result = await deleteChapterBlockApi(params);
+        await deleteChapterBlockApi(params);
         isAcitiveDeleteForm.value = false;
         window.location.reload();
     } catch (err) {

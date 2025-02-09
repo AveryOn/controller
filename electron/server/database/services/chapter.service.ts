@@ -1,4 +1,3 @@
-import { Chapter } from "../../types/controllers/materials.types";
 import { InstanceDatabaseDoc, IpcContractRes } from "../../types/database/index.types";
 import { ChapterCreateDto, ChapterCreateResponse, ChapterForGetAll, ChapterGetByPathNameRes, ChapterRaw, ChapterRawResponse, ChapterUpdateDto } from "../../types/services/chapter.service";
 import { DatabaseManager } from "../manager";

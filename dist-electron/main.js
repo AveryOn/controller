@@ -6104,70 +6104,70 @@ app.whenReady().then(async () => {
   if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
-  ipcMain.handle("validate-access-token", async (event, params) => {
+  ipcMain.handle("validate-access-token", async (_, params) => {
     return await validateAccessToken(params);
   });
-  ipcMain.handle("prepare-user-store", async (event, params) => {
+  ipcMain.handle("prepare-user-store", async (_, params) => {
     const { payload: { username } } = await verifyAccessToken(params.token);
     return await prepareUserStore(win, username);
   });
-  ipcMain.handle("get-users", async (event, config2) => {
+  ipcMain.handle("get-users", async (_, config2) => {
     return await getUsers(config2);
   });
-  ipcMain.handle("create-user", async (event, params) => {
+  ipcMain.handle("create-user", async (_, params) => {
     return await createUser(params);
   });
-  ipcMain.handle("login-user", async (event, params) => {
+  ipcMain.handle("login-user", async (_, params) => {
     return await loginUser(win, params, { expiresToken: { Y: 1 } });
   });
-  ipcMain.handle("update-password", async (event, params) => {
+  ipcMain.handle("update-password", async (_, params) => {
     return await updatePassword(params);
   });
-  ipcMain.handle("create-chapter", async (event, params, auth) => {
+  ipcMain.handle("create-chapter", async (_, params, auth) => {
     return await createChapter(params, auth);
   });
-  ipcMain.handle("get-menu-chapters", async (event, params) => {
+  ipcMain.handle("get-menu-chapters", async (_, params) => {
     return await getChapters(params);
   });
-  ipcMain.handle("get-one-chapter", async (event, params) => {
+  ipcMain.handle("get-one-chapter", async (_, params) => {
     return await getOneChapter(params);
   });
-  ipcMain.handle("create-sub-chapter", async (event, params, auth) => {
+  ipcMain.handle("create-sub-chapter", async (_, params, auth) => {
     return await createSubChapter(params, auth);
   });
-  ipcMain.handle("sync-materials", async (event, auth) => {
+  ipcMain.handle("sync-materials", async (_, auth) => {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZATE");
     const { payload: { username } } = await verifyAccessToken(auth.token);
     return await syncMaterialsStores(username);
   });
-  ipcMain.handle("get-one-sub-chapter", async (event, params, auth) => {
+  ipcMain.handle("get-one-sub-chapter", async (_, params, auth) => {
     return await getOneSubChapter(params, auth);
   });
-  ipcMain.handle("edit-chapter", async (event, params, auth) => {
+  ipcMain.handle("edit-chapter", async (_, params, auth) => {
     return await editChapter(params, auth);
   });
-  ipcMain.handle("delete-chapter", async (event, params) => {
+  ipcMain.handle("delete-chapter", async (_, params) => {
     return await deleteChapter(params);
   });
-  ipcMain.handle("delete-sub-chapter", async (event, params) => {
+  ipcMain.handle("delete-sub-chapter", async (_, params) => {
     return await deleteSubChapter(params);
   });
-  ipcMain.handle("get-chapter-blocks", async (event, params) => {
+  ipcMain.handle("get-chapter-blocks", async (_, params) => {
     return await getChapterBlocks(params);
   });
-  ipcMain.handle("get-sub-chapter-blocks", async (event, params) => {
+  ipcMain.handle("get-sub-chapter-blocks", async (_, params) => {
     return await getSubChapterBlocks(params);
   });
-  ipcMain.handle("create-chapter-block", async (event, params) => {
+  ipcMain.handle("create-chapter-block", async (_, params) => {
     return await createChapterBlock(params);
   });
-  ipcMain.handle("edit-chapter-block", async (event, params) => {
+  ipcMain.handle("edit-chapter-block", async (_, params) => {
     return await editChapterBlock(params);
   });
-  ipcMain.handle("edit-chapter-block-title", async (event, params) => {
+  ipcMain.handle("edit-chapter-block-title", async (_, params) => {
     return await editChapterBlock(params);
   });
-  ipcMain.handle("delete-chapter-block", async (event, params) => {
+  ipcMain.handle("delete-chapter-block", async (_, params) => {
     return await deleteChapterBlock(params);
   });
 });

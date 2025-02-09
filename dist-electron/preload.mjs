@@ -27,6 +27,6 @@ electron.contextBridge.exposeInMainWorld("electron", {
   editChapterBlockTitle: (params) => electron.ipcRenderer.invoke("edit-chapter-block-title", params),
   deleteChapterBlock: (params) => electron.ipcRenderer.invoke("delete-chapter-block", params)
 });
-electron.ipcRenderer.on("main-process-message", (event, message) => {
+electron.ipcRenderer.on("main-process-message", (_, message) => {
   console.log("Сообщение от основного процесса:", message);
 });
