@@ -5957,13 +5957,11 @@ async function editChapterBlock(params) {
     if (!params || !params.pathName || !params.block)
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
     const blockService = new BlocksService();
-    const chapterService = new ChapterService();
-    const subChapterService = new SubChapterService();
     const updatedBlock = await blockService.update(params.block.id, {
       ...params.block,
       updatedAt: formatDate()
     });
-    console.log("updatedBlock", updatedBlock);
+    return updatedBlock;
   } catch (err) {
     console.error(err);
     throw err;

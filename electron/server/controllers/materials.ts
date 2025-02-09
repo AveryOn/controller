@@ -568,60 +568,12 @@ export async function editChapterBlock(params: EditChapterBlock) {
             throw new Error('[editChapterBlock]>> INVALID_INPUT');
 
         const blockService = new BlocksService();
-        const chapterService = new ChapterService();
-        const subChapterService = new SubChapterService();
 
         const updatedBlock = await blockService.update(params.block.id, { 
             ...params.block,
             updatedAt: formatDate(),
         });
-        console.log('updatedBlock', updatedBlock);
-
-        // const materials: Chapter[] = await readFile(FSCONFIG);
-        // const blockId = params?.block?.id || params?.blockId;
-        // const timestamp = formatDate();
-        // // Поиск уровня для записи блока в соответствующий раздел/подраздел
-        // // Поиск раздела
-        // if(params.pathName && !params.fullpath) {
-        //     const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-        //     if(!findedChapter?.content) throw new Error('[editChapterBlock]>> Ключа content не существует!');
-        //     // Поиск нужного блока
-        //     const findedBlock = findedChapter.content.blocks.find((block: ChapterBlock) => block.id === blockId);
-        //     if(!findedBlock) throw new Error('[editChapterBlock]>> NOT_FOUND_RECORD[1]');
-        //     if(!params.blockTitle) {
-        //         updateBlock(findedBlock, params.block); // обновление исходного объекта новыми данными, сохраняя ссылки
-        //     } else {
-        //         findedBlock.title = params.blockTitle;
-        //     }
-        //     // Обновление временных меток
-        //     findedChapter.updatedAt = timestamp;
-        //     findedBlock.updatedAt = timestamp;
-        // }
-        // // Поиск подраздела
-        // else if(params.pathName && params.fullpath) {
-        //     const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-        //     const correctPath: string[] = trimPath(params.fullpath, { split: true }) as string[];
-        //     if(!findedChapter || !findedChapter.items) throw new Error('[editChapterBlock]>> INTERNAL_ERROR[1]');
-        //     const subChapter: SubChapter = findLevel(findedChapter.items, correctPath.slice(1)) as SubChapter;
-        //     if(!subChapter || !subChapter.content) throw new Error('[editChapterBlock]>> INTERNAL_ERROR[2]!');
-        //     // Поиск нужного блока
-        //     const findedBlock = subChapter.content.blocks.find((block: ChapterBlock) => block.id === blockId);
-        //     if(!findedBlock) throw new Error('[editChapterBlock]>> NOT_FOUND_RECORD[2]');
-        //     if(!params.blockTitle) {
-        //         updateBlock(findedBlock, params.block); // обновление исходного объекта новыми данными, сохраняя ссылки
-        //     } else {
-        //         findedBlock.title = params.blockTitle;
-        //     }
-        //     // Обновление временных меток
-        //     findedChapter.updatedAt = timestamp;
-        //     findedBlock.updatedAt = timestamp;
-        // }
-        // else {
-        //     throw new Error('[editChapterBlock]>> INTERNAL_ERROR[3]');
-        // }
-        // // Запись изменений в БД
-        // await writeFile(materials, FSCONFIG);
-        // return materials;
+        return updatedBlock;
     } catch (err) {
         console.error(err);
         throw err;

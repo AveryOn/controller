@@ -193,7 +193,7 @@ export default class BlocksService {
                 ${keys}
             WHERE id = ?;
         `, [...args, blockId]);
-        const updatedBlock: BlockForGet | null = await this.getById(blockId, { select: ['id', 'title'] }) as BlockForGet ;
+        const updatedBlock: BlockForGet | null = await this.getById(blockId) as BlockForGet ;
         if(!updatedBlock) throw new Error('[BlocksService.update]>> updatedBlock is not defined');
         return updatedBlock;
     }
