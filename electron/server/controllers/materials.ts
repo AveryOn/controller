@@ -174,43 +174,43 @@ export async function getOneChapter(params: GetChapterOneParams): Promise<Chapte
     }
 }
 
-// Поиск нужного подраздела по полному пути
-interface LevelWithLabels { chapter: SubChapter, labels: string[] }
-type FindLevelResult = SubChapter | null | LevelWithLabels;
-const bundleLabels: string[] = [];
-function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: boolean }): FindLevelResult {
-    if (items.length <= 0) return null;
-    const current = initPath.shift();
-    for (const chapter of items) {
-        const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
-        // Нашли нужный уровень
-        if (selfPath === current) {
-            // Собираем массив название разделов, если на клиенте был на это запрос
-            if (config?.labels === true) bundleLabels.push(chapter.label);
-            // если исчерпан, то мы нашли искомый подраздел
-            if (initPath.length <= 0) {
-                if (config?.labels === true) {
-                    const labels = [...bundleLabels];
-                    bundleLabels.length = 0;
-                    return { chapter, labels: labels };
-                }
-                else {
-                    return chapter;
-                }
-            }
-            // Если путь еще не пуст, то продолжаем проходить по нему
-            else {
-                if (chapter.items && chapter.items.length > 0) {
-                    return findLevel(chapter.items, initPath, config);
-                }
-                else {
-                    throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
-                }
-            }
-        }
-    }
-    return null;
-}
+// // Поиск нужного подраздела по полному пути
+// interface LevelWithLabels { chapter: SubChapter, labels: string[] }
+// type FindLevelResult = SubChapter | null | LevelWithLabels;
+// const bundleLabels: string[] = [];
+// function findLevel(items: SubChapter[], initPath: string[], config?: { labels?: boolean }): FindLevelResult {
+//     if (items.length <= 0) return null;
+//     const current = initPath.shift();
+//     for (const chapter of items) {
+//         const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
+//         // Нашли нужный уровень
+//         if (selfPath === current) {
+//             // Собираем массив название разделов, если на клиенте был на это запрос
+//             if (config?.labels === true) bundleLabels.push(chapter.label);
+//             // если исчерпан, то мы нашли искомый подраздел
+//             if (initPath.length <= 0) {
+//                 if (config?.labels === true) {
+//                     const labels = [...bundleLabels];
+//                     bundleLabels.length = 0;
+//                     return { chapter, labels: labels };
+//                 }
+//                 else {
+//                     return chapter;
+//                 }
+//             }
+//             // Если путь еще не пуст, то продолжаем проходить по нему
+//             else {
+//                 if (chapter.items && chapter.items.length > 0) {
+//                     return findLevel(chapter.items, initPath, config);
+//                 }
+//                 else {
+//                     throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
+//                 }
+//             }
+//         }
+//     }
+//     return null;
+// }
 
 // Создание нового подраздела
 export async function createSubChapter(params: SubChapterCreate, auth: AuthParams): Promise<SubChapterCreateResponse> {

@@ -83,15 +83,15 @@ export interface EditChapterBlock {
     block: ChapterBlock;
 }
 
-export interface EditChapterBlockTitle {
-    pathName: string;
-    fullpath?: string;
-    block: ChapterBlock;
-    // pathName: string;
-    // fullpath?: string;
-    // blockId: number;
-    // blockTitle: string;
-}
+// export interface EditChapterBlockTitle {
+//     pathName: string;
+//     fullpath?: string;
+//     block: ChapterBlock;
+//     // pathName: string;
+//     // fullpath?: string;
+//     // blockId: number;
+//     // blockTitle: string;
+// }
 
 export interface DeleteChapterBlock {
     pathName: string;
