@@ -25,7 +25,7 @@ export default class UserService {
     async getAll() {
         const rows = await this.instanceDb!.all(`
             SELECT * FROM users;
-        `);
+        `, [], true);
         return rows;
     }
 
@@ -34,7 +34,7 @@ export default class UserService {
         await this.instanceDb!.run(`
             INSERT INTO users (username, password, avatar, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?);
-        `, [username, password, avatar, createdAt, updatedAt]);
+        `, [username, password, avatar, createdAt, updatedAt], true);
         const newUser = await this.findByUsername({ username: username }, { excludes: ['password'] });
         if(!newUser) throw new Error('[UserService.create]>> newUser was not created');
         return newUser;
@@ -55,7 +55,7 @@ export default class UserService {
                 SELECT ${correctFieldsSql}
                 FROM users
                 WHERE username = ?;
-            `,[dto.username]);
+            `,[dto.username], true);
             if(!res || !res?.payload) return null;
             return res.payload;
         } catch (err) {
@@ -70,7 +70,7 @@ export default class UserService {
             UPDATE users SET password = ? 
             WHERE username = ?;
 
-        `,[dto.password, dto.username]);
+        `,[dto.password, dto.username], true);
         return null;
     }
 } 

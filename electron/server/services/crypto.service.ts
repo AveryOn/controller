@@ -6,7 +6,7 @@ const N = 16384;    // Число итераций (можно увеличив�
 const R = 8;        // Параметр блока
 const P = 1;        // Параметр параллельности
 
-// Формирование одностороннего ключа шифрования для баз данных 
+// Формирование одностороннего ключа шифрования для баз данных уровня пользователя
 export async function encryptPragmaKey(username: string, password: string) {
     if(!username || typeof username !== 'string') throw new Error('invalid username');
     if(!password || typeof password !== 'string') throw new Error('invalid password');

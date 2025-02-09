@@ -11,6 +11,14 @@ let db = null;
 process.on("message", async (msg) => {
     
     if(msg && msg.action) {
+
+        if(!msg?.payload?.pragmaKey) {
+            const msgErr = 'pragmaKey is not defined!'
+            process.send({ action: msg.action, payload: new Error(msgErr), status: 'error' });
+            throw new Error(msgErr);
+        }
+        console.log('IPC PRAGMA KEY::', msg.payload.pragmaKey);
+        
         // инициализация базы данных
         if(msg.action.includes('init')) {
             if(!msg.payload?.dbpath) throw new Error('dbpath is a required')
@@ -37,7 +45,7 @@ process.on("message", async (msg) => {
                     const migrateList = migrations[key];
                     if(Array.isArray(migrateList)) {
                         db.serialize(async () => {
-                            db.run(`PRAGMA key = 'abc123';`); // Установка пароля
+                            db.run(`PRAGMA key = '${ msg.payload.pragmaKey }';`); // Установка пароля
                             for (const sql of migrateList) {
                                 await new Promise((resolve) => {
                                     db.exec(sql, (err) => {
@@ -61,7 +69,7 @@ process.on("message", async (msg) => {
         // для all запросов 
         if(msg.action.includes('all')) {
             db.serialize(async () => {
-                db.run(`PRAGMA key = 'abc123';`);
+                db.run(`PRAGMA key = '${ msg.payload.pragmaKey }';`);
                 db.all(msg.payload.sql, (err, rows) => {
                     if(err) {
                         process.send({ action: msg.action, payload: err, status: 'error' });
@@ -79,7 +87,7 @@ process.on("message", async (msg) => {
         // для get запросов
         if(msg.action.includes('get')) {
             db.serialize(async () => {
-                db.run(`PRAGMA key = 'abc123';`);
+                db.run(`PRAGMA key = '${ msg.payload.pragmaKey }';`);
                 db.get(msg.payload.sql, msg.payload.arguments, (err, row) => {
                     if(err) {
                         console.log('ERROR', err);
@@ -98,7 +106,7 @@ process.on("message", async (msg) => {
         // для run запросов
         if(msg.action.includes('run')) {
             db.serialize(async () => {
-                db.run(`PRAGMA key = 'abc123';`);
+                db.run(`PRAGMA key = '${ msg.payload.pragmaKey }';`);
                 db.run(msg.payload.sql, msg.payload.arguments, (err, data) => {
                     if(err) {
                         console.log(err);
@@ -117,7 +125,7 @@ process.on("message", async (msg) => {
         // для exec запросов
         if(msg.action.includes('exec')) {
             db.serialize(async () => {
-                db.run(`PRAGMA key = 'abc123';`);
+                db.run(`PRAGMA key = '${ msg.payload.pragmaKey }';`);
                 db.exec(msg.payload.sql, msg.payload.arguments, (err) => {
                     if(err) {
                         process.send({ action: msg.action, payload: err, status: 'error' });

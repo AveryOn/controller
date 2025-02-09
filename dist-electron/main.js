@@ -514,14 +514,29 @@ const _InstanceDatabase = class _InstanceDatabase {
     }
     this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
     this.process = fork(this.processPath);
-    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }).then(({ status }) => state && state(status === "ok")).catch(() => {
+    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }, true).then(({ status }) => state && state(status === "ok")).catch(() => {
       state && state(false);
     });
   }
+  // Извлечь ключ шифрования базы данных
+  fetchPragmaKey(onApp) {
+    try {
+      if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
+      if (onApp === true) {
+        return process.env.APP_KEY;
+      } else {
+        return "abc123";
+      }
+    } catch (err) {
+      console.debug("requestIPC>>", err);
+      throw err;
+    }
+  }
   // сделать запрос к дочернему процессу и получить ответ
-  async requestIPC(data) {
+  async requestIPC(data, onApp) {
     try {
       if (this.process) {
+        const pragmaKey = this.fetchPragmaKey(onApp);
         const action = `${data.action}-${Date.now()}`;
         let returnData;
         const promise = new Promise((resolve, reject) => {
@@ -533,45 +548,64 @@ const _InstanceDatabase = class _InstanceDatabase {
           };
           this.process.on("message", returnData);
         });
-        this.process.send({ action, payload: data.payload });
+        this.process.send({
+          action,
+          payload: { ...data.payload, pragmaKey }
+        });
         const response = await promise;
         this.process.removeListener("message", returnData);
         return response;
       } else throw new Error("requestIPC => process is not defined");
     } catch (err) {
-      console.log("requestIPC>>", err);
+      console.debug("requestIPC>>", err);
       throw err;
     }
   }
   /* Запросы к sqlite */
   // Выполняет запрос и возвращает все строки результата
-  async all(sql, args) {
+  async all(sql, args, onApp = false) {
     if (this.process) {
-      return await this.requestIPC({ action: "all", payload: { sql, arguments: args } });
+      return await this.requestIPC({ action: "all", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
     } else throw new Error("all => process is not defined");
   }
   // Выполняет запрос и возвращает одну строку результата
-  async get(sql, args) {
+  async get(sql, args, onApp = false) {
     if (this.process) {
-      return await this.requestIPC({ action: "get", payload: { sql, arguments: args } });
+      return await this.requestIPC({ action: "get", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
     } else throw new Error("get => process is not defined");
   }
   // Выполняет запрос без возврата результата 
-  async run(sql, args) {
+  async run(sql, args, onApp = false) {
     if (this.process) {
-      return await this.requestIPC({ action: "run", payload: { sql, arguments: args } });
+      return await this.requestIPC({ action: "run", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
     } else throw new Error("run => process is not defined");
   }
   // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
-  async exec(sql, args) {
+  async exec(sql, args, onApp = false) {
     if (this.process) {
-      return await this.requestIPC({ action: "exec", payload: { sql, arguments: args } });
+      return await this.requestIPC({ action: "exec", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
     } else throw new Error("exec => process is not defined");
   }
   // Запуск миграций для текущей базы данных
   async migrate(config2) {
+    if (!config2) throw new Error("[migrate]>> config is not defined");
     if (this.process) {
-      return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: { isGeneral: config2 == null ? void 0 : config2.isGeneral } });
+      return await this.requestIPC({
+        action: `migrate:${this.dbname}`,
+        payload: { ...config2 }
+      }, config2.isGeneral);
     } else throw new Error("exec => process is not defined");
   }
 };
@@ -586,7 +620,7 @@ const _DatabaseManager = class _DatabaseManager {
   // получение экземпляра менеджера
   static instance() {
     if (!_DatabaseManager.instanceManager) {
-      console.log("DatabaseManager > Создан новый экземпляр менеджера");
+      console.debug("DatabaseManager > created a new DB manager instance");
       const instance = new _DatabaseManager();
       _DatabaseManager.instanceManager = instance;
     }
@@ -597,7 +631,7 @@ const _DatabaseManager = class _DatabaseManager {
     if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
     try {
       for (const item of items) {
-        const isReliable = await new Promise((resolve, reject) => {
+        const isReliable = await new Promise((resolve) => {
           const dbname = item.dbname;
           this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
             resolve(enabled);
@@ -626,7 +660,7 @@ const _DatabaseManager = class _DatabaseManager {
         { dbname: "users", isGeneral: true }
       ]);
       if ((config2 == null ? void 0 : config2.migrate) === true) {
-        await this.executeMigrations();
+        await this.executeMigrations({ pragmaKey: process.env.APP_KEY, isGeneral: true });
         console.debug("initOnApp>> migrations were applied");
       }
       return await promise;
@@ -643,10 +677,11 @@ const _DatabaseManager = class _DatabaseManager {
         { dbname: "materials", isGeneral: false }
       ]);
       if ((config2 == null ? void 0 : config2.migrate) === true) {
-        await this.executeMigrations();
+        const keyDB = "abc123";
+        await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
         console.debug("initOnUser>> migrations were applied");
       }
-      console.log("БЫЛ ВЫЗЫВАН initOnUser", username);
+      console.log("WAS CALLED initOnUser", username);
       return await promise;
     } catch (err) {
       console.error("[DatabaseManager.initOnUser]>> ", err);
@@ -654,12 +689,12 @@ const _DatabaseManager = class _DatabaseManager {
     }
   }
   // применить миграции для всех баз данных
-  async executeMigrations() {
+  async executeMigrations(config2) {
     try {
       for (let key in this.instanceDatabaseList) {
         if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
           const db = this.instanceDatabaseList[key];
-          await db.migrate();
+          await db.migrate(config2);
         }
       }
     } catch (err) {
@@ -688,7 +723,7 @@ class UserService {
   async getAll() {
     const rows = await this.instanceDb.all(`
             SELECT * FROM users;
-        `);
+        `, [], true);
     return rows;
   }
   // Создать одного пользователя
@@ -696,7 +731,7 @@ class UserService {
     await this.instanceDb.run(`
             INSERT INTO users (username, password, avatar, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?);
-        `, [username, password, avatar, createdAt, updatedAt]);
+        `, [username, password, avatar, createdAt, updatedAt], true);
     const newUser = await this.findByUsername({ username }, { excludes: ["password"] });
     if (!newUser) throw new Error("[UserService.create]>> newUser was not created");
     return newUser;
@@ -716,7 +751,7 @@ class UserService {
                 SELECT ${correctFieldsSql}
                 FROM users
                 WHERE username = ?;
-            `, [dto.username]);
+            `, [dto.username], true);
       if (!res || !(res == null ? void 0 : res.payload)) return null;
       return res.payload;
     } catch (err) {
@@ -730,7 +765,7 @@ class UserService {
             UPDATE users SET password = ? 
             WHERE username = ?;
 
-        `, [dto.password, dto.username]);
+        `, [dto.password, dto.username], true);
     return null;
   }
 }

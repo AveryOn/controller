@@ -37,15 +37,32 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
 
         // Инит процесса и ожидание его доступности
         this.process = fork(this.processPath);
-        this.requestIPC({ action: 'init', payload: { dbpath: this.dbpath } })
+        this.requestIPC({ action: 'init', payload: { dbpath: this.dbpath } }, true)
             .then(({ status }) => state && state(status === 'ok'))
             .catch(() => { state && state(false) });
     }
 
+    // Извлечь ключ шифрования базы данных
+    private fetchPragmaKey(onApp: boolean): string | undefined | null {
+        try {
+            if(!onApp && typeof onApp !== 'boolean') throw new Error('[fetchPragmaKey]>> onApp is not defined');
+            if(onApp === true) {
+                return process.env.APP_KEY;
+            }
+            else {
+                return 'abc123';
+            }
+        } catch (err) {
+            console.debug('requestIPC>>', err);
+            throw err;
+        }
+    }
+
     // сделать запрос к дочернему процессу и получить ответ
-    private async requestIPC(data: IpcContractReq) {
+    private async requestIPC(data: IpcContractReq, onApp: boolean) {
         try {
             if(this.process) {
+                const pragmaKey = this.fetchPragmaKey(onApp);
                 const action = `${data.action}-${Date.now()}`;
                 let returnData: (data: IpcContractRes) => any;
                 const promise: Promise<IpcContractRes> = new Promise((resolve, reject) => {
@@ -57,51 +74,70 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
                     }
                     this.process!.on('message', returnData);
                 })
-                this.process.send({ action: action, payload: data.payload } as IpcContractReq);
+                this.process.send({ 
+                    action, 
+                    payload: { ...data.payload, pragmaKey },
+                } as IpcContractReq);
                 const response = await promise;
                 this.process.removeListener('message', returnData!);
                 return response;
             }
             else throw new Error('requestIPC => process is not defined');
         } catch (err) {
-            console.log('requestIPC>>', err);
+            console.debug('requestIPC>>', err);
             throw err;
         }
     }
 
     /* Запросы к sqlite */
     // Выполняет запрос и возвращает все строки результата
-    async all(sql: string, args?: any[]): Promise<IpcContractRes> {
+    async all(sql: string, args?: any[], onApp: boolean = false): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'all', payload: { sql, arguments: args } });
+            return await this.requestIPC({ action: 'all', payload: {
+                sql, 
+                arguments: args,
+            } }, onApp);
         }
         else throw new Error('all => process is not defined');
     }
     // Выполняет запрос и возвращает одну строку результата
-    async get(sql: string, args?: any[]): Promise<IpcContractRes> {
+    async get(sql: string, args?: any[], onApp: boolean = false): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'get', payload: { sql, arguments: args } });
+            return await this.requestIPC({ action: 'get', payload: {
+                sql, 
+                arguments: args,
+            } }, onApp);
         }
         else throw new Error('get => process is not defined');
     }
     // Выполняет запрос без возврата результата 
-    async run(sql: string, args?: any[]): Promise<IpcContractRes> {
+    async run(sql: string, args?: any[], onApp: boolean = false): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'run', payload: { sql, arguments: args } });
+            return await this.requestIPC({ action: 'run', payload: {
+                sql, 
+                arguments: args,
+            } }, onApp);
         }
         else throw new Error('run => process is not defined');
     }
     // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
-    async exec(sql: string, args?: any[]): Promise<IpcContractRes> {
+    async exec(sql: string, args?: any[], onApp: boolean = false): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: 'exec', payload: { sql, arguments: args } });
+            return await this.requestIPC({ action: 'exec', payload: { 
+                sql, 
+                arguments: args,
+            } }, onApp);
         }
         else throw new Error('exec => process is not defined');
     }
     // Запуск миграций для текущей базы данных
-    async migrate(config?: { isGeneral?: boolean }): Promise<IpcContractRes> {
+    async migrate(config: { isGeneral: boolean, pargmaKey: string | undefined }): Promise<IpcContractRes> {
+        if(!config) throw new Error('[migrate]>> config is not defined');
         if (this.process) {
-            return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: { isGeneral: config?.isGeneral } });
+            return await this.requestIPC({ 
+                action: `migrate:${this.dbname}`, 
+                payload: { ...config }, 
+            }, config.isGeneral);
         }
         else throw new Error('exec => process is not defined');
     }
@@ -120,7 +156,7 @@ export class DatabaseManager {
     // получение экземпляра менеджера
     static instance() {
         if (!DatabaseManager.instanceManager) {
-            console.log('DatabaseManager > Создан новый экземпляр менеджера');
+            console.debug('DatabaseManager > created a new DB manager instance');
             
             const instance = new DatabaseManager();
             DatabaseManager.instanceManager = instance;
@@ -133,7 +169,7 @@ export class DatabaseManager {
         if(!items || !Array.isArray(items)) throw TypeError('[executeAllInitDB]>> invalid items');   
         try {
             for (const item of items) {
-                const isReliable: boolean = await new Promise((resolve, reject) => {
+                const isReliable: boolean = await new Promise((resolve) => {
                     const dbname = item.dbname;
                     this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
                         resolve(enabled);
@@ -166,7 +202,7 @@ export class DatabaseManager {
             ]);
             // вызов миграций
             if(config?.migrate === true) {
-                await this.executeMigrations({ isGeneral: true });
+                await this.executeMigrations({ pragmaKey: process.env.APP_KEY, isGeneral: true });
                 console.debug("initOnApp>> migrations were applied");
             }
             return await promise;
@@ -178,7 +214,6 @@ export class DatabaseManager {
 
     // Инициализация Баз Данных уровня пользователя
     async initOnUser(username: string, config?: { migrate?: boolean }): Promise<boolean> {
-        
         try {
             this.username = username;
             // здесь поочередно вызываются иниты баз данных. Порядок важен
@@ -187,10 +222,11 @@ export class DatabaseManager {
             ]);
             // вызов миграций
             if(config?.migrate === true) {
-                await this.executeMigrations({ isGeneral: false });
+                const keyDB = 'abc123'
+                await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
                 console.debug("initOnUser>> migrations were applied");
             }
-            console.log('БЫЛ ВЫЗЫВАН initOnUser', username);
+            console.log('WAS CALLED initOnUser', username);
             return await promise;
         } catch (err) {
             console.error('[DatabaseManager.initOnUser]>> ', err);
@@ -199,7 +235,7 @@ export class DatabaseManager {
     }
 
     // применить миграции для всех баз данных
-    async executeMigrations(config?: { isGeneral?: boolean }) {
+    async executeMigrations(config: { isGeneral: boolean, pragmaKey: string | undefined }) {
         try {
             for (let key in this.instanceDatabaseList) {
                 if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {

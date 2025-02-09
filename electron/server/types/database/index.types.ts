@@ -22,9 +22,9 @@ export interface InitDbItem {
 }
 
 export interface InstanceDatabaseDoc {
-    all: (sql: string, args?: any[]) => Promise<IpcContractRes>;
-    get: (sql: string, args?: any[]) => Promise<IpcContractRes>;
-    run: (sql: string, args?: any[]) => Promise<IpcContractRes>;
-    exec: (sql: string, args?: any[]) => Promise<IpcContractRes>;
-    migrate: (config?: { isGeneral?: boolean }) => Promise<IpcContractRes>;
+    all: (sql: string, args?: any[], onApp?: boolean) => Promise<IpcContractRes>;
+    get: (sql: string, args?: any[], onApp?: boolean) => Promise<IpcContractRes>;
+    run: (sql: string, args?: any[], onApp?: boolean) => Promise<IpcContractRes>;
+    exec: (sql: string, args?: any[], onApp?: boolean) => Promise<IpcContractRes>;
+    migrate: (config: { isGeneral: boolean, pargmaKey: string | undefined }) => Promise<IpcContractRes>;
 }

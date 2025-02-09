@@ -44,7 +44,7 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams, 
             Reflect.deleteProperty(readyUser, 'hash_salt');
             Reflect.deleteProperty(readyUser, 'password');
 
-            // Формируется ключ шифрования баз данных
+            // Формируется ключ шифрования баз данных уровня пользователь
             const keyDB = await encryptPragmaKey(params.username, params.password);
             console.log('KEY CIPHER', keyDB);
             
