@@ -554,12 +554,6 @@ export async function createChapterBlock(params: CreateChapterBlock) {
     }
 }
 
-// Обновление данных блока раздела
-function updateBlock(oldBlock: ChapterBlock, newBlock: ChapterBlock) {
-    if(!oldBlock || !newBlock) throw new Error('[editChapterBlock]>>[updateBlock]>> INVALID_INPUT');
-    oldBlock.content = newBlock.content;
-    oldBlock.title = newBlock.title;
-}
 // Редактирование нового блока для раздела
 export async function editChapterBlock(params: EditChapterBlock) {
     console.log('[editChapterBlock] => ', params);
