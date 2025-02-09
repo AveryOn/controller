@@ -186,6 +186,8 @@ export default class BlocksService {
     // region UPDATE
     async update(blockId: number, dto: UpdateBlockByTitle | ChapterBlock) {
         if(!blockId) throw new Error('[ChapterService.update]>> blockId is not defined');
+        if(typeof blockId !=='number') throw new Error('[ChapterService.update]>> invalid blockId');
+
         const { args, keys } = this.correctFieldsSqlForRec<UpdateBlockByTitle | ChapterBlock>(dto);
         await this.instanceDb!.run(`
             UPDATE blocks
@@ -198,4 +200,18 @@ export default class BlocksService {
         return updatedBlock;
     }
     // end region
+
+    // region DELETE
+    // Удалить блок по айди
+    async deleteOne(blockId: number): Promise<void> {
+        if(!blockId) throw new Error('[ChapterService.deleteOne]>> blockId is not defined');
+        if(typeof blockId !=='number') throw new Error('[ChapterService.deleteOne]>> invalid blockId');
+        
+        await this.instanceDb!.run(`
+            DELETE FROM blocks 
+            WHERE id = ?;
+        `, [blockId]);
+        return void 0;
+    }
+    //end region
 } 

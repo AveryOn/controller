@@ -575,40 +575,15 @@ export async function editChapterBlock(params: EditChapterBlock) {
 }
 
 // Удаление блока из раздела
-export async function deleteChapterBlock(params: DeleteChapterBlock): Promise<Chapter | SubChapter> {
+export async function deleteChapterBlock(params: DeleteChapterBlock): Promise<void> {
     console.log('[deleteChapterBlock] => ', params);
     try {
-        if(!params || !params.pathName) {
+        if(!params || !params.pathName)
             throw new Error('[deleteChapterBlock]>> INVALID_INPUT');
-        }
-        const materials: Chapter[] = await readFile(FSCONFIG);
-        // Поиск уровня для удаления блока из раздела/подраздела
-        // Поиск раздела
-        if(params.pathName && !params.fullpath) {
-            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-            if(!findedChapter?.content) throw new Error('[deleteChapterBlock]>> Ключа content не существует!');
-            // Удаление блока
-            findedChapter.content.blocks = findedChapter.content.blocks.filter((block: ChapterBlock) => block.id !== params.blockId);
-            // Запись изменений в БД
-            await writeFile(materials, FSCONFIG);
-            return findedChapter
-        }
-        // Поиск подраздела
-        else if(params.pathName && params.fullpath) {
-            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-            const correctPath: string[] = trimPath(params.fullpath, { split: true }) as string[];
-            if(!findedChapter || !findedChapter.items) throw new Error('[deleteChapterBlock]>> INTERNAL_ERROR[1]');
-            const subChapter: SubChapter = findLevel(findedChapter.items, correctPath.slice(1)) as SubChapter;
-            if(!subChapter || !subChapter.content) throw new Error('[deleteChapterBlock]>> INTERNAL_ERROR[2]!');
-            // Удаление блока
-            subChapter.content.blocks = subChapter.content.blocks.filter((block: ChapterBlock) => block.id !== params.blockId);
-            // Запись изменений в БД
-            await writeFile(materials, FSCONFIG);
-            return subChapter;
-        }
-        else {
-            throw new Error('[deleteChapterBlock]>> INTERNAL_ERROR[3]');
-        }
+        
+        const blockService = new BlocksService();
+
+        return await blockService.deleteOne(params.blockId);
     } catch (err) {
         console.error(err);
         throw err;

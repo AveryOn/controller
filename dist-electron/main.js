@@ -5514,6 +5514,7 @@ class BlocksService {
   // region UPDATE
   async update(blockId, dto) {
     if (!blockId) throw new Error("[ChapterService.update]>> blockId is not defined");
+    if (typeof blockId !== "number") throw new Error("[ChapterService.update]>> invalid blockId");
     const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
     await this.instanceDb.run(`
             UPDATE blocks
@@ -5521,11 +5522,23 @@ class BlocksService {
                 ${keys2}
             WHERE id = ?;
         `, [...args, blockId]);
-    const updatedBlock = await this.getById(blockId, { select: ["id", "title"] });
+    const updatedBlock = await this.getById(blockId);
     if (!updatedBlock) throw new Error("[BlocksService.update]>> updatedBlock is not defined");
     return updatedBlock;
   }
   // end region
+  // region DELETE
+  // Удалить блок по айди
+  async deleteOne(blockId) {
+    if (!blockId) throw new Error("[ChapterService.deleteOne]>> blockId is not defined");
+    if (typeof blockId !== "number") throw new Error("[ChapterService.deleteOne]>> invalid blockId");
+    await this.instanceDb.run(`
+            DELETE FROM blocks 
+            WHERE id = ?;
+        `, [blockId]);
+    return void 0;
+  }
+  //end region
 }
 const MATERIALS_FILENAME = "materials.json";
 const MATERIALS_MENU_FILENAME = "materials-menu.json";
@@ -5651,27 +5664,6 @@ async function getOneChapter(params) {
     console.error(err);
     throw err;
   }
-}
-function findLevel(items, initPath, config2) {
-  if (items.length <= 0) return null;
-  const current = initPath.shift();
-  for (const chapter of items) {
-    const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
-    if (selfPath === current) {
-      if (initPath.length <= 0) {
-        {
-          return chapter;
-        }
-      } else {
-        if (chapter.items && chapter.items.length > 0) {
-          return findLevel(chapter.items, initPath);
-        } else {
-          throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
-        }
-      }
-    }
-  }
-  return null;
 }
 async function createSubChapter(params, auth) {
   console.log("[createSubChapter] => ", params);
@@ -5970,28 +5962,10 @@ async function editChapterBlock(params) {
 async function deleteChapterBlock(params) {
   console.log("[deleteChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName) {
+    if (!params || !params.pathName)
       throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
-    }
-    const materials = await readFile(FSCONFIG$1);
-    if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[deleteChapterBlock]>> Ключа content не существует!");
-      findedChapter.content.blocks = findedChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials, FSCONFIG$1);
-      return findedChapter;
-    } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
-      if (!findedChapter || !findedChapter.items) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
-      if (!subChapter || !subChapter.content) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[2]!");
-      subChapter.content.blocks = subChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials, FSCONFIG$1);
-      return subChapter;
-    } else {
-      throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[3]");
-    }
+    const blockService = new BlocksService();
+    return await blockService.deleteOne(params.blockId);
   } catch (err) {
     console.error(err);
     throw err;
