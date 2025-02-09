@@ -17,8 +17,6 @@ process.on("message", async (msg) => {
             process.send({ action: msg.action, payload: new Error(msgErr), status: 'error' });
             throw new Error(msgErr);
         }
-        console.log('IPC PRAGMA KEY::', msg.payload.pragmaKey);
-        
         // инициализация базы данных
         if(msg.action.includes('init')) {
             if(!msg.payload?.dbpath) throw new Error('dbpath is a required')
@@ -29,7 +27,6 @@ process.on("message", async (msg) => {
                     process.send({ action: msg.action, payload: err, status: 'error' });
                 }
                 else {
-                    console.log('OK');
                     process.send({ 
                         action: msg.action, 
                         payload: null, 
