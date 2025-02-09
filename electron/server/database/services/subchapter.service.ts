@@ -66,6 +66,7 @@ export default class SubChapterService {
         }
     }
 
+    // region READ
     // Получить массив подразделов
     async getAll(config?: { excludes?: Array<keyof SubChapterRaw> }): Promise<Array<SubChapterForGetAll>> {
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes)
@@ -80,11 +81,16 @@ export default class SubChapterService {
     async findById(
         id: number, 
         config?: { 
+            select?: Array<keyof SubChapterRaw>,
             excludes?: Array<keyof SubChapterRaw>; 
             includes?: { blocks: boolean },
         }): Promise<SubChapterRawResponse | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
+            if(config?.select?.length && config?.select?.length > 0) {
+                const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof SubChapterRaw));
+                correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof SubChapterRaw>);
+            }
             let res: IpcContractRes;
             if(config?.includes?.blocks === true) {
                 res = await this.instanceDb!.get(`
@@ -132,9 +138,18 @@ export default class SubChapterService {
     }
 
     // Найти подраздел по pathName
-    async findByPathName(pathName: string, config?: { excludes?: Array<keyof SubChapterRaw> }): Promise<SubChapterRawResponse | null> {
+    async findByPathName(
+        pathName: string, 
+        config?: { 
+            select?: Array<keyof SubChapterRaw>,
+            excludes?: Array<keyof SubChapterRaw> 
+        }): Promise<SubChapterRawResponse | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
+            if(config?.select?.length && config?.select?.length > 0) {
+                const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof SubChapterRaw));
+                correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof SubChapterRaw>);
+            }
             const res = await this.instanceDb!.get(`
                 SELECT ${correctFieldsSql}
                 FROM sub_chapters
@@ -150,11 +165,16 @@ export default class SubChapterService {
 
     // Найти подраздел по fullpath
     async findByFullpath<T>(fullpath: string, config?: { 
+        select?: Array<keyof SubChapterRaw>,
         excludes?: Array<keyof SubChapterRaw>,
         includes?: { blocks: boolean },
     }): Promise<SubChapterGetByPathNameRes | T | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
+            if(config?.select?.length && config?.select?.length > 0) {
+                const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof SubChapterRaw));
+                correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof SubChapterRaw>);
+            }
             let res: IpcContractRes;
             if(config?.includes?.blocks === true) {
                 res = await this.instanceDb!.get(`
@@ -196,7 +216,9 @@ export default class SubChapterService {
             return null;
         }
     }
+    //end region
 
+    // region CREATE
     // Создать один подраздел
     async create(dto: SubChapterCreateDto): Promise<SubChapterCreateResponse> {
         await this.instanceDb!.run(`
@@ -229,6 +251,8 @@ export default class SubChapterService {
         if (!newSubChapter) throw new Error('[SubChapterService.create]>> newSubChapter was not created');
         return newSubChapter;
     }
+    // end region
+
     // region UPDATE
     // Обновление данных ПОДраздела
     async update(id: number, dto: SubChapterUpdateDto): Promise<SubChapterRawResponse> {

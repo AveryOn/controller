@@ -1,3 +1,4 @@
+import { formatDate } from "../../services/date.service";
 import { InstanceDatabaseDoc } from "../../types/database/index.types";
 import { BlockRaw, BlockForGet, CreateBlockDto, GetBlockByTitle } from "../../types/services/blocks.service";
 import { DatabaseManager } from "../manager";
@@ -64,35 +65,45 @@ export default class BlocksService {
     // Получить массив блоков для раздела
     async getAllForChapter(chapterId: number, config?: { excludes?: Array<keyof BlockRaw> }): Promise<Array<BlockForGet>> {
         if(!chapterId) throw new Error('[BlocksService.getAllForChapter]>> chapterId is not defined');
+        if(typeof chapterId !== 'number' || Object.is(+chapterId, NaN)) throw new Error('[BlocksService.getAllForChapter]>> invalid chapterId');
         
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes);
-
         const rows = await this.instanceDb!.all(`
-            SELECT ${correctFieldsSql} FROM blocks
-            WHERE chapter_id = ?;
-        `, [chapterId]);
+            SELECT ${correctFieldsSql} FROM blocks 
+            WHERE chapter_id = ${chapterId};
+            `, []);
         return rows.payload as Array<BlockForGet>;
     }
 
     // Получить массив блоков для подраздела
     async getAllForSubChapter(chapterId: number, config?: { excludes?: Array<keyof BlockRaw> }): Promise<Array<BlockForGet>> {
         if(!chapterId) throw new Error('[BlocksService.getAllForSubChapter]>> chapterId is not defined');
-        
+        if(typeof chapterId !== 'number' || Object.is(+chapterId, NaN)) throw new Error('[BlocksService.getAllForSubChapter]>> invalid chapterId');
+
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes);
 
         const rows = await this.instanceDb!.all(`
             SELECT ${correctFieldsSql} FROM blocks
-            WHERE sub_chapter_id = ?;
-        `, [chapterId]);
+            WHERE sub_chapter_id = ${chapterId};
+        `, []);
         return rows.payload as Array<BlockForGet>;
     }
 
     // Получить раздел по title 
-    async getByTitle(dto: GetBlockByTitle, config?: { excludes?: Array<keyof BlockRaw> }): Promise<BlockForGet | null> {
+    async getByTitle(
+        dto: GetBlockByTitle, 
+        config?: { 
+            select?: Array<keyof BlockRaw>,
+            excludes?: Array<keyof BlockRaw> 
+        }): Promise<BlockForGet | null> {
         if(!dto.title) throw new Error('[BlocksService.getByTitle]>> title is not defined');
         if(!dto.chapterId && !dto.subChapterId) throw new Error('[BlocksService.getByTitle]>> either chapterId or subChapterId must be transmitted');
 
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes);
+        if(config?.select?.length && config?.select?.length > 0) {
+            const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof BlockRaw));
+            correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof BlockRaw>);
+        }
         let sql: string | null = null;
         let args: any[] = []; 
         if(dto.chapterId) {
@@ -121,22 +132,30 @@ export default class BlocksService {
 
     // region CREATE
     // Создать блок для раздела
-    async createBlockForChapter(dto: CreateBlockDto) {
+    async createForChapter(dto: CreateBlockDto) {
         await this.instanceDb!.run(`
             INSERT INTO blocks (
                 chapter_id,
                 sub_chapter_id,
                 title,
+                created_at,
+                updated_at
             )
-            VALUES (?, ?, ?);
+            VALUES (?, ?, ?, ?, ?);
         `, [
             dto.chapterId,
             dto.subChapterId,
             dto.title,
+            formatDate(),
+            formatDate(),
         ]);
-        const newBlock: ChapterCreateResponse | null = await this.findByPathName<ChapterCreateResponse>(dto.pathName) as ChapterCreateResponse;
-        if(!newChapter) throw new Error('[ChapterService.create]>> newChapter was not created');
-        return newChapter;
+        const newBlock: BlockForGet | null = await this.getByTitle({ 
+            title: dto.title, 
+            chapterId: dto.chapterId, 
+            subChapterId: dto.subChapterId 
+        }) as BlockForGet;
+        if(!newBlock) throw new Error('[BlocksService.createForChapter]>> newBlock was not created');
+        return newBlock;
     }
     // end region
 } 

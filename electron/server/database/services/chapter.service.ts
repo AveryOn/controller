@@ -108,11 +108,16 @@ export default class ChapterService {
     async findById(
         id: number, 
         config?: { 
+            select?: Array<keyof ChapterRaw>,
             excludes?: Array<keyof ChapterRaw>; 
             includes?: { blocks: boolean },
         }): Promise<ChapterRawResponse | null> {
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
+            if(config?.select?.length && config?.select?.length > 0) {
+                const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof ChapterRaw));
+                correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof ChapterRaw>);
+            }
             let res: IpcContractRes;
             if(config?.includes?.blocks === true) {
                 res = await this.instanceDb!.get(`
@@ -161,12 +166,16 @@ export default class ChapterService {
 
     // Найти раздел по pathName
     async findByPathName<T>(pathName: string, config?: { 
+        select?: Array<keyof ChapterRaw>,
         excludes?: Array<keyof ChapterRaw>, 
         includes?: { blocks: boolean },
     }): Promise<ChapterGetByPathNameRes | T | null> {
-
         try {
             let correctFieldsSql: string = this.correctFieldsSqlForExclude(config?.excludes);
+            if(config?.select?.length && config?.select?.length > 0) {
+                const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof ChapterRaw));
+                correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof ChapterRaw>);
+            }
             let res: IpcContractRes;
             if(config?.includes?.blocks === true) {
                 res = await this.instanceDb!.get(`

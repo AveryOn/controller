@@ -4920,11 +4920,18 @@ class ChapterService {
   }
   // Найти раздел по ID
   async findById(id, config2) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
       let res;
-      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
         res = await this.instanceDb.get(`
                     SELECT 
                         chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
@@ -4959,7 +4966,7 @@ class ChapterService {
       const data = res.payload;
       if (data.blocks && typeof data.blocks === "string") {
         data.blocks = JSON.parse(data.blocks);
-        data.blocks = !!((_b = data.blocks[0]) == null ? void 0 : _b.id) ? data.blocks : [];
+        data.blocks = !!((_d = data.blocks[0]) == null ? void 0 : _d.id) ? data.blocks : [];
       }
       return data;
     } catch (err) {
@@ -4969,11 +4976,18 @@ class ChapterService {
   }
   // Найти раздел по pathName
   async findByPathName(pathName, config2) {
-    var _a;
+    var _a, _b, _c;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
       let res;
-      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
         res = await this.instanceDb.get(`
                     SELECT 
                         chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
@@ -5037,9 +5051,9 @@ class ChapterService {
       dto.createdAt,
       dto.updatedAt
     ]);
-    const newChapter2 = await this.findByPathName(dto.pathName);
-    if (!newChapter2) throw new Error("[ChapterService.create]>> newChapter was not created");
-    return newChapter2;
+    const newChapter = await this.findByPathName(dto.pathName);
+    if (!newChapter) throw new Error("[ChapterService.create]>> newChapter was not created");
+    return newChapter;
   }
   // end region
   // region UPDATE
@@ -5053,13 +5067,13 @@ class ChapterService {
                 ${keys2}
             WHERE id = ?;
         `, [...args, id]);
-    const newChapter2 = await this.findById(id, {
+    const newChapter = await this.findById(id, {
       includes: {
         blocks: true
       }
     });
-    if (!newChapter2) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
-    return newChapter2;
+    if (!newChapter) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
+    return newChapter;
   }
   // end region
   // region DELETE
@@ -5134,6 +5148,7 @@ class SubChapterService {
       args
     };
   }
+  // region READ
   // Получить массив подразделов
   async getAll(config2) {
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
@@ -5144,11 +5159,18 @@ class SubChapterService {
   }
   // Найти подраздел по ID
   async findById(id, config2) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
       let res;
-      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
         res = await this.instanceDb.get(`
                     SELECT 
                         sub_chapters.${this.allFields["id"]}, sub_chapters.${this.allFields["pathName"]},
@@ -5183,7 +5205,7 @@ class SubChapterService {
       const data = res.payload;
       if (data.blocks && typeof data.blocks === "string") {
         data.blocks = JSON.parse(data.blocks);
-        data.blocks = !!((_b = data.blocks[0]) == null ? void 0 : _b.id) ? data.blocks : [];
+        data.blocks = !!((_d = data.blocks[0]) == null ? void 0 : _d.id) ? data.blocks : [];
       }
       return data;
     } catch (err) {
@@ -5193,8 +5215,16 @@ class SubChapterService {
   }
   // Найти подраздел по pathName
   async findByPathName(pathName, config2) {
+    var _a, _b;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
       const res = await this.instanceDb.get(`
                 SELECT ${correctFieldsSql}
                 FROM sub_chapters
@@ -5209,11 +5239,18 @@ class SubChapterService {
   }
   // Найти подраздел по fullpath
   async findByFullpath(fullpath, config2) {
-    var _a;
+    var _a, _b, _c;
     try {
       let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
       let res;
-      if (((_a = config2 == null ? void 0 : config2.includes) == null ? void 0 : _a.blocks) === true) {
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
         res = await this.instanceDb.get(`
                     SELECT 
                         sub_chapters.${this.allFields["id"]}, sub_chapters.${this.allFields["pathName"]},
@@ -5252,6 +5289,8 @@ class SubChapterService {
       return null;
     }
   }
+  //end region
+  // region CREATE
   // Создать один подраздел
   async create(dto) {
     await this.instanceDb.run(`
@@ -5284,6 +5323,7 @@ class SubChapterService {
     if (!newSubChapter) throw new Error("[SubChapterService.create]>> newSubChapter was not created");
     return newSubChapter;
   }
+  // end region
   // region UPDATE
   // Обновление данных ПОДраздела
   async update(id, dto) {
@@ -5369,28 +5409,38 @@ class BlocksService {
   // Получить массив блоков для раздела
   async getAllForChapter(chapterId, config2) {
     if (!chapterId) throw new Error("[BlocksService.getAllForChapter]>> chapterId is not defined");
+    if (typeof chapterId !== "number" || Object.is(+chapterId, NaN)) throw new Error("[BlocksService.getAllForChapter]>> invalid chapterId");
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
     const rows = await this.instanceDb.all(`
-            SELECT ${correctFieldsSql} FROM blocks
-            WHERE chapter_id = ?;
-        `, [chapterId]);
+            SELECT ${correctFieldsSql} FROM blocks 
+            WHERE chapter_id = ${chapterId};
+            `, []);
     return rows.payload;
   }
   // Получить массив блоков для подраздела
   async getAllForSubChapter(chapterId, config2) {
     if (!chapterId) throw new Error("[BlocksService.getAllForSubChapter]>> chapterId is not defined");
+    if (typeof chapterId !== "number" || Object.is(+chapterId, NaN)) throw new Error("[BlocksService.getAllForSubChapter]>> invalid chapterId");
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
     const rows = await this.instanceDb.all(`
             SELECT ${correctFieldsSql} FROM blocks
-            WHERE sub_chapter_id = ?;
-        `, [chapterId]);
+            WHERE sub_chapter_id = ${chapterId};
+        `, []);
     return rows.payload;
   }
   // Получить раздел по title 
   async getByTitle(dto, config2) {
+    var _a, _b;
     if (!dto.title) throw new Error("[BlocksService.getByTitle]>> title is not defined");
     if (!dto.chapterId && !dto.subChapterId) throw new Error("[BlocksService.getByTitle]>> either chapterId or subChapterId must be transmitted");
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+      const excludesKeys = Object.keys(this.allFields).filter((key) => {
+        var _a2;
+        return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+      });
+      correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+    }
     let sql = null;
     let args = [];
     if (dto.chapterId) {
@@ -5415,22 +5465,30 @@ class BlocksService {
   // end region
   // region CREATE
   // Создать блок для раздела
-  async createBlockForChapter(dto) {
+  async createForChapter(dto) {
     await this.instanceDb.run(`
             INSERT INTO blocks (
                 chapter_id,
                 sub_chapter_id,
                 title,
+                created_at,
+                updated_at
             )
-            VALUES (?, ?, ?);
+            VALUES (?, ?, ?, ?, ?);
         `, [
       dto.chapterId,
       dto.subChapterId,
-      dto.title
+      dto.title,
+      formatDate(),
+      formatDate()
     ]);
-    await this.findByPathName(dto.pathName);
-    if (!newChapter) throw new Error("[ChapterService.create]>> newChapter was not created");
-    return newChapter;
+    const newBlock = await this.getByTitle({
+      title: dto.title,
+      chapterId: dto.chapterId,
+      subChapterId: dto.subChapterId
+    });
+    if (!newBlock) throw new Error("[BlocksService.createForChapter]>> newBlock was not created");
+    return newBlock;
   }
   // end region
 }
@@ -5470,7 +5528,7 @@ async function createChapter(params, auth) {
     const { payload } = await verifyAccessToken(auth.token);
     const chapterService = new ChapterService();
     const timestamp = formatDate();
-    const newChapter2 = await chapterService.create({
+    const newChapter = await chapterService.create({
       chapterType: params.chapterType,
       label: params.label,
       icon: params.icon,
@@ -5481,7 +5539,7 @@ async function createChapter(params, auth) {
       updatedAt: timestamp
     });
     await syncMaterialsStores(payload.username);
-    return newChapter2;
+    return newChapter;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5818,9 +5876,7 @@ async function getSubChapterBlocks(params) {
   console.log("[getSubChapterBlocks] => ", params);
   try {
     const blockService = new BlocksService();
-    const blocks = await blockService.getAllForChapter(params.chapterId);
-    const res = await blockService.getByTitle({ title: "Example", subChapterId: 1 });
-    console.log("RESULT RESULT ", res);
+    const blocks = await blockService.getAllForSubChapter(params.chapterId);
     return blocks;
   } catch (err) {
     console.error(err);
@@ -5830,34 +5886,31 @@ async function getSubChapterBlocks(params) {
 async function createChapterBlock(params) {
   console.log("[createChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName || !params.title || params.title.length < 3) {
+    if (!params || !params.pathName || !params.title)
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
-    }
-    const materials = await readFile(FSCONFIG$1);
-    const timestamp = formatDate();
-    const newBlock = {
-      id: Date.now(),
-      title: params.title,
-      content: null,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    };
-    if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[createChapterBlock]>> Ключа content не существует!");
-      findedChapter.content.blocks.push(newBlock);
-    } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
-      if (!findedChapter || !findedChapter.items) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
-      if (!subChapter || !subChapter.content) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[2]!");
-      subChapter.content.blocks.push(newBlock);
-    } else {
-      throw new Error("[createChapterBlock]>> INTERNAL_ERROR[3]");
-    }
-    await writeFile(materials, FSCONFIG$1);
-    return newBlock;
+    const blockService = new BlocksService();
+    const chapterService = new ChapterService();
+    const subChapterService = new SubChapterService();
+    if (!params.fullpath && params.pathName) {
+      const findedChapter = await chapterService.findByPathName(params.pathName, { select: ["id"] });
+      if (!findedChapter || !findedChapter.id) throw new Error("[createChapterBlock]>> NOT_FOUND [1]");
+      const newBlock = await blockService.createForChapter({
+        chapterId: findedChapter.id,
+        subChapterId: null,
+        title: params.title
+      });
+      return newBlock;
+    } else if (params.fullpath && params.pathName) {
+      const findedSubChapter = await subChapterService.findByFullpath(params.fullpath, { select: ["id"] });
+      if (!findedSubChapter || !findedSubChapter.id) throw new Error("[createChapterBlock]>> NOT_FOUND [2]");
+      const newBlock = await blockService.createForChapter({
+        chapterId: null,
+        subChapterId: findedSubChapter.id,
+        title: params.title
+      });
+      return newBlock;
+    } else
+      throw new Error("[createChapterBlock]>> INTERNAL_ERROR");
   } catch (err) {
     console.error(err);
     throw err;

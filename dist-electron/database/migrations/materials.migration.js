@@ -35,7 +35,7 @@ const createBlockTable = `
         chapter_id INTEGER,
         sub_chapter_id INTEGER,
         title TEXT NOT NULL,
-        content TEXT NOT NULL,
+        content TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (chapter_id) REFERENCES chapters(id),

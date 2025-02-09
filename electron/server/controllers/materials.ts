@@ -507,9 +507,7 @@ export async function getSubChapterBlocks(params: GetChapterBlocks) {
     console.log('[getSubChapterBlocks] => ', params);
     try {
         const blockService = new BlocksService();
-        const blocks = await blockService.getAllForChapter(params.chapterId);
-        const res = await blockService.getByTitle({ title: 'Example', subChapterId: 1 });
-        console.log('RESULT RESULT ', res);
+        const blocks = await blockService.getAllForSubChapter(params.chapterId);
         return blocks;
     } catch (err) {
         console.error(err);
@@ -521,42 +519,36 @@ export async function getSubChapterBlocks(params: GetChapterBlocks) {
 export async function createChapterBlock(params: CreateChapterBlock) {
     console.log('[createChapterBlock] => ', params);
     try {
-        if(!params || !params.pathName || !params.title || params.title.length < 3) {
+        if(!params || !params.pathName || !params.title)
             throw new Error('[createChapterBlock]>> INVALID_INPUT');
+
+        const blockService = new BlocksService();
+        const chapterService = new ChapterService();
+        const subChapterService = new SubChapterService();
+        // Создание блока для раздела
+        if(!params.fullpath && params.pathName) {
+            const findedChapter = await chapterService.findByPathName<{id: number}>(params.pathName, { select: ['id'] });
+            if(!findedChapter || !findedChapter.id) throw new Error('[createChapterBlock]>> NOT_FOUND [1]');
+            const newBlock = await blockService.createForChapter({ 
+                chapterId: findedChapter.id, 
+                subChapterId: null, 
+                title: params.title,
+            });
+            return newBlock;
         }
-        const materials: Chapter[] = await readFile(FSCONFIG);
-        // Создание нового экземпляра блока
-        const timestamp = formatDate();
-        const newBlock: ChapterBlock = {
-            id: Date.now(),
-            title: params.title,
-            content: null,
-            createdAt: timestamp,
-            updatedAt: timestamp,
+        // Создание блока для подраздела
+        else if (params.fullpath && params.pathName) {
+            const findedSubChapter = await subChapterService.findByFullpath<{ id: number }>(params.fullpath, { select: ['id'] });
+            if(!findedSubChapter || !findedSubChapter.id) throw new Error('[createChapterBlock]>> NOT_FOUND [2]');
+            const newBlock = await blockService.createForChapter({ 
+                chapterId: null, 
+                subChapterId: findedSubChapter.id, 
+                title: params.title,
+            });
+            return newBlock;
         }
-        // Поиск уровня для записи блока в соответствующий раздел/подраздел
-        // Поиск раздела
-        if(params.pathName && !params.fullpath) {
-            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-            if(!findedChapter?.content) throw new Error('[createChapterBlock]>> Ключа content не существует!');
-            findedChapter.content.blocks.push(newBlock);
-        }
-        // Поиск подраздела
-        else if(params.pathName && params.fullpath) {
-            const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-            const correctPath: string[] = trimPath(params.fullpath, { split: true }) as string[];
-            if(!findedChapter || !findedChapter.items) throw new Error('[createChapterBlock]>> INTERNAL_ERROR[1]');
-            const subChapter: SubChapter = findLevel(findedChapter.items, correctPath.slice(1)) as SubChapter;
-            if(!subChapter || !subChapter.content) throw new Error('[createChapterBlock]>> INTERNAL_ERROR[2]!');
-            // Добавление нового блока в исходный массив
-            subChapter.content.blocks.push(newBlock);
-        }
-        else {
-            throw new Error('[createChapterBlock]>> INTERNAL_ERROR[3]');
-        }
-        // Запись изменений в БД
-        await writeFile(materials, FSCONFIG);
-        return newBlock;
+        else
+            throw new Error('[createChapterBlock]>> INTERNAL_ERROR');
     } catch (err) {
         console.error(err);
         throw err;
