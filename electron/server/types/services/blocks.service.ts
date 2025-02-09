@@ -9,7 +9,7 @@ export interface BlockRaw {
     updatedAt:      string,
 }
 
-export interface BlockForGetAll {
+export interface BlockForGet {
     id:             number,
     chapterId:      number,
     subChapterId:   number,
@@ -17,4 +17,16 @@ export interface BlockForGetAll {
     content:        string,
     createdAt:      string,
     updatedAt:      string,
+}
+
+export interface CreateBlockDto {
+    chapterId:      number | null,
+    subChapterId:   number | null,
+    title:          string,
+}
+
+export interface GetBlockByTitle {
+    chapterId?:      number | null,
+    subChapterId?:   number | null,
+    title:          string,
 }

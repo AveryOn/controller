@@ -6,7 +6,6 @@ import path$1 from "path";
 import require$$2 from "os";
 import crypto$1 from "crypto";
 import { app, BrowserWindow, ipcMain } from "electron";
-import { createRequire } from "node:module";
 import { fileURLToPath as fileURLToPath$1 } from "node:url";
 import path$2 from "node:path";
 import fs$1 from "fs/promises";
@@ -5038,9 +5037,9 @@ class ChapterService {
       dto.createdAt,
       dto.updatedAt
     ]);
-    const newChapter = await this.findByPathName(dto.pathName);
-    if (!newChapter) throw new Error("[ChapterService.create]>> newChapter was not created");
-    return newChapter;
+    const newChapter2 = await this.findByPathName(dto.pathName);
+    if (!newChapter2) throw new Error("[ChapterService.create]>> newChapter was not created");
+    return newChapter2;
   }
   // end region
   // region UPDATE
@@ -5054,13 +5053,13 @@ class ChapterService {
                 ${keys2}
             WHERE id = ?;
         `, [...args, id]);
-    const newChapter = await this.findById(id, {
+    const newChapter2 = await this.findById(id, {
       includes: {
         blocks: true
       }
     });
-    if (!newChapter) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
-    return newChapter;
+    if (!newChapter2) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
+    return newChapter2;
   }
   // end region
   // region DELETE
@@ -5329,11 +5328,11 @@ class BlocksService {
       updatedAt: "updated_at AS updatedAt"
     });
     __publicField(this, "allFieldsForRec", {
-      chapterId: "chapter_id AS chapterId",
-      subChapterId: "sub_chapter_id AS subChapterId",
+      chapterId: "chapter_id",
+      subChapterId: "sub_chapter_id",
       title: "title",
       content: "content",
-      updatedAt: "updated_at AS updatedAt"
+      updatedAt: "updated_at"
     });
     this.instanceDb = DatabaseManager.instance().getDatabase("materials");
     if (!this.instanceDb) throw new Error("DB materials is not initialized");
@@ -5387,6 +5386,52 @@ class BlocksService {
         `, [chapterId]);
     return rows.payload;
   }
+  // Получить раздел по title 
+  async getByTitle(dto, config2) {
+    if (!dto.title) throw new Error("[BlocksService.getByTitle]>> title is not defined");
+    if (!dto.chapterId && !dto.subChapterId) throw new Error("[BlocksService.getByTitle]>> either chapterId or subChapterId must be transmitted");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    let sql = null;
+    let args = [];
+    if (dto.chapterId) {
+      sql = `
+                SELECT ${correctFieldsSql} FROM blocks
+                WHERE chapter_id = ? AND title = ?;
+            `;
+      args = [dto.chapterId, dto.title];
+    } else if (dto.subChapterId) {
+      sql = `
+                SELECT ${correctFieldsSql} FROM blocks
+                WHERE sub_chapter_id = ? AND title = ?;
+            `;
+      args = [dto.subChapterId, dto.title];
+    }
+    if (sql) {
+      const res = await this.instanceDb.get(sql, args);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } else throw new Error("[BlocksService.getByTitle]>> INTERNAL ERROR");
+  }
+  // end region
+  // region CREATE
+  // Создать блок для раздела
+  async createBlockForChapter(dto) {
+    await this.instanceDb.run(`
+            INSERT INTO blocks (
+                chapter_id,
+                sub_chapter_id,
+                title,
+            )
+            VALUES (?, ?, ?);
+        `, [
+      dto.chapterId,
+      dto.subChapterId,
+      dto.title
+    ]);
+    await this.findByPathName(dto.pathName);
+    if (!newChapter) throw new Error("[ChapterService.create]>> newChapter was not created");
+    return newChapter;
+  }
   // end region
 }
 const MATERIALS_FILENAME = "materials.json";
@@ -5406,7 +5451,7 @@ const FSCONFIG_MENU = {
 async function prepareMaterialsStoreForMenu(username) {
   const userDirPath = getAppUserDirname(username);
   console.log("[prepareMaterialsStoreForMenu] => void");
-  return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true }).then((data) => {
+  return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true }).then((_) => {
     return true;
   }).catch(async () => {
     try {
@@ -5425,7 +5470,7 @@ async function createChapter(params, auth) {
     const { payload } = await verifyAccessToken(auth.token);
     const chapterService = new ChapterService();
     const timestamp = formatDate();
-    const newChapter = await chapterService.create({
+    const newChapter2 = await chapterService.create({
       chapterType: params.chapterType,
       label: params.label,
       icon: params.icon,
@@ -5435,8 +5480,8 @@ async function createChapter(params, auth) {
       createdAt: timestamp,
       updatedAt: timestamp
     });
-    const menu = await syncMaterialsStores(payload.username);
-    return newChapter;
+    await syncMaterialsStores(payload.username);
+    return newChapter2;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5774,6 +5819,8 @@ async function getSubChapterBlocks(params) {
   try {
     const blockService = new BlocksService();
     const blocks = await blockService.getAllForChapter(params.chapterId);
+    const res = await blockService.getByTitle({ title: "Example", subChapterId: 1 });
+    console.log("RESULT RESULT ", res);
     return blocks;
   } catch (err) {
     console.error(err);
@@ -6057,7 +6104,6 @@ async function loginUser(win2, params, config2) {
     throw err;
   }
 }
-createRequire(import.meta.url);
 const __dirname = path$2.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];

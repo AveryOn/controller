@@ -508,6 +508,8 @@ export async function getSubChapterBlocks(params: GetChapterBlocks) {
     try {
         const blockService = new BlocksService();
         const blocks = await blockService.getAllForChapter(params.chapterId);
+        const res = await blockService.getByTitle({ title: 'Example', subChapterId: 1 });
+        console.log('RESULT RESULT ', res);
         return blocks;
     } catch (err) {
         console.error(err);
