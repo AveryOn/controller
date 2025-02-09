@@ -131,7 +131,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         else throw new Error('exec => process is not defined');
     }
     // Запуск миграций для текущей базы данных
-    async migrate(config: { isGeneral: boolean, pargmaKey: string | undefined }): Promise<IpcContractRes> {
+    async migrate(config: { isGeneral: boolean, pragmaKey: string | undefined }): Promise<IpcContractRes> {
         if(!config) throw new Error('[migrate]>> config is not defined');
         if (this.process) {
             return await this.requestIPC({ 
