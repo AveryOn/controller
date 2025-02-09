@@ -30,3 +30,11 @@ export interface GetBlockByTitle {
     subChapterId?:   number | null,
     title:          string,
 }
+
+export interface UpdateBlockByTitle {
+    chapterId?:      number,
+    subChapterId?:   number,
+    title?:          string,
+    content?:        string,
+    updatedAt?:      string,
+}

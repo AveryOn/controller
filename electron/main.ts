@@ -18,7 +18,6 @@ import type {
     DeleteChapterParams,
     DeleteSubChapterParams,
     EditChapterBlock,
-    EditChapterBlockTitle,
     EditChapterParams,
     GetChapterBlocks,
     GetChapterOneParams,
@@ -226,12 +225,7 @@ app.whenReady().then(async () => {
     });
 
     // Редактирование блока для раздела
-    ipcMain.handle("edit-chapter-block", async (_, params: EditChapterBlock & EditChapterBlockTitle) => {
-        return await editChapterBlock(params);
-    });
-
-    // Редактирование заголовка блока для раздела
-    ipcMain.handle("edit-chapter-block-title", async (_, params: EditChapterBlockTitle & EditChapterBlock) => {
+    ipcMain.handle("edit-chapter-block", async (_, params: EditChapterBlock) => {
         return await editChapterBlock(params);
     });
 

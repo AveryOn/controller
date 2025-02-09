@@ -198,21 +198,6 @@ export async function editChapterBlockApi(params: EditChapterBlock): Promise<Cha
     });
 }
 
-// Редактирование заголовка блока для раздела
-export async function editChapterBlockTitleApi(params: EditChapterBlockTitle): Promise<Chapter[]> {
-    return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
-        setTimeout(async () => {
-            try {
-                const result = await window.electron.editChapterBlockTitle(params);
-                resolve(result);
-            } catch (err) {
-                reject(err);
-            }
-        }, TIMEOUT);
-    });
-}
-
 // Удаление блока из раздела
 export async function deleteChapterBlockApi(params: DeleteChapterBlock): Promise<Chapter> {
     return new Promise((resolve, reject) => {

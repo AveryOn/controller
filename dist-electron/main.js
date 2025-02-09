@@ -5462,6 +5462,26 @@ class BlocksService {
       return res.payload;
     } else throw new Error("[BlocksService.getByTitle]>> INTERNAL ERROR");
   }
+  // Получить блок по ID 
+  async getById(blockId, config2) {
+    var _a, _b;
+    if (!blockId) throw new Error("[BlocksService.getById]>> blockId is not defined");
+    if (typeof blockId !== "number") throw new Error("[BlocksService.getById]>> invalid blockId");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+      const excludesKeys = Object.keys(this.allFields).filter((key) => {
+        var _a2;
+        return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+      });
+      correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+    }
+    const res = await this.instanceDb.get(`
+            SELECT ${correctFieldsSql} FROM blocks
+            WHERE id = ?;
+        `, [blockId]);
+    if (!res || !(res == null ? void 0 : res.payload)) return null;
+    return res.payload;
+  }
   // end region
   // region CREATE
   // Создать блок для раздела
@@ -5489,6 +5509,21 @@ class BlocksService {
     });
     if (!newBlock) throw new Error("[BlocksService.createForChapter]>> newBlock was not created");
     return newBlock;
+  }
+  // end region
+  // region UPDATE
+  async update(blockId, dto) {
+    if (!blockId) throw new Error("[ChapterService.update]>> blockId is not defined");
+    const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
+    await this.instanceDb.run(`
+            UPDATE blocks
+            SET
+                ${keys2}
+            WHERE id = ?;
+        `, [...args, blockId]);
+    const updatedBlock = await this.getById(blockId, { select: ["id", "title"] });
+    if (!updatedBlock) throw new Error("[BlocksService.update]>> updatedBlock is not defined");
+    return updatedBlock;
   }
   // end region
 }
@@ -5916,53 +5951,19 @@ async function createChapterBlock(params) {
     throw err;
   }
 }
-function updateBlock(oldBlock, newBlock) {
-  if (!oldBlock || !newBlock) throw new Error("[editChapterBlock]>>[updateBlock]>> INVALID_INPUT");
-  oldBlock.content = newBlock.content;
-  oldBlock.title = newBlock.title;
-}
 async function editChapterBlock(params) {
-  var _a;
   console.log("[editChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName) {
+    if (!params || !params.pathName || !params.block)
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
-    }
-    const materials = await readFile(FSCONFIG$1);
-    const blockId = ((_a = params == null ? void 0 : params.block) == null ? void 0 : _a.id) || (params == null ? void 0 : params.blockId);
-    const timestamp = formatDate();
-    if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
-      const findedBlock = findedChapter.content.blocks.find((block) => block.id === blockId);
-      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
-      if (!params.blockTitle) {
-        updateBlock(findedBlock, params.block);
-      } else {
-        findedBlock.title = params.blockTitle;
-      }
-      findedChapter.updatedAt = timestamp;
-      findedBlock.updatedAt = timestamp;
-    } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
-      if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
-      if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
-      const findedBlock = subChapter.content.blocks.find((block) => block.id === blockId);
-      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
-      if (!params.blockTitle) {
-        updateBlock(findedBlock, params.block);
-      } else {
-        findedBlock.title = params.blockTitle;
-      }
-      findedChapter.updatedAt = timestamp;
-      findedBlock.updatedAt = timestamp;
-    } else {
-      throw new Error("[editChapterBlock]>> INTERNAL_ERROR[3]");
-    }
-    await writeFile(materials, FSCONFIG$1);
-    return materials;
+    const blockService = new BlocksService();
+    const chapterService = new ChapterService();
+    const subChapterService = new SubChapterService();
+    const updatedBlock = await blockService.update(params.block.id, {
+      ...params.block,
+      updatedAt: formatDate()
+    });
+    console.log("updatedBlock", updatedBlock);
   } catch (err) {
     console.error(err);
     throw err;
@@ -6261,9 +6262,6 @@ app.whenReady().then(async () => {
     return await createChapterBlock(params);
   });
   ipcMain.handle("edit-chapter-block", async (_, params) => {
-    return await editChapterBlock(params);
-  });
-  ipcMain.handle("edit-chapter-block-title", async (_, params) => {
     return await editChapterBlock(params);
   });
   ipcMain.handle("delete-chapter-block", async (_, params) => {

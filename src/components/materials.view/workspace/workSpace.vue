@@ -115,7 +115,7 @@ import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
-import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi, getChapterBlocksApi, getSubChapterBlocksApi } from '../../../api/materials.api';
+import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, getChapterBlocksApi, getSubChapterBlocksApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
@@ -270,9 +270,11 @@ async function openEditTileBlock(blockId: number, title: string, block?: Chapter
         else {
             try {
                 isLoadingEditTitleBlock.value = true;
-                const result = await editChapterBlockTitleApi({
-                    blockId: currentBlock.value.id,
-                    blockTitle: titleBlock.value,
+                const result = await editChapterBlockApi({
+                    block: {
+                        ...currentBlock.value, 
+                        title: titleBlock.value
+                    },
                     pathName: pathName.value,
                     fullpath: props.chapter?.fullpath,
                 });

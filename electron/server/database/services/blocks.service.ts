@@ -1,6 +1,7 @@
 import { formatDate } from "../../services/date.service";
+import { ChapterBlock } from "../../types/controllers/materials.types";
 import { InstanceDatabaseDoc } from "../../types/database/index.types";
-import { BlockRaw, BlockForGet, CreateBlockDto, GetBlockByTitle } from "../../types/services/blocks.service";
+import { BlockRaw, BlockForGet, CreateBlockDto, GetBlockByTitle, UpdateBlockByTitle } from "../../types/services/blocks.service";
 import { DatabaseManager } from "../manager";
 
 export default class BlocksService {
@@ -126,8 +127,31 @@ export default class BlocksService {
             return res.payload as BlockForGet;
         }
         else throw new Error('[BlocksService.getByTitle]>> INTERNAL ERROR');
-
     }
+
+    // Получить блок по ID 
+    async getById(
+        blockId: number, 
+        config?: { 
+            select?: Array<keyof BlockRaw>,
+            excludes?: Array<keyof BlockRaw> 
+        }): Promise<BlockForGet | null> {
+        if(!blockId) throw new Error('[BlocksService.getById]>> blockId is not defined');
+        if(typeof blockId !== 'number') throw new Error('[BlocksService.getById]>> invalid blockId');
+
+        let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes);
+        if(config?.select?.length && config?.select?.length > 0) {
+            const excludesKeys = Object.keys(this.allFields).filter((key) => !config.select?.includes(key as keyof BlockRaw));
+            correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys as Array<keyof BlockRaw>);
+        }
+        const res = await this.instanceDb!.get(`
+            SELECT ${correctFieldsSql} FROM blocks
+            WHERE id = ?;
+        `, [blockId]);
+        if (!res || !res?.payload) return null;
+        return res.payload as BlockForGet;
+    }
+
     // end region
 
     // region CREATE
@@ -156,6 +180,22 @@ export default class BlocksService {
         }) as BlockForGet;
         if(!newBlock) throw new Error('[BlocksService.createForChapter]>> newBlock was not created');
         return newBlock;
+    }
+    // end region
+
+    // region UPDATE
+    async update(blockId: number, dto: UpdateBlockByTitle | ChapterBlock) {
+        if(!blockId) throw new Error('[ChapterService.update]>> blockId is not defined');
+        const { args, keys } = this.correctFieldsSqlForRec<UpdateBlockByTitle | ChapterBlock>(dto);
+        await this.instanceDb!.run(`
+            UPDATE blocks
+            SET
+                ${keys}
+            WHERE id = ?;
+        `, [...args, blockId]);
+        const updatedBlock: BlockForGet | null = await this.getById(blockId, { select: ['id', 'title'] }) as BlockForGet ;
+        if(!updatedBlock) throw new Error('[BlocksService.update]>> updatedBlock is not defined');
+        return updatedBlock;
     }
     // end region
 } 
