@@ -26,5 +26,5 @@ export interface InstanceDatabaseDoc {
     get: (sql: string, args?: any[]) => Promise<IpcContractRes>;
     run: (sql: string, args?: any[]) => Promise<IpcContractRes>;
     exec: (sql: string, args?: any[]) => Promise<IpcContractRes>;
-    migrate: () => Promise<IpcContractRes>;
+    migrate: (config?: { isGeneral?: boolean }) => Promise<IpcContractRes>;
 }

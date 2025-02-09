@@ -1,6 +1,6 @@
 import { CreateUserParams, GetUsersConfig, PrepareUserStoreParams, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
 import { encrypt, verify } from '../services/crypto.service';
-import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
+import { FsOperationConfig, isExistFileOrDir, mkDir, readFile } from '../services/fs.service';
 import UserService from '../database/services/users.service';
 import { prepareUserStore } from './system.controller';
 import { formatDate } from '../services/date.service';
@@ -13,15 +13,15 @@ const FSCONFIG: FsOperationConfig = {
     format: 'json',
 }
 
-// Подготовить пользовательское хранилище
-export async function prepareUserStore(params: PrepareUserStoreParams): Promise<Array<User>> {
-    try {
+// // Подготовить пользовательское хранилище
+// export async function prepareUserStore(params: PrepareUserStoreParams): Promise<Array<User>> {
+//     try {
 
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
+//     } catch (err) {
+//         console.error(err);
+//         throw err;
+//     }
+// }
 
 // Получение пользователей с базы данных
 export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {

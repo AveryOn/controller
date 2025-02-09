@@ -1,5 +1,5 @@
 import UserService from "../database/services/users.service";
-import { verify } from "../services/crypto.service";
+import { encryptPragmaKey, verify } from "../services/crypto.service";
 import { createAccessToken, verifyAccessToken } from "../services/tokens.service";
 import { ValidateAccessTokenParams } from "../types/controllers/auth.types";
 import { LoginParams, LoginResponse } from "../types/controllers/users.types";
@@ -38,11 +38,17 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams, 
         const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
             console.log('[loginUser]>> INTERNAL_ERROR', err);
         });
-        // Если пароль верный то выписываем токен
+        // Если пароль верный то выписываем необходимые креды
         if (isVerifyPassword === true) {
             const readyUser = { ...user };
             Reflect.deleteProperty(readyUser, 'hash_salt');
             Reflect.deleteProperty(readyUser, 'password');
+
+            // Формируется ключ шифрования баз данных
+            const keyDB = await encryptPragmaKey(params.username, params.password);
+            console.log('KEY CIPHER', keyDB);
+            
+
             // Формируем токен доступа
             const token = await createAccessToken({ 
                 userId: readyUser.id, 

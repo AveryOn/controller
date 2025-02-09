@@ -99,9 +99,9 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         else throw new Error('exec => process is not defined');
     }
     // Запуск миграций для текущей базы данных
-    async migrate(): Promise<IpcContractRes> {
+    async migrate(config?: { isGeneral?: boolean }): Promise<IpcContractRes> {
         if (this.process) {
-            return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: null });
+            return await this.requestIPC({ action: `migrate:${this.dbname}`, payload: { isGeneral: config?.isGeneral } });
         }
         else throw new Error('exec => process is not defined');
     }
@@ -166,7 +166,7 @@ export class DatabaseManager {
             ]);
             // вызов миграций
             if(config?.migrate === true) {
-                await this.executeMigrations();
+                await this.executeMigrations({ isGeneral: true });
                 console.debug("initOnApp>> migrations were applied");
             }
             return await promise;
@@ -187,7 +187,7 @@ export class DatabaseManager {
             ]);
             // вызов миграций
             if(config?.migrate === true) {
-                await this.executeMigrations();
+                await this.executeMigrations({ isGeneral: false });
                 console.debug("initOnUser>> migrations were applied");
             }
             console.log('БЫЛ ВЫЗЫВАН initOnUser', username);
@@ -199,12 +199,12 @@ export class DatabaseManager {
     }
 
     // применить миграции для всех баз данных
-    async executeMigrations() {
+    async executeMigrations(config?: { isGeneral?: boolean }) {
         try {
             for (let key in this.instanceDatabaseList) {
                 if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
                     const db = this.instanceDatabaseList[key];
-                    await db.migrate();
+                    await db.migrate(config);
                 }
             }
         } catch (err) {

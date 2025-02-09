@@ -115,7 +115,7 @@ import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
-import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } from '../../../api/materials.api';
+import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi, getChapterBlocksApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
@@ -223,6 +223,20 @@ const currentBlock = computed(() => {
 watch(() => props.isShowCreateBlock, (newVal) => {
     isActiveCreateForm.value = newVal;
 });
+
+// Отслеживать что раздел/подраздел был переключен на другой
+watch(
+    () => [props.chapter?.fullpath, props.chapter?.pathName], 
+    async (newVals, oldVals) => {
+        const [newFullpath, newPathName] = newVals;
+        const [oldFullpath, oldPathName] = oldVals;
+        if(newFullpath ?? '' + newPathName !== oldFullpath ?? '' + oldPathName) {
+            // выполнить запрос на получение блоков раздела
+            if(!newFullpath && props.chapter?.id) {
+                await getChapterBlocksApi({ chapterId: props.chapter.id });
+            }
+        }
+})
 
 // Изменить заголовок content chapter
 function editContentTitle() {

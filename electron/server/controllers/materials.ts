@@ -12,6 +12,7 @@ import { Chapter,
     EditChapterBlock, 
     EditChapterBlockTitle, 
     EditChapterParams, 
+    GetChapterBlocks, 
     GetChapterOneParams, 
     GetChaptersConfig, 
     GetSubChapterOneParams, 
@@ -484,6 +485,17 @@ export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<
     } catch (err) {
         console.error(err);
         return 'failed';
+    }
+}
+
+// Получить блоки раздела по его айди
+export async function getChapterBlocks(params: GetChapterBlocks) {
+    console.log('[getChapterBlocks] => ', params);
+    try {
+        
+    } catch (err) {
+        console.error(err);
+        throw err;
     }
 }
 

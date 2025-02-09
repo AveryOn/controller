@@ -66,6 +66,10 @@ export interface ChapterContent {
     blocks: Array<ChapterBlock>;
 }
 
+export interface GetChapterBlocks {
+    chapterId: number;
+}
+
 // Объект для создания нового блока в разделе
 export interface CreateChapterBlock {
     pathName?: string;

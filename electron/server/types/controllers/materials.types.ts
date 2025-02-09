@@ -62,6 +62,10 @@ export interface DeleteSubChapterParams {
 
 export type DeleteResponseMessage = 'success' | 'failed';
 
+export interface GetChapterBlocks {
+    chapterId: number;
+}
+
 export interface CreateChapterBlock {
     pathName: string;
     fullpath?: string;
