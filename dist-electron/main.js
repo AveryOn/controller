@@ -5316,6 +5316,79 @@ class SubChapterService {
   }
   // end region
 }
+class BlocksService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      chapterId: "chapter_id AS chapterId",
+      subChapterId: "sub_chapter_id AS subChapterId",
+      title: "title",
+      content: "content",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    __publicField(this, "allFieldsForRec", {
+      chapterId: "chapter_id AS chapterId",
+      subChapterId: "sub_chapter_id AS subChapterId",
+      title: "title",
+      content: "content",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("materials");
+    if (!this.instanceDb) throw new Error("DB materials is not initialized");
+  }
+  // коррекция полей таблицы. Исключает те поля которые приходят в массиве
+  correctFieldsSqlForExclude(excludedFields) {
+    let correctFieldsSql;
+    if ((excludedFields == null ? void 0 : excludedFields.length) > 0) {
+      correctFieldsSql = Object.entries(this.allFields).filter(([key, __]) => {
+        if (!excludedFields.includes(key)) return true;
+        else return false;
+      }).map(([__, value]) => value).join(",");
+    } else correctFieldsSql = Object.values(this.allFields).join(",");
+    return correctFieldsSql;
+  }
+  // корректировка полей таблицы для выполнения записи данных sql
+  correctFieldsSqlForRec(dto) {
+    if (!dto || typeof dto !== "object")
+      throw new Error("[BlocksService.correctFieldsSqlForRec]>> dto is not defined");
+    const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+      if (Object.prototype.hasOwnProperty.call(dto, key)) {
+        return true;
+      } else return false;
+    });
+    const args = correctFieldsEntries.map(([k, __]) => {
+      return dto[k];
+    });
+    return {
+      keys: correctFieldsEntries.map(([__, val]) => val + " = ?").join(", "),
+      args
+    };
+  }
+  // region READ
+  // Получить массив блоков для раздела
+  async getAllForChapter(chapterId, config2) {
+    if (!chapterId) throw new Error("[BlocksService.getAllForChapter]>> chapterId is not defined");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM blocks
+            WHERE chapter_id = ?;
+        `, [chapterId]);
+    return rows.payload;
+  }
+  // Получить массив блоков для подраздела
+  async getAllForSubChapter(chapterId, config2) {
+    if (!chapterId) throw new Error("[BlocksService.getAllForSubChapter]>> chapterId is not defined");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM blocks
+            WHERE sub_chapter_id = ?;
+        `, [chapterId]);
+    return rows.payload;
+  }
+  // end region
+}
 const MATERIALS_FILENAME = "materials.json";
 const MATERIALS_MENU_FILENAME = "materials-menu.json";
 const FSCONFIG$1 = {
@@ -5687,6 +5760,25 @@ async function deleteSubChapter(params) {
 }
 async function getChapterBlocks(params) {
   console.log("[getChapterBlocks] => ", params);
+  try {
+    const blockService = new BlocksService();
+    const blocks = await blockService.getAllForChapter(params.chapterId);
+    return blocks;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function getSubChapterBlocks(params) {
+  console.log("[getSubChapterBlocks] => ", params);
+  try {
+    const blockService = new BlocksService();
+    const blocks = await blockService.getAllForChapter(params.chapterId);
+    return blocks;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
 async function createChapterBlock(params) {
   console.log("[createChapterBlock] => ", params);
@@ -6062,6 +6154,9 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("get-chapter-blocks", async (event, params) => {
     return await getChapterBlocks(params);
+  });
+  ipcMain.handle("get-sub-chapter-blocks", async (event, params) => {
+    return await getSubChapterBlocks(params);
   });
   ipcMain.handle("create-chapter-block", async (event, params) => {
     return await createChapterBlock(params);

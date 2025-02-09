@@ -27,6 +27,7 @@ import ChapterService from "../database/services/chapter.service";
 import { ChapterCreateDto, ChapterGetByPathNameRes, ChapterRawResponse, SubChapterCreateResponse, SubChapterGetByPathNameRes, SubChapterRawResponse } from "../types/services/chapter.service";
 import { AuthParams } from "../types/controllers/index.types";
 import SubChapterService from "../database/services/subchapter.service";
+import BlocksService from "../database/services/blocks.service";
 
 const MATERIALS_FILENAME = 'materials.json';
 const MATERIALS_MENU_FILENAME = 'materials-menu.json';
@@ -492,7 +493,22 @@ export async function deleteSubChapter(params: DeleteSubChapterParams): Promise<
 export async function getChapterBlocks(params: GetChapterBlocks) {
     console.log('[getChapterBlocks] => ', params);
     try {
-        
+        const blockService = new BlocksService();
+        const blocks = await blockService.getAllForChapter(params.chapterId);
+        return blocks;
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+// Получить блоки подраздела по его айди
+export async function getSubChapterBlocks(params: GetChapterBlocks) {
+    console.log('[getSubChapterBlocks] => ', params);
+    try {
+        const blockService = new BlocksService();
+        const blocks = await blockService.getAllForChapter(params.chapterId);
+        return blocks;
     } catch (err) {
         console.error(err);
         throw err;

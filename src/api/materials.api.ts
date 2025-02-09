@@ -1,4 +1,4 @@
-import type { Chapter, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, GetChapterBlocks, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
+import type { Chapter, ChapterBlock, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, GetChapterBlocks, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
 import { useMaterialsStore } from "../stores/materials.store";
 
 const TIMEOUT = 1003;
@@ -139,12 +139,27 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
 }
 
 // Получение блоков для раздела
-export async function getChapterBlocksApi(params: GetChapterBlocks) {
+export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
     return new Promise((resolve, reject) => {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.getChapterBlocks(params);
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
+}
+
+// Получение блоков для подраздела
+export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(async () => {
+            try {
+                const result = await window.electron.getSubChapterBlocks(params);
                 resolve(result);
             } catch (err) {
                 reject(err);

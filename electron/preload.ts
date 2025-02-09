@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electron', {
 
     // ======= MATERIALS > BLOCKS ========
     getChapterBlocks: (params: GetChapterBlocks) => ipcRenderer.invoke('get-chapter-blocks', params),
+    getSubChapterBlocks: (params: GetChapterBlocks) => ipcRenderer.invoke('get-sub-chapter-blocks', params),
     createChapterBlock: (params: CreateChapterBlock) => ipcRenderer.invoke('create-chapter-block', params),
     editChapterBlock: (params: EditChapterBlockTitle & EditChapterBlock) => ipcRenderer.invoke('edit-chapter-block', params),
     editChapterBlockTitle: (params: EditChapterBlockTitle & EditChapterBlock) => ipcRenderer.invoke('edit-chapter-block-title', params),

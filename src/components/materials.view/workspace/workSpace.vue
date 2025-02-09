@@ -115,7 +115,7 @@ import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
-import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi, getChapterBlocksApi } from '../../../api/materials.api';
+import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi, getChapterBlocksApi, getSubChapterBlocksApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
@@ -135,6 +135,7 @@ const emit = defineEmits<{
 const notice = useNotices();
 const materialStore = useMaterialsStore();
 
+const blocks: Ref<Array<any>> = ref([]);
 const workspaceDiv: Ref<null | HTMLDivElement> = ref(null);
 const currentBlockId = ref<null | number>(null); 
 
@@ -178,13 +179,6 @@ const blockContent = computed(() => {
         else return editorContent.value;
     }
 })
-
-const blocks = computed(() => {
-    if(props.chapter) {
-        return props.chapter.content.blocks;
-    }
-    return [];
-});
 
 const sortedBlocks = computed(() => {
     return sortedMerge(blocks.value, 'updatedAt', 'least');
@@ -232,9 +226,15 @@ watch(
         const [oldFullpath, oldPathName] = oldVals;
         if(newFullpath ?? '' + newPathName !== oldFullpath ?? '' + oldPathName) {
             // выполнить запрос на получение блоков раздела
-            if(!newFullpath && props.chapter?.id) {
-                await getChapterBlocksApi({ chapterId: props.chapter.id });
+            if(!newFullpath && newPathName && props.chapter?.id) {
+                blocks.value = await getChapterBlocksApi({ chapterId: props.chapter.id });
             }
+            // выполнить запрос на получение блоков ПОДраздела
+            else if(newFullpath && newPathName &&  props.chapter?.id) {
+                blocks.value = await getSubChapterBlocksApi({ chapterId: props.chapter.id });
+            }
+            else 
+                throw new Error('watch>> [props.chapter?.fullpath, props.chapter?.pathName]');
         }
 })
 
@@ -446,7 +446,6 @@ function controllerKeys(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-    console.log('asdasdsdasdsdw');
     window.addEventListener('keydown', controllerKeys);
 });
 

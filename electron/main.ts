@@ -38,6 +38,7 @@ import { createChapter,
     getChapters, 
     getOneChapter, 
     getOneSubChapter,
+    getSubChapterBlocks,
     syncMaterialsStores, 
     // syncMaterialsStores 
 } from './server/controllers/materials'
@@ -212,6 +213,11 @@ app.whenReady().then(async () => {
     // получение блоков раздела
     ipcMain.handle("get-chapter-blocks", async (event, params: GetChapterBlocks) => {
         return await getChapterBlocks(params);
+    });
+
+    // получение блоков раздела
+    ipcMain.handle("get-sub-chapter-blocks", async (event, params: GetChapterBlocks) => {
+        return await getSubChapterBlocks(params);
     });
 
     // Создание блока для раздела
