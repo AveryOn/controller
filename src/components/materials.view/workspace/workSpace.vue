@@ -10,7 +10,7 @@
         <!-- Форма удаления блока -->
         <deleteBlockForm 
         :loading="isLoadingDeleteBlock"
-        v-model="isAcitiveDeleteForm"
+        v-model="isActivateDeleteForm"
         @delete="reqDeleteBlockMaterial"
         />
         <!-- Если блоков нет -->
@@ -154,7 +154,7 @@ const opennedBlockForDelete = ref({
     blockId: null as null | number,
 });
 const isActiveCreateForm = ref(false);
-const isAcitiveDeleteForm = ref(false);
+const isActivateDeleteForm = ref(false);
 const contentTitle = ref('');
 const isLoadingEditContentTitle = ref(false);
 const editorContent: Ref<null | string> = ref(null);
@@ -325,7 +325,7 @@ function chooseBlockForEdit(block: ChapterBlock) {
 // Выбрать блок для удаления
 function chooseBlockForDelete(block: ChapterBlock) {
     opennedBlockForDelete.value.blockId = block.id;
-    isAcitiveDeleteForm.value = true;
+    isActivateDeleteForm.value = true;
 }
 
 // Включить форму создания нового блока
@@ -393,7 +393,7 @@ async function reqDeleteBlockMaterial() {
             fullpath: fullpath,
         }
         await deleteChapterBlockApi(params);
-        isAcitiveDeleteForm.value = false;
+        isActivateDeleteForm.value = false;
         window.location.reload();
     } catch (err) {
         console.error(err);
@@ -427,9 +427,9 @@ function controllerKeys(e: KeyboardEvent) {
         if(isActiveCreateForm.value) {
             return void (isActiveCreateForm.value = false);
         }
-        if(isAcitiveDeleteForm.value) {
+        if(isActivateDeleteForm.value) {
             opennedBlockForDelete.value.blockId = null;
-            return void (isAcitiveDeleteForm.value = false);
+            return void (isActivateDeleteForm.value = false);
         }
         if(opennedEditTitleBlock.value) return void (opennedEditTitleBlock.value = null);
         if(opennedStateEditor.value.isActive) closeTextEditor();

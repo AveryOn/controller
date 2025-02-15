@@ -1,6 +1,8 @@
 import sqlite3Pkg  from '@journeyapps/sqlcipher';
 import materialsMigration from './migrations/materials.migration.js';
 import usersMigration from './migrations/users.migration.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const migrations = {
     "migrate:materials": materialsMigration,
@@ -11,7 +13,7 @@ let db = null;
 process.on("message", async (msg) => {
     
     if(msg && msg.action) {
-
+        
         if(!msg?.payload?.pragmaKey) {
             const msgErr = 'pragmaKey is not defined!'
             process.send({ action: msg.action, payload: new Error(msgErr), status: 'error' });

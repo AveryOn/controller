@@ -522,7 +522,9 @@ const _InstanceDatabase = class _InstanceDatabase {
     try {
       if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
       if (onApp === true) {
-        return process.env.APP_KEY;
+        const key = process.env.APP_KEY;
+        console.log("ENV PRAGMA KEY", key);
+        return key;
       } else {
         return "abc123";
       }

@@ -16,7 +16,6 @@
     "@journeyapps/sqlcipher": "^5.3.1",
     "@mdi/js": "^7.4.47",
     "@primevue/themes": "^4.2.3",
-    "better-sqlite3": "^11.7.2",
     "dotenv": "^16.4.7",
     "electron-squirrel-startup": "^1.0.1",
     "highlight": "^0.2.4",
@@ -28,7 +27,6 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.2.3",
     "quill": "^2.0.3",
-    "sqlite3": "^5.1.7",
     "vue": "^3.4.21",
     "vue-quill-editor": "^3.0.6",
     "vue-router": "^4.5.0"
