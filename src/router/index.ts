@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, createMemoryHistory } from "vue-router";
+import { createRouter, createMemoryHistory } from "vue-router";
 import MainView from "../views/MainView.vue";
 import LoginView from "../views/LoginView.vue";
 import { useLoginStore } from "../stores/login.store";
@@ -44,9 +44,9 @@ const router = createRouter({
 // Защита ранжирования маршрутов
 router.beforeEach(async (to, from, next) => {
     const store = useLoginStore();
-    const isValide = await validateAccessTokenApi({ token: localStorage.getItem('token') });
-    store.isAuth = isValide;
-    if (!isValide) {
+    const isValid = await validateAccessTokenApi({ token: localStorage.getItem('token') });
+    store.isAuth = isValid;
+    if (!isValid) {
         // Приватный маршрут
         if (to.meta.private === true) {
             if (from.name !== 'login') {

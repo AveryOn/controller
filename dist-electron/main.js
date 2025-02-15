@@ -314,6 +314,12 @@ var cliOptions = function optionMatcher(args) {
     )
   );
 })();
+const GlobalNames = {
+  USER_PRAGMA_KEY: "USER_PRAGMA_KEY"
+};
+const variables = {
+  APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb"
+};
 const KEYLEN = 64;
 const N = 16384;
 const R = 8;
@@ -323,8 +329,8 @@ async function encryptPragmaKey(username, password) {
   if (!password || typeof password !== "string") throw new Error("invalid password");
   return new Promise((resolve, reject) => {
     try {
-      const APP_KEY = process.env.APP_KEY;
-      if (!APP_KEY) throw new Error("APP_KEY is not defined");
+      const APP_KEY = variables.APP_KEY;
+      if (!APP_KEY) ;
       const S = crypto$1.createHash("sha256").update(username + APP_KEY).digest("hex");
       const I = 3e5;
       const key = crypto$1.pbkdf2Sync(password, S, I, KEYLEN, "sha512").toString("hex");
@@ -488,17 +494,56 @@ async function isExistFileOrDir(pathName, config2) {
     } else throw err;
   }
 }
+const _TTLStore = class _TTLStore {
+  constructor() {
+    __publicField(this, "store");
+    this.store = /* @__PURE__ */ new Map();
+  }
+  static getInstance() {
+    if (!_TTLStore.instance) {
+      console.log("TTLStore init...");
+      _TTLStore.instance = new _TTLStore();
+    }
+    return _TTLStore.instance;
+  }
+  set(key, value, ttl = 60 * 60 * 1) {
+    const expiresAt = Date.now() + ttl;
+    this.store.set(key, { value, expiresAt });
+    console.log("TTL STORE", this.store);
+    setTimeout(() => {
+      this.delete(key);
+      console.log(`TTLStore key ${key} was deleted!!!`);
+    }, ttl);
+  }
+  get(key) {
+    const entry = this.store.get(key);
+    if (!entry || entry.expiresAt < Date.now()) {
+      this.store.delete(key);
+      return void 0;
+    }
+    return entry.value;
+  }
+  delete(key) {
+    this.store.delete(key);
+  }
+};
+__publicField(_TTLStore, "instance");
+let TTLStore = _TTLStore;
 const _InstanceDatabase = class _InstanceDatabase {
   constructor(dbname, username, state) {
     __publicField(this, "dbname", null);
     __publicField(this, "dbpath", null);
     __publicField(this, "processPath", null);
     __publicField(this, "process", null);
+    __publicField(this, "storeTTL", null);
     if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
     if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
     this.init(dbname, username, (isReliable) => {
       state && state(isReliable);
     });
+    if (!this.storeTTL) {
+      this.storeTTL = TTLStore.getInstance();
+    }
     if (!_InstanceDatabase.instanceDB) {
       _InstanceDatabase.instanceDB = this;
     }
@@ -522,11 +567,17 @@ const _InstanceDatabase = class _InstanceDatabase {
     try {
       if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
       if (onApp === true) {
-        const key = process.env.APP_KEY;
-        console.log("ENV PRAGMA KEY", key);
+        const key = variables.APP_KEY;
+        console.log("APP PRAGMA KEY", key);
         return key;
       } else {
-        return "abc123";
+        if (!this.storeTTL) throw new Error("fetchPragmaKey > storeTTL is not defined");
+        const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY);
+        if (!key) {
+          throw new Error("fetchPragmaKey > ");
+        }
+        console.log("USER PRAGMA KEY", key);
+        return key;
       }
     } catch (err) {
       console.debug("requestIPC>>", err);
@@ -5988,6 +6039,7 @@ async function prepareUserStore(win2, username) {
     throw err;
   }
 }
+const storeTTL$1 = TTLStore.getInstance();
 const FILENAME = "users.json";
 const FSCONFIG = {
   directory: "appData",
@@ -6047,6 +6099,9 @@ async function createUser(params) {
     }
     const now2 = formatDate();
     const hash = await encrypt(params.password);
+    const keyDB = await encryptPragmaKey(params.username, params.password);
+    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 60);
+    console.log("KEY CIPHER", keyDB);
     const newUser = await userService.create({
       username: params.username,
       password: hash,
@@ -6056,7 +6111,7 @@ async function createUser(params) {
     });
     const isCreationNewDir = await initUserDir(newUser);
     if (!isCreationNewDir) {
-      throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+      throw new Error(`[createUser]>> directory for user ${newUser.id} was not created!`);
     }
     return newUser;
   } catch (err) {
@@ -6087,6 +6142,7 @@ async function updatePassword(params) {
     throw err;
   }
 }
+const storeTTL = TTLStore.getInstance();
 async function validateAccessToken(params) {
   console.log("[validateAccessToken] =>", params);
   try {
@@ -6114,6 +6170,7 @@ async function loginUser(win2, params, config2) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const keyDB = await encryptPragmaKey(params.username, params.password);
+      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 60);
       console.log("KEY CIPHER", keyDB);
       const token2 = await createAccessToken({
         userId: readyUser.id,
@@ -6151,7 +6208,7 @@ function createWindow() {
       symbolColor: "#74b1be",
       height: 20
     }
-    // expose window controlls in Windows/Linux
+    // expose window controls in Windows/Linux
     // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
   });
   win.webContents.on("did-finish-load", async () => {
@@ -6210,7 +6267,7 @@ app.whenReady().then(async () => {
     return await createSubChapter(params, auth);
   });
   ipcMain.handle("sync-materials", async (_, auth) => {
-    if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZATE");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
     const { payload: { username } } = await verifyAccessToken(auth.token);
     return await syncMaterialsStores(username);
   });

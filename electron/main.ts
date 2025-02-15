@@ -76,7 +76,7 @@ function createWindow() {
             symbolColor: '#74b1be',
             height: 20
         },
-        // expose window controlls in Windows/Linux
+        // expose window controls in Windows/Linux
         // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
     });
 
@@ -113,7 +113,7 @@ app.on('activate', () => {
 
 // ХУК ЗАПУСКА ПРИЛОЖЕНИЯ
 app.whenReady().then(async () => {
-    // Инициалзация кластера баз данных
+    // Инициализация кластера баз данных
     const isReadyDB = await DatabaseManager
         .instance()
         .initOnApp({ migrate: true });
@@ -162,7 +162,7 @@ app.whenReady().then(async () => {
     });
 
     // ===== MATERIALS ========
-    // Созданое нового раздела материалов
+    // Созданное нового раздела материалов
     ipcMain.handle("create-chapter", async (_, params: ChapterCreate, auth: AuthParams) => {
         return await createChapter(params, auth);
     });
@@ -184,7 +184,7 @@ app.whenReady().then(async () => {
 
     // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
     ipcMain.handle("sync-materials", async (_, auth: AuthParams) => {
-        if(!auth?.token) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZATE");
+        if(!auth?.token) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
         const { payload: { username } } = await verifyAccessToken(auth.token);
         return await syncMaterialsStores(username);
     });

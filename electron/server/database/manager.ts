@@ -3,6 +3,9 @@ import { app } from 'electron';
 import path from 'path'
 import { getDistProjectDir } from '../services/fs.service';
 import { DbNamesType, InitDbItem, InstanceDatabaseDoc, IpcContractReq, IpcContractRes, UsernameType } from '../types/database/index.types';
+import { GlobalNames, variables } from '../../config/global';
+import { TTLStore } from './services/ttl-store.service';
+
 
 // Экземпляр базы данных
 export class InstanceDatabase implements InstanceDatabaseDoc {
@@ -11,13 +14,20 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
     private dbpath: string | null               = null;
     private processPath: string | null          = null;
     private process: ChildProcess | null        = null;
+    private storeTTL: TTLStore<string> | null   = null;
 
     constructor (dbname: DbNamesType, username: UsernameType, state?: (enabled: boolean) => void) {
         if(!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
         if(!username || typeof username !== 'string') throw new Error("InstanceDatabase > constructor: username is a required");
+
         this.init(dbname, username, (isReliable) => {
             state && state(isReliable);
         });
+
+        // Инит ttl хранилища 
+        if(!this.storeTTL) {
+            this.storeTTL = TTLStore.getInstance<string>()
+        }
         if(!InstanceDatabase.instanceDB) {
             InstanceDatabase.instanceDB = this;
         }
@@ -47,12 +57,19 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         try {
             if(!onApp && typeof onApp !== 'boolean') throw new Error('[fetchPragmaKey]>> onApp is not defined');
             if(onApp === true) {
-                const key = process.env.APP_KEY;
-                console.log('ENV PRAGMA KEY', key);
+                const key = variables.APP_KEY
+                console.log('APP PRAGMA KEY', key);
                 return key;
             }
             else {
-                return 'abc123';
+                if(!this.storeTTL) throw new Error('fetchPragmaKey > storeTTL is not defined');
+                
+                const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY)
+                if(!key) {
+                    throw new Error('fetchPragmaKey > ')
+                }
+                console.log('USER PRAGMA KEY', key);
+                return key;
             }
         } catch (err) {
             console.debug('requestIPC>>', err);

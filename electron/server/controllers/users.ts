@@ -1,10 +1,15 @@
-import { CreateUserParams, GetUsersConfig, PrepareUserStoreParams, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
-import { encrypt, verify } from '../services/crypto.service';
+import { CreateUserParams, GetUsersConfig, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
+import { encrypt, encryptPragmaKey, verify } from '../services/crypto.service';
 import { FsOperationConfig, isExistFileOrDir, mkDir, readFile } from '../services/fs.service';
 import UserService from '../database/services/users.service';
 import { prepareUserStore } from './system.controller';
 import { formatDate } from '../services/date.service';
+import { GlobalNames } from '../../config/global';
+import { TTLStore } from '../database/services/ttl-store.service';
 
+
+// инициализация TTL хранилища 
+const storeTTL = TTLStore.getInstance<string>()
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
     directory: 'appData',
@@ -93,6 +98,11 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
         // Если проверка прошла успешно, то создаем нового пользователя
         const now = formatDate();
         const hash = await encrypt(params.password);
+        
+        // Формируется ключ шифрования баз данных уровня пользователь
+        const keyDB = await encryptPragmaKey(params.username, params.password);
+        storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1_000 * 60)
+        console.log('KEY CIPHER', keyDB);
 
         // Запись нового пользователя в БД
         const newUser = await userService.create({
@@ -104,7 +114,7 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
         });
         const isCreationNewDir = await initUserDir(newUser);
         if(!isCreationNewDir) {
-            throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+            throw new Error(`[createUser]>> directory for user ${newUser.id} was not created!`);
         }
         return newUser as UserCreateResponse;
     } catch (err) {
@@ -112,7 +122,6 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
         throw err;
     }
 }
-
 
 // Обновление пароля
 export async function updatePassword(params: UpdatePasswordParams): Promise<boolean> {

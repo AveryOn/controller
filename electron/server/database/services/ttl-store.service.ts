@@ -1,5 +1,5 @@
 
-class TTLStore<T> {
+export class TTLStore<T> {
     private static instance: TTLStore<any>;
     private store: Map<string, { value: T; expiresAt: number }>;
 
@@ -9,7 +9,7 @@ class TTLStore<T> {
 
     static getInstance<T>(): TTLStore<T> {
         if (!TTLStore.instance) {
-            console.log('TTLStore инициализация...');
+            console.log('TTLStore init...');
             TTLStore.instance = new TTLStore<T>();
         }
         return TTLStore.instance;
@@ -18,10 +18,12 @@ class TTLStore<T> {
     set(key: string, value: T, ttl: number = (60 * 60 * 1)) {
         const expiresAt = Date.now() + ttl;
         this.store.set(key, { value, expiresAt });
+        console.log('TTL STORE', this.store);
+        
         setTimeout(() => {
             this.delete(key), ttl
-            console.log(`TTLStore ключ ${key} был удален!!!`);
-        });
+            console.log(`TTLStore key ${key} was deleted!!!`);
+        }, ttl);
     }
 
     get(key: string): T | undefined {
