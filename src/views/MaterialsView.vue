@@ -31,6 +31,7 @@
 import { computed, onMounted, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
+//@ts-expect-error
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiRefresh, mdiCloseBoxOutline } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
