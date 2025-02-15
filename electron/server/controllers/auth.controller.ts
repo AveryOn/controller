@@ -1,5 +1,5 @@
-import { GlobalNames } from "../../config/global";
-import { TTLStore } from "../database/services/ttl-store.service";
+import { GlobalNames, Vars } from "../../config/global";
+import { TTLStore } from "../services/ttl-store.service";
 import UserService from "../database/services/users.service";
 import { encryptPragmaKey, verify } from "../services/crypto.service";
 import { createAccessToken, verifyAccessToken } from "../services/tokens.service";
@@ -8,6 +8,7 @@ import { LoginParams, LoginResponse } from "../types/controllers/users.types";
 import { ExpiresToken } from "../types/services/tokens.types";
 import { prepareUserStore } from "./system.controller";
 import { BrowserWindow } from "electron";
+import { logoutIpc } from "../ipc/users.ipc";
 
 // инициализация TTL хранилища 
 const storeTTL = TTLStore.getInstance<string>()
@@ -52,7 +53,7 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams, 
 
             // Формируется ключ шифрования баз данных уровня пользователь
             const keyDB = await encryptPragmaKey(params.username, params.password);
-            storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1_000 * 60)
+            storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win));
             console.log('KEY CIPHER', keyDB);
 
             // Формируем токен доступа

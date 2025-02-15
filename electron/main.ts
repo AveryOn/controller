@@ -47,6 +47,7 @@ import { ValidateAccessTokenParams } from './server/types/controllers/auth.types
 import { AuthParams } from './server/types/controllers/index.types';
 import { prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
+import { TTLStore } from './server/services/ttl-store.service';
 
 
 // const require = createRequire(import.meta.url);
@@ -113,6 +114,9 @@ app.on('activate', () => {
 
 // ХУК ЗАПУСКА ПРИЛОЖЕНИЯ
 app.whenReady().then(async () => {
+    // Инициализация TTL Store
+    TTLStore.getInstance<string>();
+
     // Инициализация кластера баз данных
     const isReadyDB = await DatabaseManager
         .instance()
@@ -148,7 +152,7 @@ app.whenReady().then(async () => {
 
     // Создание нового пользователя
     ipcMain.handle("create-user", async (_, params: CreateUserParams) => {
-        return await createUser(params);
+        return await createUser(win, params);
     });
 
     // Вход пользователя в систему

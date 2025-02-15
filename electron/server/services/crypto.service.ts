@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { variables } from '../../config/global';
+import { Vars } from '../../config/global';
 
 // Параметры для scrypt
 const KEYLEN = 64;  // Длина ключа (хеша)
@@ -13,7 +13,7 @@ export async function encryptPragmaKey(username: string, password: string): Prom
     if(!password || typeof password !== 'string') throw new Error('invalid password');
     return new Promise((resolve, reject) => {
         try {
-            const APP_KEY = variables.APP_KEY;
+            const APP_KEY = Vars.APP_KEY;
             if(!APP_KEY) throw new Error('APP_KEY is not defined');
             const S = crypto.createHash('sha256').update(username + APP_KEY).digest('hex');
             const I = 300_000;

@@ -1,5 +1,9 @@
 "use strict";
 const electron = require("electron");
+function logout() {
+  localStorage.clear();
+  window.location.reload();
+}
 electron.contextBridge.exposeInMainWorld("electron", {
   // ============= AUTH =============
   validateAccessToken: (params) => electron.ipcRenderer.invoke("validate-access-token", params),
@@ -28,4 +32,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
 });
 electron.ipcRenderer.on("main-process-message", (_, message) => {
   console.log("Сообщение от основного процесса:", message);
+});
+electron.ipcRenderer.on("logout", (_) => {
+  logout();
 });

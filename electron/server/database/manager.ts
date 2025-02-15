@@ -3,8 +3,8 @@ import { app } from 'electron';
 import path from 'path'
 import { getDistProjectDir } from '../services/fs.service';
 import { DbNamesType, InitDbItem, InstanceDatabaseDoc, IpcContractReq, IpcContractRes, UsernameType } from '../types/database/index.types';
-import { GlobalNames, variables } from '../../config/global';
-import { TTLStore } from './services/ttl-store.service';
+import { GlobalNames, Vars } from '../../config/global';
+import { TTLStore } from '../services/ttl-store.service';
 
 
 // Экземпляр базы данных
@@ -57,7 +57,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         try {
             if(!onApp && typeof onApp !== 'boolean') throw new Error('[fetchPragmaKey]>> onApp is not defined');
             if(onApp === true) {
-                const key = variables.APP_KEY
+                const key = Vars.APP_KEY
                 console.log('APP PRAGMA KEY', key);
                 return key;
             }

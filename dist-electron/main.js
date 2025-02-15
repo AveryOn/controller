@@ -501,20 +501,30 @@ const _TTLStore = class _TTLStore {
   }
   static getInstance() {
     if (!_TTLStore.instance) {
-      console.log("TTLStore init...");
       _TTLStore.instance = new _TTLStore();
     }
     return _TTLStore.instance;
   }
-  set(key, value, ttl = 60 * 60 * 1) {
+  /**
+   * Создает новую запись в временном хранилище
+   * @param key название ключа по которому происходит взаимодействие с записью
+   * @param value значение которое будет хранится
+   * @param ttl время которое запись будет существовать в хранилище (в `мс`)
+   * @param cb коллбэк который вызывается, когда запись просрочилась и удаляется из хранилища 
+   */
+  set(key, value, ttl = 60 * 60 * 1, cb) {
     const expiresAt = Date.now() + ttl;
     this.store.set(key, { value, expiresAt });
-    console.log("TTL STORE", this.store);
     setTimeout(() => {
       this.delete(key);
-      console.log(`TTLStore key ${key} was deleted!!!`);
+      cb == null ? void 0 : cb.call(null);
     }, ttl);
   }
+  /**
+   * Позволяет получить значение хранимое по ключу
+   * @param key название ключа для извлечения значения
+   * @returns значение из существующей записи
+   */
   get(key) {
     const entry = this.store.get(key);
     if (!entry || entry.expiresAt < Date.now()) {
@@ -523,6 +533,10 @@ const _TTLStore = class _TTLStore {
     }
     return entry.value;
   }
+  /**
+   * Удаление строки по ключу
+   * @param key название ключа
+   */
   delete(key) {
     this.store.delete(key);
   }
@@ -6039,6 +6053,11 @@ async function prepareUserStore(win2, username) {
     throw err;
   }
 }
+function logoutIpc(win2) {
+  console.log("NEED TO LOGOUT");
+  if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
+  win2.webContents.send("logout");
+}
 const storeTTL$1 = TTLStore.getInstance();
 const FILENAME = "users.json";
 const FSCONFIG = {
@@ -6088,7 +6107,7 @@ async function initUserDir(user) {
     throw err;
   }
 }
-async function createUser(params) {
+async function createUser(win2, params) {
   console.log("[createUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
@@ -6100,7 +6119,7 @@ async function createUser(params) {
     const now2 = formatDate();
     const hash = await encrypt(params.password);
     const keyDB = await encryptPragmaKey(params.username, params.password);
-    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 60);
+    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 60, () => logoutIpc(win2));
     console.log("KEY CIPHER", keyDB);
     const newUser = await userService.create({
       username: params.username,
@@ -6170,7 +6189,7 @@ async function loginUser(win2, params, config2) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const keyDB = await encryptPragmaKey(params.username, params.password);
-      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 60);
+      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 20, () => logoutIpc(win2));
       console.log("KEY CIPHER", keyDB);
       const token2 = await createAccessToken({
         userId: readyUser.id,
@@ -6231,6 +6250,7 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(async () => {
+  TTLStore.getInstance();
   const isReadyDB = await DatabaseManager.instance().initOnApp({ migrate: true });
   if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
   console.debug("APPLICATION DATABASES ARE READY");
@@ -6246,7 +6266,7 @@ app.whenReady().then(async () => {
     return await getUsers(config2);
   });
   ipcMain.handle("create-user", async (_, params) => {
-    return await createUser(params);
+    return await createUser(win, params);
   });
   ipcMain.handle("login-user", async (_, params) => {
     return await loginUser(win, params, { expiresToken: { Y: 1 } });

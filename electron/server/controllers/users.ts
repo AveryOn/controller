@@ -4,8 +4,10 @@ import { FsOperationConfig, isExistFileOrDir, mkDir, readFile } from '../service
 import UserService from '../database/services/users.service';
 import { prepareUserStore } from './system.controller';
 import { formatDate } from '../services/date.service';
-import { GlobalNames } from '../../config/global';
-import { TTLStore } from '../database/services/ttl-store.service';
+import { GlobalNames, Vars } from '../../config/global';
+import { TTLStore } from '../services/ttl-store.service';
+import { logoutIpc } from '../ipc/users.ipc';
+import { BrowserWindow } from 'electron';
 
 
 // инициализация TTL хранилища 
@@ -85,7 +87,7 @@ async function initUserDir(user: UserCreateResponse): Promise<boolean> {
 }
 
 // Создание нового пользователя при регистрации
-export async function createUser(params: CreateUserParams): Promise<UserCreateResponse> {
+export async function createUser(win: BrowserWindow | null, params: CreateUserParams): Promise<UserCreateResponse> {
     console.log('[createUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
@@ -101,7 +103,7 @@ export async function createUser(params: CreateUserParams): Promise<UserCreateRe
         
         // Формируется ключ шифрования баз данных уровня пользователь
         const keyDB = await encryptPragmaKey(params.username, params.password);
-        storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1_000 * 60)
+        storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win))
         console.log('KEY CIPHER', keyDB);
 
         // Запись нового пользователя в БД
