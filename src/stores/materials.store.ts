@@ -35,18 +35,18 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     function updateMenuItems(items: ChapterForMenu[]) {
         materialChaptersMenu.value.length = 0;
         materialChaptersMenu.value.push(...items, addChapterItem);
+        console.log('MENU', materialChaptersMenu.value);
     }
 
     // Запросить элементы меню панели материалов
     async function getMaterialsMenu() {
         try {
             loadingGetMenuChapters.value = true;
-            if(materialChaptersMenu.value[0].type === 'loading') {
+            if (materialChaptersMenu.value[0].type === 'loading') {
                 const token = localStorage.getItem('token') ?? '';
                 const items = await getChapters({ forMenu: true, token: token });
-                console.log(items);
                 updateMenuItems(items);
-            } 
+            }
         } catch (err) {
             throw err;
         }
@@ -63,14 +63,32 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
 
     // Получить полный лэйбл материалов
     function getMaterialsFullLabels(): string[] {
-        if(materialsLabel.value.length > 0) {
-           return materialsLabel.value;
+        if (materialsLabel.value.length > 0) {
+            return materialsLabel.value;
         }
         return JSON.parse(localStorage.getItem('materials-full-label')!) ?? [];
     }
     function removeMaterialsFullLabels() {
         materialsLabel.value.length = 0;
         localStorage.removeItem('materials-full-label');
+    }
+
+    /**
+     * Сформировать HTML id для элемента панели меню 
+     * @param item элемент панели меню (раздел или подраздел), который имеет `id`, `pathName` и `pathname`?
+     * @returns 
+     */
+    function createMaterialElementId(item: any): string {
+        if (!item.id) return `item-${Date.now()}`;
+        if (item?.fullpath) {
+            return `${item.id}-${item.fullpath}`;
+        }
+        else if (item?.pathName) {
+            return `${item.id}-${item.pathName}`;
+        }
+        else {
+            return `item-${Date.now()}`;
+        }
     }
 
     return {
@@ -88,5 +106,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         updateMaterialsFullLabels,
         getMaterialsFullLabels,
         removeMaterialsFullLabels,
+        createMaterialElementId,
     }
 });

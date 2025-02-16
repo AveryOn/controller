@@ -45,6 +45,8 @@ const materialStore = useMaterialsStore();
 const emit = defineEmits<{
     (e: 'openChapter', label: string): void;
     (e: 'updateRootChapterId', id: number): void;
+    (e: 'updateFullLabel', label: string): void;
+    (e: 'deleteCurrentLabel', label: string): void;
     (e: 'quit'): void;
 }>();
 
@@ -143,7 +145,7 @@ function deleteChapter() {
     closeAllWins();
     isShowDeleteChapter.value = true;
 }
-// Вызов окна для редактировния текущего раздела 
+// Вызов окна для редактирования текущего раздела 
 function editChapter() {
     closeAllWins();
     isShowEditChapter.value = true;
@@ -204,6 +206,7 @@ async function requestDeleteChapter() {
             // Запрос к серверной стороне на удаление раздела
             await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
             isShowDeleteChapter.value = false;
+            emit('deleteCurrentLabel', opennedChapter.value?.label)
         } catch (err) {
             console.error(err);
             throw err;
@@ -221,8 +224,9 @@ async function requestDeleteSubChapter() {
         if (opennedChapter.value?.fullpath) {
             await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
             isShowDeleteChapter.value = false;
+            emit('deleteCurrentLabel', opennedChapter.value?.label)
         }
-        else throw new Error('[requestDeleteSubChapter]> парметр fullpath не существует');
+        else throw new Error('[requestDeleteSubChapter]> параметр fullpath не существует');
     } catch (err) {
         console.error(err);
         throw err;
@@ -285,7 +289,7 @@ async function requestForEdit(data: ChapterCreate) {
             const { isDiff, keys } = isDifferentDataEditForm(copyEditFormData.value, data);
             // Если данные были изменены, то запрос проходит
             if (isDiff) {
-                // Подготовливаем данные для отправки на сервер
+                // Подготавливаем данные для отправки на сервер
                 const editData: ChapterEdit = prepareDataForEdit(data, keys);
                 const readyObject: ChapterEditRequest = {
                     params: editData,
@@ -293,8 +297,10 @@ async function requestForEdit(data: ChapterCreate) {
                     pathName: computePathName(),
                 }
                 const result = await editChapterApi(JSON.parse(JSON.stringify(readyObject)));
-                console.log(JSON.stringify(result, null, 4));
-                console.log(JSON.stringify(opennedChapter.value, null, 4));
+                // В случае если изменялся label
+                if(editData.label) {
+                    emit('updateFullLabel', result.label);
+                }
                 opennedChapter.value = result;
                 isShowEditChapter.value = false;
                 return result;
@@ -378,16 +384,16 @@ async function initPageData(
     }
 }
 
-function controllKey(e: KeyboardEvent) {
+function controlKey(e: KeyboardEvent) {
     if (e.key === 'Escape') {
         closeAllWins();
     }
 }
 onMounted(() => {
-    window.addEventListener('keydown', controllKey);
+    window.addEventListener('keydown', controlKey);
 });
 onBeforeUnmount(() => {
-    window.removeEventListener('keydown', controllKey);
+    window.removeEventListener('keydown', controlKey);
 })
 
 

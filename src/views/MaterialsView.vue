@@ -21,6 +21,8 @@
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
             @open-chapter="(label) => console.log(label)"
             @update-root-chapter-id="(id: number) => rootChapterId = id"
+            @update-full-label="(label: string) => updateFullLabel(label)"
+            @delete-current-label="() => excludeLabelOfDeletedChapter()"
             @quit="handlerQuitChapter"
             />
         </div>
@@ -63,6 +65,26 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
         materialStore.loadingCreateChapter = false;
         router.push({ name: 'materials' });
     }
+}
+
+/**
+ * При обновлении раздела/подраздела в случае если был изменен label необходимо обновить и fullLabel
+ * @param label название раздела которое было обновлено
+ */
+function updateFullLabel(label: string) {
+    materialStore.materialsLabel.pop()
+    materialStore.materialsLabel.push(label);
+}
+
+/**
+ * При удалении раздела/подраздела необходимо вырезать его label из общего fullLabel
+ * @param label название раздела который был удален
+ */
+function excludeLabelOfDeletedChapter() {
+    materialStore.materialsLabel.pop(); // удаляется label текущего открытого раздела
+    // Также записать в localStorage
+    materialStore.updateMaterialsFullLabels(materialStore.materialsLabel);
+    window.location.reload();
 }
 
 // Переход на default 

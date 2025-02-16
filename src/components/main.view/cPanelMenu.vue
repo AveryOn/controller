@@ -3,6 +3,7 @@
         <PanelMenu class="w-full h-full" :model="mainStore.menuPanelItems">
             <template #item="{ item }">
                 <div
+                :id="materialsStore.createMaterialElementId(item)"
                 class="inner-item flex items-center cursor-pointer px-2 py-1"
                 @click="() => selectItem(item)"
                 >
@@ -77,6 +78,8 @@ function selectItem(item: any) {
         });
     }
 }
+
+
 </script>
 
 <style scoped>
