@@ -317,8 +317,9 @@ var cliOptions = function optionMatcher(args) {
 const GlobalNames = {
   USER_PRAGMA_KEY: "USER_PRAGMA_KEY"
 };
-const variables = {
-  APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb"
+const Vars = {
+  APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb",
+  USER_PRAGMA_KEY_TTL: 1e3 * 60 * 5
 };
 const KEYLEN = 64;
 const N = 16384;
@@ -329,7 +330,7 @@ async function encryptPragmaKey(username, password) {
   if (!password || typeof password !== "string") throw new Error("invalid password");
   return new Promise((resolve, reject) => {
     try {
-      const APP_KEY = variables.APP_KEY;
+      const APP_KEY = Vars.APP_KEY;
       if (!APP_KEY) ;
       const S = crypto$1.createHash("sha256").update(username + APP_KEY).digest("hex");
       const I = 3e5;
@@ -581,7 +582,7 @@ const _InstanceDatabase = class _InstanceDatabase {
     try {
       if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
       if (onApp === true) {
-        const key = variables.APP_KEY;
+        const key = Vars.APP_KEY;
         console.log("APP PRAGMA KEY", key);
         return key;
       } else {
@@ -6054,7 +6055,6 @@ async function prepareUserStore(win2, username) {
   }
 }
 function logoutIpc(win2) {
-  console.log("NEED TO LOGOUT");
   if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
   win2.webContents.send("logout");
 }
@@ -6119,7 +6119,7 @@ async function createUser(win2, params) {
     const now2 = formatDate();
     const hash = await encrypt(params.password);
     const keyDB = await encryptPragmaKey(params.username, params.password);
-    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 60, () => logoutIpc(win2));
+    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
     console.log("KEY CIPHER", keyDB);
     const newUser = await userService.create({
       username: params.username,
@@ -6189,7 +6189,7 @@ async function loginUser(win2, params, config2) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const keyDB = await encryptPragmaKey(params.username, params.password);
-      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, 1e3 * 20, () => logoutIpc(win2));
+      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
       console.log("KEY CIPHER", keyDB);
       const token2 = await createAccessToken({
         userId: readyUser.id,
