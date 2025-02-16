@@ -66,10 +66,10 @@ export async function prepareMaterialsStoreForMenu(username: string): Promise<bo
 export async function createChapter(params: ChapterCreate, auth: AuthParams) {
     console.log('[createChapter] => ', params);
     try {
-        if(!auth?.token) throw new Error("[createChapter]>> 401 UNAUTHORIZATE");
+        if(!auth?.token) throw new Error("[createChapter]>> 401 UNAUTHORIZE");
         const { payload } = await verifyAccessToken(auth.token);
         const chapterService = new ChapterService();
-        // Создание нового экзепляра раздела
+        // Создание нового экземпляра раздела
         const timestamp = formatDate();
         const newChapter = await chapterService.create({
             chapterType: params.chapterType,
@@ -95,7 +95,7 @@ export async function getChapters(params: GetChaptersConfig): Promise<ChapterFor
     console.log('getChapters => ', params);
     try {
         if(!params) throw new Error('[getChapters]>> invalid params');
-        if(!params.token) new Error('[getChapters]>> 401 UNAUTHORIZATE');
+        if(!params.token) new Error('[getChapters]>> 401 UNAUTHORIZE');
         const { payload: { username } } = await verifyAccessToken(params.token);
         const userDirPath = getAppUserDirname(username);
         // Если запрос шел от панели меню
@@ -217,7 +217,7 @@ export async function createSubChapter(params: SubChapterCreate, auth: AuthParam
     console.log('[createSubChapter] => ', params);
     try {
         if (!params || !params.chapterId) throw '[createSubChapter]>> INVALID_INPUT_DATA';
-        if(!auth?.token) throw '[createSubChapter]>> 401 UNAUTHORIZATE';
+        if(!auth?.token) throw '[createSubChapter]>> 401 UNAUTHORIZE';
         const { payload: { username } } = await verifyAccessToken(auth.token)
         const subChapterService = new SubChapterService();
         const now = formatDate();
@@ -261,7 +261,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                 const basePath = correctFullpath.shift();
                 
                 if(!mappa[basePath!]) mappa[basePath!] = [];
-                subChapter.fullLabels = [...stackLabels, subChapter.label]; // собираем полный label. Берем стек лэйблов предыдущего пути + текщий лэйбл 
+                subChapter.fullLabels = [...stackLabels, subChapter.label]; // собираем полный label. Берем стек лэйблов предыдущего пути + текущий лэйбл 
                 if(correctFullpath.length > 0) {
                     mappa[basePath!].push(subChapter);
                 }
@@ -281,7 +281,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
                 }
                 else {
                     // подраздел который обрабатывается в этом условии имеет несколько items
-                    // и этот подраздел по сути является некотрым узлом, и его label является некоторым неймспейсом
+                    // и этот подраздел по сути является некоторым узлом, и его label является некоторым неймспейсом
                     // для всех находящихся в нем подразделов, и потому, его лэйбл нужно поместить в текущий стек (трассу) лэйблов,
                     // чтобы каждый из его дочерних разделов знал вс. трассу лэйблов + свой лэйбл (для формирования fullLabel каждого подраздела)
                     stackLabels.push(subChapter.label);  
@@ -328,7 +328,7 @@ export async function syncMaterialsStores(username: string): Promise<Array<Chapt
 export async function getOneSubChapter(params: GetSubChapterOneParams, auth: AuthParams): Promise<SubChapter> {
     console.log('[getOneSubChapter] => ', params);
     try {
-        if(!auth?.token) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
+        if(!auth?.token) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZE");
         await verifyAccessToken(auth.token);
         const subChapterService = new SubChapterService();
         await subChapterService.findByFullpath(params.fullpath);
@@ -383,7 +383,7 @@ export async function getOneSubChapter(params: GetSubChapterOneParams, auth: Aut
 export async function editChapter(input: EditChapterParams, auth: AuthParams): Promise<Chapter> {
     console.log('[editChapter] => ', input);
     try {
-        if(!auth?.token) throw new Error("[editChapter]>> 401 UNAUTHORIZATE");
+        if(!auth?.token) throw new Error("[editChapter]>> 401 UNAUTHORIZE");
         const { payload: { username } } = await verifyAccessToken(auth.token);
         const { params, fullpath, pathName } = input;
         // Редактирование раздела

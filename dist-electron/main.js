@@ -320,6 +320,7 @@ const GlobalNames = {
 const Vars = {
   APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb",
   USER_PRAGMA_KEY_TTL: 1e3 * 60 * 5
+  // 5 min
 };
 const KEYLEN = 64;
 const N = 16384;
@@ -5640,7 +5641,7 @@ async function prepareMaterialsStoreForMenu(username) {
 async function createChapter(params, auth) {
   console.log("[createChapter] => ", params);
   try {
-    if (!(auth == null ? void 0 : auth.token)) throw new Error("[createChapter]>> 401 UNAUTHORIZATE");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[createChapter]>> 401 UNAUTHORIZE");
     const { payload } = await verifyAccessToken(auth.token);
     const chapterService = new ChapterService();
     const timestamp = formatDate();
@@ -5665,7 +5666,7 @@ async function getChapters(params) {
   console.log("getChapters => ", params);
   try {
     if (!params) throw new Error("[getChapters]>> invalid params");
-    if (!params.token) new Error("[getChapters]>> 401 UNAUTHORIZATE");
+    if (!params.token) new Error("[getChapters]>> 401 UNAUTHORIZE");
     const { payload: { username } } = await verifyAccessToken(params.token);
     const userDirPath = getAppUserDirname(username);
     let chapters;
@@ -5737,7 +5738,7 @@ async function createSubChapter(params, auth) {
   console.log("[createSubChapter] => ", params);
   try {
     if (!params || !params.chapterId) throw "[createSubChapter]>> INVALID_INPUT_DATA";
-    if (!(auth == null ? void 0 : auth.token)) throw "[createSubChapter]>> 401 UNAUTHORIZATE";
+    if (!(auth == null ? void 0 : auth.token)) throw "[createSubChapter]>> 401 UNAUTHORIZE";
     const { payload: { username } } = await verifyAccessToken(auth.token);
     const subChapterService = new SubChapterService();
     const now2 = formatDate();
@@ -5825,7 +5826,7 @@ async function syncMaterialsStores(username) {
 async function getOneSubChapter(params, auth) {
   console.log("[getOneSubChapter] => ", params);
   try {
-    if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token);
     const subChapterService = new SubChapterService();
     await subChapterService.findByFullpath(params.fullpath);
@@ -5875,7 +5876,7 @@ async function getOneSubChapter(params, auth) {
 async function editChapter(input, auth) {
   console.log("[editChapter] => ", input);
   try {
-    if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapter]>> 401 UNAUTHORIZATE");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapter]>> 401 UNAUTHORIZE");
     const { payload: { username } } = await verifyAccessToken(auth.token);
     const { params, fullpath, pathName } = input;
     if (!fullpath && pathName) {
