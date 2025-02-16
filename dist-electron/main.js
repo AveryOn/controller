@@ -5886,7 +5886,13 @@ async function editChapter(input, auth) {
         if (params.chapterType === "file" && findedChapter.chapterType === "dir") {
           throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
         }
-        const updatedChapter = await chapterService.update(findedChapter.id, params);
+        const updatedChapter = await chapterService.update(
+          findedChapter.id,
+          {
+            ...params,
+            updatedAt: formatDate()
+          }
+        );
         await syncMaterialsStores(username);
         const resultChapter = {
           ...updatedChapter,
@@ -5905,7 +5911,13 @@ async function editChapter(input, auth) {
         if (params.chapterType === "file" && findedSubChapter.chapterType === "dir") {
           throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
         }
-        const updatedSubChapter = await subChapterService.update(findedSubChapter.id, params);
+        const updatedSubChapter = await subChapterService.update(
+          findedSubChapter.id,
+          {
+            ...params,
+            updatedAt: formatDate()
+          }
+        );
         await syncMaterialsStores(username);
         const resultSubChapter = {
           ...updatedSubChapter,

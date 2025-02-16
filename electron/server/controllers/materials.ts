@@ -395,14 +395,20 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
                 if (params.chapterType === 'file' && findedChapter.chapterType === 'dir') {
                     throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
                 }
-                const updatedChapter = await chapterService.update(findedChapter.id, params) as ChapterRawResponse;
+                const updatedChapter = await chapterService.update(
+                    findedChapter.id, 
+                    { 
+                        ...params, 
+                        updatedAt: formatDate() 
+                    },
+                ) as ChapterRawResponse;
                 await syncMaterialsStores(username);
                 const resultChapter = { 
                     ...updatedChapter,
                     content: {
                         title: updatedChapter.contentTitle ?? null,
                         blocks: (Array.isArray(updatedChapter.blocks)) ? updatedChapter.blocks : []
-                    }
+                    },
                 }
                 Reflect.deleteProperty(resultChapter, 'blocks');
                 return resultChapter as any as Chapter;
@@ -418,7 +424,13 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
                 if (params.chapterType === 'file' && findedSubChapter.chapterType === 'dir') {
                     throw '[editChapter]>> INVALID_CHAPTER_TYPE[1]';
                 }
-                const updatedSubChapter = await subChapterService.update(findedSubChapter.id, params) as SubChapterRawResponse;
+                const updatedSubChapter = await subChapterService.update(
+                    findedSubChapter.id, 
+                    {
+                        ...params,
+                        updatedAt: formatDate(),
+                    },
+                ) as SubChapterRawResponse;
                 await syncMaterialsStores(username);
                 const resultSubChapter = { 
                     ...updatedSubChapter,
