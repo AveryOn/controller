@@ -1,11 +1,27 @@
-import type { Chapter, ChapterBlock, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, GetChapterBlocks, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
+import type { 
+    Chapter, 
+    ChapterBlock, 
+    ChapterCreate, 
+    ChapterEditRequest, 
+    ChapterForMenu, 
+    CreateChapterBlock, 
+    DeleteChapterBlock, 
+    DeleteChapterParams, 
+    DeleteSubChapterParams, 
+    EditChapterBlock, 
+    GetChapterBlocks, 
+    GetChaptersParams, 
+    GetOneChapterParams, 
+    GetOneSubChapterParams, 
+    SubChapterCreate,
+} from "../@types/entities/materials.types";
 import { useMaterialsStore } from "../stores/materials.store";
 
 const TIMEOUT = 1003;
-// Получить материлы с БД
+// Получить материалы с БД
 export async function getChapters(params?: GetChaptersParams): Promise<ChapterForMenu[]> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(() => {
             try {
                 resolve(window.electron.getChapters(params));
@@ -19,7 +35,7 @@ export async function getChapters(params?: GetChaptersParams): Promise<ChapterFo
 // Получить конкретный раздел
 export async function getOneChapter(params: GetOneChapterParams): Promise<Chapter> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 resolve(await window.electron.getChapter(params));
@@ -44,7 +60,7 @@ export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<
 // Создание нового раздела
 export async function createChapter(params: ChapterCreate) {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.createChapter(params, { token: localStorage.getItem('token') });
@@ -60,7 +76,7 @@ export async function createChapter(params: ChapterCreate) {
 // Создание нового подраздела
 export async function createSubChapter(params: SubChapterCreate) {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.createSubChapter(params, { token: localStorage.getItem('token') });
@@ -77,7 +93,7 @@ export async function createSubChapter(params: SubChapterCreate) {
 export async function syncMaterials(): Promise<ChapterForMenu[]> {
     const materialStore = useMaterialsStore();
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const items: ChapterForMenu[] = await window.electron.syncMaterials({ token: localStorage.getItem('token') });
@@ -93,11 +109,11 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
 // Редактирование данных раздела/подраздела
 export async function editChapterApi(params: ChapterEditRequest): Promise<Chapter> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.editChapter(params, { token: localStorage.getItem('token') });
-                // await syncMaterials();  // Синзронизация материалов в меню
+                // await syncMaterials();  // Синхронизация материалов в меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -109,7 +125,7 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
 // Удаление раздела
 export async function deleteChapterApi(params: DeleteChapterParams): Promise<void> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteChapter(params);
@@ -125,7 +141,7 @@ export async function deleteChapterApi(params: DeleteChapterParams): Promise<voi
 // Удаление подраздела
 export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promise<void> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteSubChapter(params);
@@ -141,7 +157,7 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
 // Получение блоков для раздела
 export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.getChapterBlocks(params);
@@ -156,7 +172,7 @@ export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Arr
 // Получение блоков для подраздела
 export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.getSubChapterBlocks(params);
@@ -171,7 +187,7 @@ export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<
 // Создание нового блока для раздела
 export async function createChapterBlockApi(params: CreateChapterBlock) {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.createChapterBlock(params);
@@ -186,7 +202,7 @@ export async function createChapterBlockApi(params: CreateChapterBlock) {
 // Редактирование блока для раздела
 export async function editChapterBlockApi(params: EditChapterBlock): Promise<Chapter[]> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.editChapterBlock(params);
@@ -201,7 +217,7 @@ export async function editChapterBlockApi(params: EditChapterBlock): Promise<Cha
 // Удаление блока из раздела
 export async function deleteChapterBlockApi(params: DeleteChapterBlock): Promise<Chapter> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
+        // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteChapterBlock(params);

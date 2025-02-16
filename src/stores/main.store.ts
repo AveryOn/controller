@@ -38,7 +38,7 @@ export const useMainStore = defineStore('mainStore', () => {
                 icon: 'pi pi-cog',
                 items: [
                     {
-                        label: 'Apperiance',
+                        label: 'Appearance',
                         icon: 'pi pi-image',
                     },
                     {

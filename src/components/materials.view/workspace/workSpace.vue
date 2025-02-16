@@ -224,6 +224,8 @@ watch(
     async (newVals, oldVals) => {
         const [newFullpath, newPathName] = newVals;
         const [oldFullpath, oldPathName] = oldVals;
+        console.log('WATCH props.chapter', props.chapter?.id);
+        
         if(newFullpath ?? '' + newPathName !== oldFullpath ?? '' + oldPathName) {
             // выполнить запрос на получение блоков раздела
             if(!newFullpath && newPathName && props.chapter?.id) {
@@ -234,7 +236,7 @@ watch(
                 blocks.value = await getSubChapterBlocksApi({ chapterId: props.chapter.id });
             }
             else 
-                throw new Error('watch>> [props.chapter?.fullpath, props.chapter?.pathName]');
+                console.error('watch>> [props.chapter?.fullpath, props.chapter?.pathName]');
         }
 })
 
