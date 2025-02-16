@@ -20,7 +20,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "electron"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "electron", "dist-electron/database/init.js", "dist-electron/materials.migration.js", "dist-electron/database/migrations/materials.migration.js"],
   "exclude": ["**/*.test.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

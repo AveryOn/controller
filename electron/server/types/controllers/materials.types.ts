@@ -11,6 +11,7 @@ export interface ChapterCreate {
 }
 
 export interface SubChapterCreate {
+    chapterId: number;
     pathName: string;
     label: string;
     fullpath: string;
@@ -21,6 +22,7 @@ export interface SubChapterCreate {
 }
 
 export interface GetChaptersConfig extends PaginatorParams {
+    token: string;
     forMenu?: boolean;
 }
 
@@ -32,6 +34,7 @@ export interface GetChapterOneParams {
 export interface GetSubChapterOneParams {
     pathName: string;
     fullpath: string;
+    // labels: string;
 }
 
 // Данные приходят с запросом на редактирование раздела/подраздела
@@ -59,6 +62,10 @@ export interface DeleteSubChapterParams {
 
 export type DeleteResponseMessage = 'success' | 'failed';
 
+export interface GetChapterBlocks {
+    chapterId: number;
+}
+
 export interface CreateChapterBlock {
     pathName: string;
     fullpath?: string;
@@ -76,16 +83,11 @@ export interface EditChapterBlock {
     block: ChapterBlock;
 }
 
-export interface EditChapterBlockTitle {
-    pathName: string;
-    fullpath?: string;
-    blockId: number;
-    blockTitle: string;
-}
-
 export interface ChapterBlock {
     id: number;
     title: string;
+    chapterId?: number;
+    subChapterId?: number;
     content: string | null;
     createdAt: string;
     updatedAt: string;
@@ -131,20 +133,24 @@ export interface Chapter {
 export interface SubChapterForMenu {
     id: number;
     fullpath: string;
+    pathName?: string;
+    chapterType: 'dir' | 'file';
+    fullLabels: string[];
     icon: string;
     iconType: IconType;
     label: string;
     route: string;
-    items?: SubChapter[] | null;
+    items?: SubChapterForMenu[] | null;
 }
 
 export interface ChapterForMenu {
     id: number;
-    pathName?: string;
+    pathName: string;
     fullpath?: string;
+    chapterType: 'dir' | 'file';
     icon: string;
     iconType: IconType;
     label: string;
     route: string;
-    items?: ChapterForMenu[] | null;
+    items?: SubChapterForMenu[] | null;
 }

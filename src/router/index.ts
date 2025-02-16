@@ -1,8 +1,10 @@
-import { createRouter, createWebHistory, createMemoryHistory } from "vue-router";
+import { createRouter, createMemoryHistory } from "vue-router";
 import MainView from "../views/MainView.vue";
 import LoginView from "../views/LoginView.vue";
 import { useLoginStore } from "../stores/login.store";
 import MaterialsView from "../views/MaterialsView.vue";
+import { validateAccessTokenApi } from "../api/auth.api";
+import { prepareUserStore } from "../api/users.api";
 
 const router = createRouter({
     history: createMemoryHistory(),
@@ -40,9 +42,11 @@ const router = createRouter({
 
 
 // Защита ранжирования маршрутов
-router.beforeEach((to, from, next) => {
-    const { isAuth } = useLoginStore();
-    if (isAuth === false) {
+router.beforeEach(async (to, from, next) => {
+    const store = useLoginStore();
+    const isValid = await validateAccessTokenApi({ token: localStorage.getItem('token') });
+    store.isAuth = isValid;
+    if (!isValid) {
         // Приватный маршрут
         if (to.meta.private === true) {
             if (from.name !== 'login') {
@@ -57,6 +61,11 @@ router.beforeEach((to, from, next) => {
     else {
         if (to.name === 'login') {
             return next({ name: 'main' });
+        }
+        // При первоначальном входе в приложение когда у нас выписан токен и мы на main странице
+        // То в этот момент пользовательское хранилище не активно, потому его нужно активировать
+        if(!from.name && to.name) {
+            await prepareUserStore()
         }
         localStorage.setItem('current_route', JSON.stringify({ 
             name: to.name, 

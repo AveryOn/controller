@@ -1,19 +1,17 @@
 import { BrowserWindow } from "electron";
-import { PrepareUserStorageParams } from "../types/controllers/system.types";
-import { prepareUsersStore } from "./users";
-import { prepareMaterialsStore, prepareMaterialsStoreForMenu } from "./materials";
+import { prepareMaterialsStoreForMenu } from "./materials";
+import { DatabaseManager } from "../database/manager";
 
 // Подготовить хранилище пользователя
-export async function prepareUserStore(win: BrowserWindow | null, params: PrepareUserStorageParams) {
-    console.log('[prepareUserStore]>> ', params);
+export async function prepareUserStore(win: BrowserWindow | null, username: string) {
+    console.log('[prepareUserStore]>> ', username);
     try {
         let isReliableStores: boolean = true;
-        isReliableStores = await prepareUsersStore();             // Users
-        isReliableStores = await prepareMaterialsStore();         // Materials
-        isReliableStores = await prepareMaterialsStoreForMenu()   // Materials For Menu
+        const manager = DatabaseManager.instance();
+        if(!await manager.initOnUser(username, { migrate: true })) isReliableStores = false;
+        if(!await prepareMaterialsStoreForMenu(username)) isReliableStores = false;
         
         if(!win) console.debug('[prepareUserStore]>> win is null', win);
-
         win?.webContents.send('main-process-message', isReliableStores);
         console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
     } catch (err) {

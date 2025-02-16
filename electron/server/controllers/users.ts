@@ -1,8 +1,17 @@
-import { CreateUserParams, GetUsersConfig, LoginParams, LoginResponse, UpdatePasswordParams, User } from '../types/controllers/users.types';
-import { encrypt, verify } from '../services/crypto.service';
-import { createAccessToken } from '../services/tokens.service';
-import { FsOperationConfig, isExistFileOrDir, mkDir, readFile, writeFile } from '../services/fs.service';
+import { CreateUserParams, GetUsersConfig, UpdatePasswordParams, User, UserCreateResponse } from '../types/controllers/users.types';
+import { encrypt, encryptPragmaKey, verify } from '../services/crypto.service';
+import { FsOperationConfig, isExistFileOrDir, mkDir, readFile } from '../services/fs.service';
+import UserService from '../database/services/users.service';
+import { prepareUserStore } from './system.controller';
+import { formatDate } from '../services/date.service';
+import { GlobalNames, Vars } from '../../config/global';
+import { TTLStore } from '../services/ttl-store.service';
+import { logoutIpc } from '../ipc/users.ipc';
+import { BrowserWindow } from 'electron';
 
+
+// инициализация TTL хранилища 
+const storeTTL = TTLStore.getInstance<string>()
 const FILENAME = 'users.json';
 const FSCONFIG: FsOperationConfig = {
     directory: 'appData',
@@ -11,46 +20,15 @@ const FSCONFIG: FsOperationConfig = {
     format: 'json',
 }
 
-// Сбросить все данные users 
-export async function resetUsersDB() {
-    console.log('[resetUsersDB] => void');
-    try {
-        await writeFile([], FSCONFIG);
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
+// // Подготовить пользовательское хранилище
+// export async function prepareUserStore(params: PrepareUserStoreParams): Promise<Array<User>> {
+//     try {
 
-// Запись данных в БД users 
-async function writeUsersDataFs(data: User[]): Promise<void> {
-    try {
-        return void await writeFile(JSON.stringify(data), FSCONFIG);
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
-
-// Подгтововить базу данных пользователей
-export async function prepareUsersStore(): Promise<boolean> {
-    return readFile(FSCONFIG)
-        .then((data) => {
-            return true;
-        })
-        .catch(async (err) => {
-            try {
-                if(err.code === 'ENOENT') {
-                    await writeFile([], FSCONFIG);
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                console.error('WRITE FILE', err);
-                return false;
-            }
-        })
-}
+//     } catch (err) {
+//         console.error(err);
+//         throw err;
+//     }
+// }
 
 // Получение пользователей с базы данных
 export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
@@ -71,7 +49,7 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
 }
 
 // Зарегистрировать пользовательскую директорию (при регистрации нового пользователя)
-async function initUserDir(user: User): Promise<boolean> {
+async function initUserDir(user: UserCreateResponse): Promise<boolean> {
     console.log('[initUserDir] =>', user);
     if(!user) throw new Error('user - обязательный аргумент');
     try {
@@ -89,8 +67,8 @@ async function initUserDir(user: User): Promise<boolean> {
             await mkDir(userDirName);
             if(await isExistFileOrDir(userDirName)) {
                 console.log('СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО');
-                // Затем создать файл user-[id].json (Он нужен т.к у каждого из пользователей должна быть информация о себе)
-                await writeFile({}, { ...FSCONFIG, filename: `${userDirName}/${userDirName}.json` });
+                // Инициализация баз данных
+                await prepareUserStore(null, user.username);
                 return true;
             }
             else {
@@ -108,84 +86,39 @@ async function initUserDir(user: User): Promise<boolean> {
     }
 }
 
-// Создание нового пользователя
-export async function createUser(params: CreateUserParams) {
+// Создание нового пользователя при регистрации
+export async function createUser(win: BrowserWindow | null, params: CreateUserParams): Promise<UserCreateResponse> {
     console.log('[createUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
-        // Получение списка пользователей
-        const users: Array<User> = await readFile(FSCONFIG);
-        // Проверка на то что пользователя с таким username в БД нет
-        users.forEach((user) => {
-            if (user.username === params.username) {
-                throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
-            }
-        });
-        const now = (new Date()).toISOString();
+        // Получение экземпляра сервиса
+        const userService = new UserService();
+        const user = await userService.findByUsername({ username: params.username });
+        if(user) {
+            throw '[createUser]>> CONSTRAINT_VIOLATE_UNIQUE';
+        }
         // Если проверка прошла успешно, то создаем нового пользователя
+        const now = formatDate();
         const hash = await encrypt(params.password);
-        const newUser: User = {
-            id: Date.now(),
+        
+        // Формируется ключ шифрования баз данных уровня пользователь
+        const keyDB = await encryptPragmaKey(params.username, params.password);
+        storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win))
+        console.log('KEY CIPHER', keyDB);
+
+        // Запись нового пользователя в БД
+        const newUser = await userService.create({
             username: params.username,
             password: hash,
             avatar: null,
             createdAt: now,
             updatedAt: now,
-        }
-        users.push(newUser);
-        // Запись нового пользователя в БД
-        await writeFile(users, FSCONFIG);
-        Reflect.deleteProperty(newUser, 'password');
+        });
         const isCreationNewDir = await initUserDir(newUser);
         if(!isCreationNewDir) {
-            throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+            throw new Error(`[createUser]>> directory for user ${newUser.id} was not created!`);
         }
-        return newUser;
-    } catch (err) {
-        console.error(err);
-        throw err;
-    }
-}
-
-// Подтверждение учетных данных пользователя при входе в систему
-export async function loginUser(params: LoginParams): Promise<LoginResponse> {
-    console.log('[loginUser] =>', params);
-
-    try {
-        if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
-        // Извлечение пользователей
-        const users: User[] = await readFile(FSCONFIG);
-        
-        // Поиск пользователя по username
-        const findedUser: User | undefined = users.find((user: User) => user.username === params.username);
-        if (!findedUser) {
-            throw '[loginUser]>> NOT_EXISTS_RECORD';
-        }
-        console.log(findedUser);
-        
-        // Проверка пароля
-        const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
-            console.log('[loginUser]>> INTERNAL_ERROR', err);
-        });
-        // Если пароль верный то выписываем токен
-        if (isVerifyPassword === true) {
-            const readyUser = { ...findedUser };
-            Reflect.deleteProperty(readyUser, 'hash_salt');
-            Reflect.deleteProperty(readyUser, 'password');
-            // Формируем токен доступа
-            const token = await createAccessToken({ 
-                userId: readyUser.id, 
-                username: readyUser.username 
-            }, { m: 1, s: 20 });
-            return {
-                token: token,
-                user: readyUser,
-            } as LoginResponse;
-        }
-        // Иначе выкидываем ошибку
-        else {
-            throw '[loginUser]>> INVALID_CREDENTIALS';
-        }
+        return newUser as UserCreateResponse;
     } catch (err) {
         console.error(err);
         throw err;
@@ -196,28 +129,27 @@ export async function loginUser(params: LoginParams): Promise<LoginResponse> {
 export async function updatePassword(params: UpdatePasswordParams): Promise<boolean> {
     try {
         if(params.newPassword === params.oldPassword) throw '[updatePassword]>> INVALID_DATA';
-        // Извлечение пользователей
-        let users: User[] = await getUsers();
+        if(!params.username) throw '[updatePassword]>> INVALID_DATA';
+
+        // Получение экземпляра сервиса
+        const userService = new UserService();
+
+        const user = await userService.findByUsername({ username: params.username });
         // Поиск пользователя по username
-        const findedUser: User | undefined = users.find((user: User) => user.username === params.username);
-        if (!findedUser) {
+        if (!user) {
             throw '[updatePassword]>> NOT_EXISTS_RECORD';
         }
         // Проверка паролей
-        if(!await verify(params.oldPassword, findedUser.password)) {
+        if(!await verify(params.oldPassword, user.password)) {
             throw '[updatePassword]>> INVALID_CREDENTIALS';
         }
         // Хеширование нового пароля
         const hash = await encrypt(params.newPassword);
-        findedUser.password = hash;
         // Обновление записи пользователя в БД
-        users = users.map((user: User) => {
-            if(user.id === findedUser.id) {
-                return findedUser;
-            } 
-            return user;
+        await userService.updatePassword({ 
+            username: params.username, 
+            password: hash 
         });
-        await writeUsersDataFs(users);
         return true;
     } catch (err) {
         console.error(err);

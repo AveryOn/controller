@@ -16,7 +16,7 @@
             <RegisterForm 
             class="form" 
             v-show="selectMode === 'Sign Up'" 
-            @confirm:login="handlerSignUp"
+            @confirm:register="handlerSignUp"
             />
             <LoginForm 
             class="form" 

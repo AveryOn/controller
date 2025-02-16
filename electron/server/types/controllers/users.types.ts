@@ -2,6 +2,10 @@ import { PaginatorParams } from "./index.types";
 
 export interface GetUsersConfig extends PaginatorParams {}
 
+export interface PrepareUserStoreParams {
+    token: string;
+}
+
 export interface UpdatePasswordParams {
     username: string;
     oldPassword: string;
@@ -22,6 +26,15 @@ export interface LoginResponse {
     token: string;
     user: UserClient;
 }
+
+export interface UserCreateResponse {
+    id: number;
+    username: string;
+    avatar?: undefined | null | string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface UserClient {
     id: number;
     username: string;
@@ -36,3 +49,12 @@ export interface User {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface UserCreate {
+    username: string;
+    password: string;
+    avatar?: undefined | null | string;
+    createdAt: string;
+    updatedAt: string;
+}
+

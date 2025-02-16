@@ -37,17 +37,17 @@ onBeforeMount(() => {
 onMounted(() => {
     setTimeout(() => {
         isGlobalLoading.value = false;
+        let readyTitle = '> ';
+        for (let i = 0; i < mainStore.appTitle.length; i++) {
+            setTimeout(() => {
+                const char = mainStore.appTitle[i];
+                readyTitle += char;
+                if(appTitle.textContent) {
+                    appTitle.textContent = readyTitle + '_';
+                }
+            }, i*80);
+        }
     }, 1000);
-    let readyTitle = '> ';
-    for (let i = 0; i < mainStore.appTitle.length; i++) {
-        setTimeout(() => {
-            const char = mainStore.appTitle[i];
-            readyTitle += char;
-            if(appTitle.textContent) {
-                appTitle.textContent = readyTitle + '_';
-            }
-        }, i*80);
-    }
 });
 </script>
 
@@ -57,7 +57,7 @@ onMounted(() => {
     right: 0;
     bottom: 0;
     left: 0;
-    top: 0;
+    top: 20px;
     background-color: var(--bg-color);
     display: flex;
     align-items: center;

@@ -10,7 +10,7 @@
         <!-- Форма удаления блока -->
         <deleteBlockForm 
         :loading="isLoadingDeleteBlock"
-        v-model="isAcitiveDeleteForm"
+        v-model="isActivateDeleteForm"
         @delete="reqDeleteBlockMaterial"
         />
         <!-- Если блоков нет -->
@@ -115,7 +115,7 @@ import { ref, type Ref } from 'vue';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
-import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, editChapterBlockTitleApi } from '../../../api/materials.api';
+import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi, getChapterBlocksApi, getSubChapterBlocksApi } from '../../../api/materials.api';
 import { trimPath } from '../../../utils/strings.utils';
 import { useMaterialsStore } from '../../../stores/materials.store';
 import { MenuItem } from 'primevue/menuitem';
@@ -135,6 +135,7 @@ const emit = defineEmits<{
 const notice = useNotices();
 const materialStore = useMaterialsStore();
 
+const blocks: Ref<Array<any>> = ref([]);
 const workspaceDiv: Ref<null | HTMLDivElement> = ref(null);
 const currentBlockId = ref<null | number>(null); 
 
@@ -153,7 +154,7 @@ const opennedBlockForDelete = ref({
     blockId: null as null | number,
 });
 const isActiveCreateForm = ref(false);
-const isAcitiveDeleteForm = ref(false);
+const isActivateDeleteForm = ref(false);
 const contentTitle = ref('');
 const isLoadingEditContentTitle = ref(false);
 const editorContent: Ref<null | string> = ref(null);
@@ -179,21 +180,14 @@ const blockContent = computed(() => {
     }
 })
 
-const blocks = computed(() => {
-    if(props.chapter) {
-        return props.chapter.content.blocks;
-    }
-    return [];
-});
-
 const sortedBlocks = computed(() => {
     return sortedMerge(blocks.value, 'updatedAt', 'least');
 });
 
-// Видимость инпута для label блока
-const isShowInputBlockTitle = computed(() => {
-    return opennedStateEditor.value.isActive === true;
-});
+// // Видимость инпута для label блока
+// const isShowInputBlockTitle = computed(() => {
+//     return opennedStateEditor.value.isActive === true;
+// });
 
 const isShowTextEditor = computed(() => {
     return (block: any) => {
@@ -223,6 +217,26 @@ const currentBlock = computed(() => {
 watch(() => props.isShowCreateBlock, (newVal) => {
     isActiveCreateForm.value = newVal;
 });
+
+// Отслеживать что раздел/подраздел был переключен на другой
+watch(
+    () => [props.chapter?.fullpath, props.chapter?.pathName], 
+    async (newVals, oldVals) => {
+        const [newFullpath, newPathName] = newVals;
+        const [oldFullpath, oldPathName] = oldVals;
+        if(newFullpath ?? '' + newPathName !== oldFullpath ?? '' + oldPathName) {
+            // выполнить запрос на получение блоков раздела
+            if(!newFullpath && newPathName && props.chapter?.id) {
+                blocks.value = await getChapterBlocksApi({ chapterId: props.chapter.id });
+            }
+            // выполнить запрос на получение блоков ПОДраздела
+            else if(newFullpath && newPathName &&  props.chapter?.id) {
+                blocks.value = await getSubChapterBlocksApi({ chapterId: props.chapter.id });
+            }
+            else 
+                throw new Error('watch>> [props.chapter?.fullpath, props.chapter?.pathName]');
+        }
+})
 
 // Изменить заголовок content chapter
 function editContentTitle() {
@@ -256,9 +270,11 @@ async function openEditTileBlock(blockId: number, title: string, block?: Chapter
         else {
             try {
                 isLoadingEditTitleBlock.value = true;
-                const result = await editChapterBlockTitleApi({
-                    blockId: currentBlock.value.id,
-                    blockTitle: titleBlock.value,
+                const result = await editChapterBlockApi({
+                    block: {
+                        ...currentBlock.value, 
+                        title: titleBlock.value
+                    },
                     pathName: pathName.value,
                     fullpath: props.chapter?.fullpath,
                 });
@@ -309,7 +325,7 @@ function chooseBlockForEdit(block: ChapterBlock) {
 // Выбрать блок для удаления
 function chooseBlockForDelete(block: ChapterBlock) {
     opennedBlockForDelete.value.blockId = block.id;
-    isAcitiveDeleteForm.value = true;
+    isActivateDeleteForm.value = true;
 }
 
 // Включить форму создания нового блока
@@ -376,8 +392,8 @@ async function reqDeleteBlockMaterial() {
             pathName: pathName.value,
             fullpath: fullpath,
         }
-        const result = await deleteChapterBlockApi(params);
-        isAcitiveDeleteForm.value = false;
+        await deleteChapterBlockApi(params);
+        isActivateDeleteForm.value = false;
         window.location.reload();
     } catch (err) {
         console.error(err);
@@ -411,9 +427,9 @@ function controllerKeys(e: KeyboardEvent) {
         if(isActiveCreateForm.value) {
             return void (isActiveCreateForm.value = false);
         }
-        if(isAcitiveDeleteForm.value) {
+        if(isActivateDeleteForm.value) {
             opennedBlockForDelete.value.blockId = null;
-            return void (isAcitiveDeleteForm.value = false);
+            return void (isActivateDeleteForm.value = false);
         }
         if(opennedEditTitleBlock.value) return void (opennedEditTitleBlock.value = null);
         if(opennedStateEditor.value.isActive) closeTextEditor();

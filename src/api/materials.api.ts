@@ -1,4 +1,4 @@
-import type { Chapter, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
+import type { Chapter, ChapterBlock, ChapterCreate, ChapterEditRequest, ChapterForMenu, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterBlockTitle, GetChapterBlocks, GetChaptersParams, GetOneChapterParams, GetOneSubChapterParams, SubChapterCreate } from "../@types/entities/materials.types";
 import { useMaterialsStore } from "../stores/materials.store";
 
 const TIMEOUT = 1003;
@@ -31,16 +31,13 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
 }
 
 // Получить конкретный ПОДраздел
-export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<{ chapter: Chapter, labels: string[] }> {
+export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<Chapter> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
-        setTimeout(async () => {
-            try {
-                resolve(await window.electron.getOneSubChapter(params));
-            } catch (err) {
-                reject(err);
-            }
-        }, 0);
+        try {
+            resolve(window.electron.getOneSubChapter(params, { token: localStorage.getItem('token') }));
+        } catch (err) {
+            reject(err);
+        }
     });
 }
 
@@ -50,8 +47,8 @@ export async function createChapter(params: ChapterCreate) {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.createChapter(params);
-                await syncMaterials();
+                const result = await window.electron.createChapter(params, { token: localStorage.getItem('token') });
+                // await syncMaterials();
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -66,8 +63,8 @@ export async function createSubChapter(params: SubChapterCreate) {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.createSubChapter(params);
-                await syncMaterials();  // Синхронизация подразделов с меню
+                const result = await window.electron.createSubChapter(params, { token: localStorage.getItem('token') });
+                // await syncMaterials();  // Синхронизация подразделов с меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -83,7 +80,7 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const items: ChapterForMenu[] = await window.electron.syncMaterials();
+                const items: ChapterForMenu[] = await window.electron.syncMaterials({ token: localStorage.getItem('token') });
                 materialStore.updateMenuItems(items); // Обновить состояние меню панели
                 resolve(items);
             } catch (err) {
@@ -99,8 +96,8 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
         // Иммитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.editChapter(params);
-                await syncMaterials();  // Синзронизация материалов в меню
+                const result = await window.electron.editChapter(params, { token: localStorage.getItem('token') });
+                // await syncMaterials();  // Синзронизация материалов в меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -116,7 +113,7 @@ export async function deleteChapterApi(params: DeleteChapterParams): Promise<voi
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteChapter(params);
-                await syncMaterials(); // Синхронизация данных в панели меню
+                // await syncMaterials(); // Синхронизация данных в панели меню
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -132,7 +129,37 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
         setTimeout(async () => {
             try {
                 const result = await window.electron.deleteSubChapter(params);
-                await syncMaterials();  // Синхронизация панели меню материалов
+                // await syncMaterials();  // Синхронизация панели меню материалов
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
+}
+
+// Получение блоков для раздела
+export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(async () => {
+            try {
+                const result = await window.electron.getChapterBlocks(params);
+                resolve(result);
+            } catch (err) {
+                reject(err);
+            }
+        }, TIMEOUT);
+    });
+}
+
+// Получение блоков для подраздела
+export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
+    return new Promise((resolve, reject) => {
+        // Иммитация того что запрос не настолько быстрый
+        setTimeout(async () => {
+            try {
+                const result = await window.electron.getSubChapterBlocks(params);
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -163,21 +190,6 @@ export async function editChapterBlockApi(params: EditChapterBlock): Promise<Cha
         setTimeout(async () => {
             try {
                 const result = await window.electron.editChapterBlock(params);
-                resolve(result);
-            } catch (err) {
-                reject(err);
-            }
-        }, TIMEOUT);
-    });
-}
-
-// Редактирование заголовка блока для раздела
-export async function editChapterBlockTitleApi(params: EditChapterBlockTitle): Promise<Chapter[]> {
-    return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
-        setTimeout(async () => {
-            try {
-                const result = await window.electron.editChapterBlockTitle(params);
                 resolve(result);
             } catch (err) {
                 reject(err);

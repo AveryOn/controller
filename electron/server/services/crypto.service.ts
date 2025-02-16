@@ -1,10 +1,29 @@
 import crypto from 'crypto';
+import { Vars } from '../../config/global';
 
 // Параметры для scrypt
 const KEYLEN = 64;  // Длина ключа (хеша)
-const N = 16384;    // Число итераций (можно увеличивать для усиления безопасности)
+const N = 16_384;    // Число итераций (можно увеличивать для усиления безопасности)
 const R = 8;        // Параметр блока
 const P = 1;        // Параметр параллельности
+
+// Формирование одностороннего ключа шифрования для баз данных уровня пользователя
+export async function encryptPragmaKey(username: string, password: string): Promise<string> {
+    if(!username || typeof username !== 'string') throw new Error('invalid username');
+    if(!password || typeof password !== 'string') throw new Error('invalid password');
+    return new Promise((resolve, reject) => {
+        try {
+            const APP_KEY = Vars.APP_KEY;
+            if(!APP_KEY) throw new Error('APP_KEY is not defined');
+            const S = crypto.createHash('sha256').update(username + APP_KEY).digest('hex');
+            const I = 300_000;
+            const key = crypto.pbkdf2Sync(password, S, I, KEYLEN, 'sha512').toString('hex');
+            resolve(key);
+        } catch (err) {
+            reject(err);
+        }
+    })
+}
 
 // Хеширование с помощью scrypt
 export async function encrypt(input: string): Promise<string> {

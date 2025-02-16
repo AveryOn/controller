@@ -10,6 +10,7 @@ export interface ChapterCreate {
 }
 
 export interface SubChapterCreate {
+    chapterId: number;
     pathName: string;
     label: string;
     fullpath: string;
@@ -65,6 +66,10 @@ export interface ChapterContent {
     blocks: Array<ChapterBlock>;
 }
 
+export interface GetChapterBlocks {
+    chapterId: number;
+}
+
 // Объект для создания нового блока в разделе
 export interface CreateChapterBlock {
     pathName?: string;
@@ -78,12 +83,15 @@ export interface EditChapterBlock {
     block: ChapterBlock;
 }
 
-export interface EditChapterBlockTitle {
-    pathName: string;
-    fullpath?: string;
-    blockId: number;
-    blockTitle: string;
-}
+// export interface EditChapterBlockTitle {
+//     pathName: string;
+//     fullpath?: string;
+//     block: ChapterBlock;
+//     // pathName: string;
+//     // fullpath?: string;
+//     // blockId: number;
+//     // blockTitle: string;
+// }
 
 export interface DeleteChapterBlock {
     pathName: string;
@@ -128,6 +136,7 @@ export interface SubChapterForMenu {
     id: number;
     queryName: string;
     pathName: string;
+    fullLabels: string[];
     icon: string;
     iconType: IconType;
     label: string;
@@ -184,6 +193,7 @@ export interface GetChaptersParams {
     page?: number;
     perPage?: number;
     forMenu?: boolean;
+    token: string;
 }
 
 export interface GetOneChapterParams {
@@ -194,4 +204,12 @@ export interface GetOneChapterParams {
 export interface GetOneSubChapterParams {
     pathName: string;
     fullpath: string;
+    // labels:   string;
+}
+
+export interface LabelsInfoStorage { 
+    [key: string]: { 
+        fullpath: string, 
+        fullLabel: string[],
+    } 
 }

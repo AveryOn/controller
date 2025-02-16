@@ -1,88 +1,20 @@
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import require$$0 from "fs";
 import path$1 from "path";
 import require$$2 from "os";
 import crypto$1 from "crypto";
 import { app, BrowserWindow, ipcMain } from "electron";
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath$1 } from "node:url";
 import path$2 from "node:path";
 import fs$1 from "fs/promises";
-var main$1 = { exports: {} };
-const name = "dotenv";
+import { fileURLToPath } from "url";
+import { fork } from "child_process";
+var main = { exports: {} };
 const version$1 = "16.4.7";
-const description = "Loads environment variables from .env file";
-const main = "lib/main.js";
-const types = "lib/main.d.ts";
-const exports = {
-  ".": {
-    types: "./lib/main.d.ts",
-    require: "./lib/main.js",
-    "default": "./lib/main.js"
-  },
-  "./config": "./config.js",
-  "./config.js": "./config.js",
-  "./lib/env-options": "./lib/env-options.js",
-  "./lib/env-options.js": "./lib/env-options.js",
-  "./lib/cli-options": "./lib/cli-options.js",
-  "./lib/cli-options.js": "./lib/cli-options.js",
-  "./package.json": "./package.json"
-};
-const scripts = {
-  "dts-check": "tsc --project tests/types/tsconfig.json",
-  lint: "standard",
-  pretest: "npm run lint && npm run dts-check",
-  test: "tap run --allow-empty-coverage --disable-coverage --timeout=60000",
-  "test:coverage": "tap run --show-full-coverage --timeout=60000 --coverage-report=lcov",
-  prerelease: "npm test",
-  release: "standard-version"
-};
-const repository = {
-  type: "git",
-  url: "git://github.com/motdotla/dotenv.git"
-};
-const funding = "https://dotenvx.com";
-const keywords = [
-  "dotenv",
-  "env",
-  ".env",
-  "environment",
-  "variables",
-  "config",
-  "settings"
-];
-const readmeFilename = "README.md";
-const license = "BSD-2-Clause";
-const devDependencies = {
-  "@types/node": "^18.11.3",
-  decache: "^4.6.2",
-  sinon: "^14.0.1",
-  standard: "^17.0.0",
-  "standard-version": "^9.5.0",
-  tap: "^19.2.0",
-  typescript: "^4.8.4"
-};
-const engines = {
-  node: ">=12"
-};
-const browser = {
-  fs: false
-};
 const require$$4 = {
-  name,
-  version: version$1,
-  description,
-  main,
-  types,
-  exports,
-  scripts,
-  repository,
-  funding,
-  keywords,
-  readmeFilename,
-  license,
-  devDependencies,
-  engines,
-  browser
+  version: version$1
 };
 const fs = require$$0;
 const path = path$1;
@@ -337,15 +269,15 @@ const DotenvModule = {
   parse,
   populate
 };
-main$1.exports.configDotenv = DotenvModule.configDotenv;
-main$1.exports._configVault = DotenvModule._configVault;
-main$1.exports._parseVault = DotenvModule._parseVault;
-main$1.exports.config = DotenvModule.config;
-main$1.exports.decrypt = DotenvModule.decrypt;
-main$1.exports.parse = DotenvModule.parse;
-main$1.exports.populate = DotenvModule.populate;
-main$1.exports = DotenvModule;
-var mainExports = main$1.exports;
+main.exports.configDotenv = DotenvModule.configDotenv;
+main.exports._configVault = DotenvModule._configVault;
+main.exports._parseVault = DotenvModule._parseVault;
+main.exports.config = DotenvModule.config;
+main.exports.decrypt = DotenvModule.decrypt;
+main.exports.parse = DotenvModule.parse;
+main.exports.populate = DotenvModule.populate;
+main.exports = DotenvModule;
+var mainExports = main.exports;
 const options = {};
 if (process.env.DOTENV_CONFIG_ENCODING != null) {
   options.encoding = process.env.DOTENV_CONFIG_ENCODING;
@@ -382,10 +314,33 @@ var cliOptions = function optionMatcher(args) {
     )
   );
 })();
+const GlobalNames = {
+  USER_PRAGMA_KEY: "USER_PRAGMA_KEY"
+};
+const Vars = {
+  APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb",
+  USER_PRAGMA_KEY_TTL: 1e3 * 60 * 5
+};
 const KEYLEN = 64;
 const N = 16384;
 const R = 8;
 const P = 1;
+async function encryptPragmaKey(username, password) {
+  if (!username || typeof username !== "string") throw new Error("invalid username");
+  if (!password || typeof password !== "string") throw new Error("invalid password");
+  return new Promise((resolve, reject) => {
+    try {
+      const APP_KEY = Vars.APP_KEY;
+      if (!APP_KEY) ;
+      const S = crypto$1.createHash("sha256").update(username + APP_KEY).digest("hex");
+      const I = 3e5;
+      const key = crypto$1.pbkdf2Sync(password, S, I, KEYLEN, "sha512").toString("hex");
+      resolve(key);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
 async function encrypt(input) {
   if (!input) throw new Error("input - обязательный аргумент");
   if (typeof input !== "string") throw new Error("input - должен быть типа string");
@@ -428,7 +383,7 @@ async function verify(input, hash) {
 }
 async function encryptJsonData(data, signature) {
   if (!data) throw new Error("[Services.encryptJsonData]>> NOT_DATA");
-  if (!signature || typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
+  if (typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
@@ -451,49 +406,45 @@ async function encryptJsonData(data, signature) {
     }
   });
 }
-function prepareExpireTime(expires) {
-  let ready = 0;
-  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
-  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
-  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
-  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
-  ready += 1e3 * 60 * Math.max(expires.m, 1);
-  ready += 1e3 * Math.max(expires.s, 1);
-  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
-  ready += Date.now();
-  return ready;
+async function decryptJsonData(data, signature) {
+  if (!data) throw new Error("[Services.decryptJsonData]>> NOT_DATA");
+  if (typeof signature !== "string") throw new Error("[Services.decryptJsonData]>> INVALID_SIGNATURE");
+  return new Promise((resolve, reject) => {
+    try {
+      const ALG = "aes-256-cbc";
+      const SALT = data.slice(data.length - 32);
+      const KEY2 = crypto$1.scryptSync(signature, SALT, 32);
+      const IV = Buffer.from(data.slice(0, 32), "hex");
+      if (IV.length < 16) throw new Error("[Services.decryptJsonData]>> INVALID_INIT_VECTOR");
+      let readyData = data.slice(32, data.length - 32);
+      const decipher = crypto$1.createDecipheriv(ALG, KEY2, IV);
+      let decryptedData = decipher.update(readyData, "hex", "utf8");
+      readyData = null;
+      decryptedData += decipher.final("utf8");
+      resolve(decryptedData);
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
-function createSignatureToken() {
-  try {
-    return "abc123";
-  } catch (err) {
-    console.error("[createSignatureToken]>>", err);
-    throw err;
-  }
-}
-const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
-async function createAccessToken(payload, expires) {
-  try {
-    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
-    const expiresStamp = prepareExpireTime(expires);
-    const signatureToken = createSignatureToken();
-    const tokenData = {
-      expires: expiresStamp,
-      payload,
-      signature: signatureToken
-    };
-    const token2 = await encryptJsonData(tokenData, KEY);
-    return token2;
-  } catch (err) {
-    throw err;
-  }
-}
+const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
 function getAppDirname() {
   return path$1.join(app.getPath("appData"), "controller");
 }
+function getAppUserDirname(username) {
+  return path$1.join(app.getPath("appData"), "controller", `user_${username}`);
+}
+function getDistProjectDir() {
+  return app.isPackaged ? path$1.join(process.resourcesPath, "app.asar.unpacked", "dist-electron") : __dirname$1;
+}
 async function writeFile(data, config2) {
   try {
-    const appDataDir = getAppDirname();
+    let appDataDir;
+    if (config2.customPath === true) {
+      appDataDir = config2.directory;
+    } else {
+      appDataDir = getAppDirname();
+    }
     const filePath = path$1.join(appDataDir, config2.filename);
     const correctData = config2.format === "json" ? JSON.stringify(data) : data;
     return void await fs$1.writeFile(filePath, correctData, { encoding: config2.encoding || "utf-8" });
@@ -504,7 +455,12 @@ async function writeFile(data, config2) {
 }
 async function readFile(config2) {
   try {
-    const appDataDir = getAppDirname();
+    let appDataDir;
+    if (config2.customPath === true) {
+      appDataDir = config2.directory;
+    } else {
+      appDataDir = getAppDirname();
+    }
     const filePath = path$1.join(appDataDir, config2.filename);
     const data = await fs$1.readFile(filePath, { encoding: config2.encoding || "utf-8" });
     return config2.format === "json" ? JSON.parse(data) : data;
@@ -522,11 +478,15 @@ async function mkDir(dirName) {
     throw err;
   }
 }
-async function isExistFileOrDir(pathName) {
+async function isExistFileOrDir(pathName, config2) {
   if (!pathName) throw new Error("[isExistFileOrDir]>> pathName обязательный аргумент");
   try {
-    const root = getAppDirname();
-    const fullPath = path$1.join(root, pathName);
+    let root;
+    let fullPath;
+    if (!(config2 == null ? void 0 : config2.custom)) {
+      root = getAppDirname();
+      fullPath = path$1.join(root, pathName);
+    }
     await fs$1.access(fullPath, fs$1.constants.F_OK);
     return true;
   } catch (err) {
@@ -535,168 +495,345 @@ async function isExistFileOrDir(pathName) {
     } else throw err;
   }
 }
-const FILENAME = "users.json";
-const FSCONFIG$1 = {
-  directory: "appData",
-  encoding: "utf-8",
-  filename: FILENAME,
-  format: "json"
+const _TTLStore = class _TTLStore {
+  constructor() {
+    __publicField(this, "store");
+    this.store = /* @__PURE__ */ new Map();
+  }
+  static getInstance() {
+    if (!_TTLStore.instance) {
+      _TTLStore.instance = new _TTLStore();
+    }
+    return _TTLStore.instance;
+  }
+  /**
+   * Создает новую запись в временном хранилище
+   * @param key название ключа по которому происходит взаимодействие с записью
+   * @param value значение которое будет хранится
+   * @param ttl время которое запись будет существовать в хранилище (в `мс`)
+   * @param cb коллбэк который вызывается, когда запись просрочилась и удаляется из хранилища 
+   */
+  set(key, value, ttl = 60 * 60 * 1, cb) {
+    const expiresAt = Date.now() + ttl;
+    this.store.set(key, { value, expiresAt });
+    setTimeout(() => {
+      this.delete(key);
+      cb == null ? void 0 : cb.call(null);
+    }, ttl);
+  }
+  /**
+   * Позволяет получить значение хранимое по ключу
+   * @param key название ключа для извлечения значения
+   * @returns значение из существующей записи
+   */
+  get(key) {
+    const entry = this.store.get(key);
+    if (!entry || entry.expiresAt < Date.now()) {
+      this.store.delete(key);
+      return void 0;
+    }
+    return entry.value;
+  }
+  /**
+   * Удаление строки по ключу
+   * @param key название ключа
+   */
+  delete(key) {
+    this.store.delete(key);
+  }
 };
-async function writeUsersDataFs(data) {
-  try {
-    return void await writeFile(JSON.stringify(data), FSCONFIG$1);
-  } catch (err) {
-    console.error(err);
-    throw err;
+__publicField(_TTLStore, "instance");
+let TTLStore = _TTLStore;
+const _InstanceDatabase = class _InstanceDatabase {
+  constructor(dbname, username, state) {
+    __publicField(this, "dbname", null);
+    __publicField(this, "dbpath", null);
+    __publicField(this, "processPath", null);
+    __publicField(this, "process", null);
+    __publicField(this, "storeTTL", null);
+    if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
+    if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
+    this.init(dbname, username, (isReliable) => {
+      state && state(isReliable);
+    });
+    if (!this.storeTTL) {
+      this.storeTTL = TTLStore.getInstance();
+    }
+    if (!_InstanceDatabase.instanceDB) {
+      _InstanceDatabase.instanceDB = this;
+    }
   }
-}
-async function prepareUsersStore() {
-  return readFile(FSCONFIG$1).then((data) => {
-    return true;
-  }).catch(async (err) => {
+  // Инициализация базы данных
+  init(dbname, username, state) {
+    this.dbname = dbname;
+    if (username !== "--") {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
+    } else {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
+    }
+    this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
+    this.process = fork(this.processPath);
+    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }, true).then(({ status }) => state && state(status === "ok")).catch(() => {
+      state && state(false);
+    });
+  }
+  // Извлечь ключ шифрования базы данных
+  fetchPragmaKey(onApp) {
     try {
-      if (err.code === "ENOENT") {
-        await writeFile([], FSCONFIG$1);
-        return true;
-      }
-      return false;
-    } catch (err2) {
-      console.error("WRITE FILE", err2);
-      return false;
-    }
-  });
-}
-async function getUsers(config2) {
-  try {
-    const users = await readFile(FSCONFIG$1);
-    if (config2 && config2.page && config2.perPage) {
-      const right = config2.perPage * config2.page;
-      const left = right - config2.perPage;
-      return users.slice(left, right);
-    } else return users;
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-async function initUserDir(user) {
-  console.log("[initUserDir] =>", user);
-  if (!user) throw new Error("user - обязательный аргумент");
-  try {
-    if (typeof user.id !== "number" || user.id !== user.id) {
-      throw new TypeError("[initUserDir]>> ID пользователя неверный");
-    }
-    const userDirName = `user_${user.username}`;
-    const isExistUserDir = await isExistFileOrDir(userDirName);
-    if (isExistUserDir === false) {
-      console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
-      await mkDir(userDirName);
-      if (await isExistFileOrDir(userDirName)) {
-        console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
-        await writeFile({}, { ...FSCONFIG$1, filename: `${userDirName}/${userDirName}.json` });
-        return true;
+      if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
+      if (onApp === true) {
+        const key = Vars.APP_KEY;
+        console.log("APP PRAGMA KEY", key);
+        return key;
       } else {
-        console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
-        return false;
+        if (!this.storeTTL) throw new Error("fetchPragmaKey > storeTTL is not defined");
+        const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY);
+        if (!key) {
+          throw new Error("fetchPragmaKey > ");
+        }
+        console.log("USER PRAGMA KEY", key);
+        return key;
       }
-    } else {
-      console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
-      return false;
+    } catch (err) {
+      console.debug("requestIPC>>", err);
+      throw err;
     }
-  } catch (err) {
-    throw err;
   }
-}
-async function createUser(params) {
-  console.log("[createUser] =>", params);
-  try {
-    if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
-    const users = await readFile(FSCONFIG$1);
-    users.forEach((user) => {
-      if (user.username === params.username) {
-        throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
-      }
-    });
-    const now2 = (/* @__PURE__ */ new Date()).toISOString();
-    const hash = await encrypt(params.password);
-    const newUser = {
-      id: Date.now(),
-      username: params.username,
-      password: hash,
-      avatar: null,
-      createdAt: now2,
-      updatedAt: now2
-    };
-    users.push(newUser);
-    await writeFile(users, FSCONFIG$1);
-    Reflect.deleteProperty(newUser, "password");
-    const isCreationNewDir = await initUserDir(newUser);
-    if (!isCreationNewDir) {
-      throw new Error(`[createUser]>> директория для пользователя ${newUser.id} создана не была!`);
+  // сделать запрос к дочернему процессу и получить ответ
+  async requestIPC(data, onApp) {
+    try {
+      if (this.process) {
+        const pragmaKey = this.fetchPragmaKey(onApp);
+        const action = `${data.action}-${Date.now()}`;
+        let returnData;
+        const promise = new Promise((resolve, reject) => {
+          returnData = (res) => {
+            if (res.status === "error") reject(res.payload);
+            if (res.action === action) {
+              resolve(res);
+            }
+          };
+          this.process.on("message", returnData);
+        });
+        this.process.send({
+          action,
+          payload: { ...data.payload, pragmaKey }
+        });
+        const response = await promise;
+        this.process.removeListener("message", returnData);
+        return response;
+      } else throw new Error("requestIPC => process is not defined");
+    } catch (err) {
+      console.debug("requestIPC>>", err);
+      throw err;
     }
+  }
+  /* Запросы к sqlite */
+  // Выполняет запрос и возвращает все строки результата
+  async all(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "all", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("all => process is not defined");
+  }
+  // Выполняет запрос и возвращает одну строку результата
+  async get(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "get", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("get => process is not defined");
+  }
+  // Выполняет запрос без возврата результата 
+  async run(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "run", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("run => process is not defined");
+  }
+  // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
+  async exec(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "exec", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("exec => process is not defined");
+  }
+  // Запуск миграций для текущей базы данных
+  async migrate(config2) {
+    if (!config2) throw new Error("[migrate]>> config is not defined");
+    if (this.process) {
+      return await this.requestIPC({
+        action: `migrate:${this.dbname}`,
+        payload: { ...config2 }
+      }, config2.isGeneral);
+    } else throw new Error("exec => process is not defined");
+  }
+};
+__publicField(_InstanceDatabase, "instanceDB", null);
+let InstanceDatabase = _InstanceDatabase;
+const _DatabaseManager = class _DatabaseManager {
+  constructor() {
+    __publicField(this, "instanceDatabaseList", /* @__PURE__ */ Object.create(null));
+    __publicField(this, "username", null);
+    __publicField(this, "stateConnectManager", true);
+  }
+  // получение экземпляра менеджера
+  static instance() {
+    if (!_DatabaseManager.instanceManager) {
+      console.debug("DatabaseManager > created a new DB manager instance");
+      const instance = new _DatabaseManager();
+      _DatabaseManager.instanceManager = instance;
+    }
+    return _DatabaseManager.instanceManager;
+  }
+  // Подключение всех баз данных
+  async executeAllInitDB(username, items) {
+    if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
+    try {
+      for (const item of items) {
+        const isReliable = await new Promise((resolve) => {
+          const dbname = item.dbname;
+          this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+            resolve(enabled);
+          });
+        });
+        this.stateConnectManager = isReliable;
+      }
+      return this.stateConnectManager;
+    } catch (err) {
+      console.error("[executeAllInitDB]>> ", err);
+      throw err;
+    }
+  }
+  // Залутать инстанс БД
+  getDatabase(dbname) {
+    const ins = this.instanceDatabaseList[dbname];
+    if (!ins || !(ins instanceof InstanceDatabase)) {
+      throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
+    }
+    return ins;
+  }
+  // Инициализация Баз Данных уровня приложения
+  async initOnApp(config2) {
+    try {
+      const promise = this.executeAllInitDB("--", [
+        { dbname: "users", isGeneral: true }
+      ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        await this.executeMigrations({ pragmaKey: process.env.APP_KEY, isGeneral: true });
+        console.debug("initOnApp>> migrations were applied");
+      }
+      return await promise;
+    } catch (err) {
+      console.error("[DatabaseManager.initOnApp]>> ", err);
+      throw err;
+    }
+  }
+  // Инициализация Баз Данных уровня пользователя
+  async initOnUser(username, config2) {
+    try {
+      this.username = username;
+      const promise = this.executeAllInitDB(username, [
+        { dbname: "materials", isGeneral: false }
+      ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        const keyDB = "abc123";
+        await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
+        console.debug("initOnUser>> migrations were applied");
+      }
+      console.log("WAS CALLED initOnUser", username);
+      return await promise;
+    } catch (err) {
+      console.error("[DatabaseManager.initOnUser]>> ", err);
+      throw err;
+    }
+  }
+  // применить миграции для всех баз данных
+  async executeMigrations(config2) {
+    try {
+      for (let key in this.instanceDatabaseList) {
+        if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
+          const db = this.instanceDatabaseList[key];
+          await db.migrate(config2);
+        }
+      }
+    } catch (err) {
+      console.error("executeMigrations>>", err);
+      throw err;
+    }
+  }
+};
+__publicField(_DatabaseManager, "instanceManager", null);
+let DatabaseManager = _DatabaseManager;
+class UserService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      username: "username",
+      password: "password",
+      avatar: "avatar",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("users");
+    if (!this.instanceDb) throw new Error("DB users is not initialized");
+  }
+  // Получить массив пользователей
+  async getAll() {
+    const rows = await this.instanceDb.all(`
+            SELECT * FROM users;
+        `, [], true);
+    return rows;
+  }
+  // Создать одного пользователя
+  async create({ username, password, avatar, createdAt, updatedAt }) {
+    await this.instanceDb.run(`
+            INSERT INTO users (username, password, avatar, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?);
+        `, [username, password, avatar, createdAt, updatedAt], true);
+    const newUser = await this.findByUsername({ username }, { excludes: ["password"] });
+    if (!newUser) throw new Error("[UserService.create]>> newUser was not created");
     return newUser;
-  } catch (err) {
-    console.error(err);
-    throw err;
   }
-}
-async function loginUser(params) {
-  console.log("[loginUser] =>", params);
-  try {
-    if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
-    const users = await readFile(FSCONFIG$1);
-    const findedUser = users.find((user) => user.username === params.username);
-    if (!findedUser) {
-      throw "[loginUser]>> NOT_EXISTS_RECORD";
+  // Найти пользователя по username
+  async findByUsername(dto, config2) {
+    var _a;
+    try {
+      let correctFieldsSql;
+      if (((_a = config2 == null ? void 0 : config2.excludes) == null ? void 0 : _a.length) > 0) {
+        correctFieldsSql = Object.entries(this.allFields).filter(([key, value]) => {
+          if (!(config2 == null ? void 0 : config2.excludes.includes(key))) return true;
+          else return false;
+        }).map(([_, value]) => value).join(",");
+      } else correctFieldsSql = Object.values(this.allFields).join(",");
+      const res = await this.instanceDb.get(`
+                SELECT ${correctFieldsSql}
+                FROM users
+                WHERE username = ?;
+            `, [dto.username], true);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
     }
-    console.log(findedUser);
-    const isVerifyPassword = await verify(params.password, findedUser.password).catch((err) => {
-      console.log("[loginUser]>> INTERNAL_ERROR", err);
-    });
-    if (isVerifyPassword === true) {
-      const readyUser = { ...findedUser };
-      Reflect.deleteProperty(readyUser, "hash_salt");
-      Reflect.deleteProperty(readyUser, "password");
-      const token2 = await createAccessToken({
-        userId: readyUser.id,
-        username: readyUser.username
-      }, { m: 1, s: 20 });
-      return {
-        token: token2,
-        user: readyUser
-      };
-    } else {
-      throw "[loginUser]>> INVALID_CREDENTIALS";
-    }
-  } catch (err) {
-    console.error(err);
-    throw err;
   }
-}
-async function updatePassword(params) {
-  try {
-    if (params.newPassword === params.oldPassword) throw "[updatePassword]>> INVALID_DATA";
-    let users = await getUsers();
-    const findedUser = users.find((user) => user.username === params.username);
-    if (!findedUser) {
-      throw "[updatePassword]>> NOT_EXISTS_RECORD";
-    }
-    if (!await verify(params.oldPassword, findedUser.password)) {
-      throw "[updatePassword]>> INVALID_CREDENTIALS";
-    }
-    const hash = await encrypt(params.newPassword);
-    findedUser.password = hash;
-    users = users.map((user) => {
-      if (user.id === findedUser.id) {
-        return findedUser;
-      }
-      return user;
-    });
-    await writeUsersDataFs(users);
-    return true;
-  } catch (err) {
-    console.error(err);
-    throw err;
+  // Обновление пароля
+  async updatePassword(dto) {
+    await this.instanceDb.run(`
+            UPDATE users SET password = ? 
+            WHERE username = ?;
+
+        `, [dto.password, dto.username], true);
+    return null;
   }
 }
 function trimPath(fullpath, config2) {
@@ -946,13 +1083,13 @@ function deprecate(msg, fn) {
   }, fn);
 }
 var deprecations = {};
-function deprecateSimple(name2, msg) {
+function deprecateSimple(name, msg) {
   if (hooks.deprecationHandler != null) {
-    hooks.deprecationHandler(name2, msg);
+    hooks.deprecationHandler(name, msg);
   }
-  if (!deprecations[name2]) {
+  if (!deprecations[name]) {
     warn(msg);
-    deprecations[name2] = true;
+    deprecations[name] = true;
   }
 }
 hooks.suppressDeprecationWarnings = false;
@@ -2229,22 +2366,22 @@ function chooseLocale(names) {
   }
   return globalLocale;
 }
-function isLocaleNameSane(name2) {
-  return !!(name2 && name2.match("^[^/\\\\]*$"));
+function isLocaleNameSane(name) {
+  return !!(name && name.match("^[^/\\\\]*$"));
 }
-function loadLocale(name2) {
+function loadLocale(name) {
   var oldLocale = null, aliasedRequire;
-  if (locales[name2] === void 0 && typeof module !== "undefined" && module && module.exports && isLocaleNameSane(name2)) {
+  if (locales[name] === void 0 && typeof module !== "undefined" && module && module.exports && isLocaleNameSane(name)) {
     try {
       oldLocale = globalLocale._abbr;
       aliasedRequire = require;
-      aliasedRequire("./locale/" + name2);
+      aliasedRequire("./locale/" + name);
       getSetGlobalLocale(oldLocale);
     } catch (e) {
-      locales[name2] = null;
+      locales[name] = null;
     }
   }
-  return locales[name2];
+  return locales[name];
 }
 function getSetGlobalLocale(key, values) {
   var data;
@@ -2266,16 +2403,16 @@ function getSetGlobalLocale(key, values) {
   }
   return globalLocale._abbr;
 }
-function defineLocale(name2, config2) {
+function defineLocale(name, config2) {
   if (config2 !== null) {
     var locale2, parentConfig = baseConfig;
-    config2.abbr = name2;
-    if (locales[name2] != null) {
+    config2.abbr = name;
+    if (locales[name] != null) {
       deprecateSimple(
         "defineLocaleOverride",
         "use moment.updateLocale(localeName, config) to change an existing locale. moment.defineLocale(localeName, config) should only be used for creating a new locale See http://momentjs.com/guides/#/warnings/define-locale/ for more info."
       );
-      parentConfig = locales[name2]._config;
+      parentConfig = locales[name]._config;
     } else if (config2.parentLocale != null) {
       if (locales[config2.parentLocale] != null) {
         parentConfig = locales[config2.parentLocale]._config;
@@ -2288,58 +2425,58 @@ function defineLocale(name2, config2) {
             localeFamilies[config2.parentLocale] = [];
           }
           localeFamilies[config2.parentLocale].push({
-            name: name2,
+            name,
             config: config2
           });
           return null;
         }
       }
     }
-    locales[name2] = new Locale(mergeConfigs(parentConfig, config2));
-    if (localeFamilies[name2]) {
-      localeFamilies[name2].forEach(function(x) {
+    locales[name] = new Locale(mergeConfigs(parentConfig, config2));
+    if (localeFamilies[name]) {
+      localeFamilies[name].forEach(function(x) {
         defineLocale(x.name, x.config);
       });
     }
-    getSetGlobalLocale(name2);
-    return locales[name2];
+    getSetGlobalLocale(name);
+    return locales[name];
   } else {
-    delete locales[name2];
+    delete locales[name];
     return null;
   }
 }
-function updateLocale(name2, config2) {
+function updateLocale(name, config2) {
   if (config2 != null) {
     var locale2, tmpLocale, parentConfig = baseConfig;
-    if (locales[name2] != null && locales[name2].parentLocale != null) {
-      locales[name2].set(mergeConfigs(locales[name2]._config, config2));
+    if (locales[name] != null && locales[name].parentLocale != null) {
+      locales[name].set(mergeConfigs(locales[name]._config, config2));
     } else {
-      tmpLocale = loadLocale(name2);
+      tmpLocale = loadLocale(name);
       if (tmpLocale != null) {
         parentConfig = tmpLocale._config;
       }
       config2 = mergeConfigs(parentConfig, config2);
       if (tmpLocale == null) {
-        config2.abbr = name2;
+        config2.abbr = name;
       }
       locale2 = new Locale(config2);
-      locale2.parentLocale = locales[name2];
-      locales[name2] = locale2;
+      locale2.parentLocale = locales[name];
+      locales[name] = locale2;
     }
-    getSetGlobalLocale(name2);
+    getSetGlobalLocale(name);
   } else {
-    if (locales[name2] != null) {
-      if (locales[name2].parentLocale != null) {
-        locales[name2] = locales[name2].parentLocale;
-        if (name2 === getSetGlobalLocale()) {
-          getSetGlobalLocale(name2);
+    if (locales[name] != null) {
+      if (locales[name].parentLocale != null) {
+        locales[name] = locales[name].parentLocale;
+        if (name === getSetGlobalLocale()) {
+          getSetGlobalLocale(name);
         }
-      } else if (locales[name2] != null) {
-        delete locales[name2];
+      } else if (locales[name] != null) {
+        delete locales[name];
       }
     }
   }
-  return locales[name2];
+  return locales[name];
 }
 function getLocale(key) {
   var locale2;
@@ -3245,13 +3382,13 @@ function momentsDifference(base, other) {
   }
   return res;
 }
-function createAdder(direction, name2) {
+function createAdder(direction, name) {
   return function(val, period) {
     var dur, tmp;
     if (period !== null && !isNaN(+period)) {
       deprecateSimple(
-        name2,
-        "moment()." + name2 + "(period, number) is deprecated. Please use moment()." + name2 + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
+        name,
+        "moment()." + name + "(period, number) is deprecated. Please use moment()." + name + "(number, period). See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info."
       );
       tmp = val;
       val = period;
@@ -3825,10 +3962,10 @@ function localeEras(m, format2) {
   return eras;
 }
 function localeErasParse(eraName, format2, strict) {
-  var i, l, eras = this.eras(), name2, abbr, narrow;
+  var i, l, eras = this.eras(), name, abbr, narrow;
   eraName = eraName.toUpperCase();
   for (i = 0, l = eras.length; i < l; ++i) {
-    name2 = eras[i].name.toUpperCase();
+    name = eras[i].name.toUpperCase();
     abbr = eras[i].abbr.toUpperCase();
     narrow = eras[i].narrow.toUpperCase();
     if (strict) {
@@ -3841,7 +3978,7 @@ function localeErasParse(eraName, format2, strict) {
           }
           break;
         case "NNNN":
-          if (name2 === eraName) {
+          if (name === eraName) {
             return eras[i];
           }
           break;
@@ -3851,7 +3988,7 @@ function localeErasParse(eraName, format2, strict) {
           }
           break;
       }
-    } else if ([name2, abbr, narrow].indexOf(eraName) >= 0) {
+    } else if ([name, abbr, narrow].indexOf(eraName) >= 0) {
       return eras[i];
     }
   }
@@ -4488,9 +4625,9 @@ function get$2(units) {
   units = normalizeUnits(units);
   return this.isValid() ? this[units + "s"]() : NaN;
 }
-function makeGetter(name2) {
+function makeGetter(name) {
   return function() {
-    return this.isValid() ? this._data[name2] : NaN;
+    return this.isValid() ? this._data[name] : NaN;
   };
 }
 var milliseconds = makeGetter("milliseconds"), seconds = makeGetter("seconds"), minutes = makeGetter("minutes"), hours = makeGetter("hours"), days = makeGetter("days"), months = makeGetter("months"), years = makeGetter("years");
@@ -4709,9 +4846,771 @@ function formatDate(date, template, utcOffset) {
     throw err;
   }
 }
+function prepareExpireTime(expires) {
+  let ready = 0;
+  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
+  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
+  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
+  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  if (expires.m) ready += 1e3 * 60 * Math.max(expires.m, 1);
+  if (expires.s) ready += 1e3 * Math.max(expires.s, 1);
+  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
+  ready += Date.now();
+  return ready;
+}
+function createSignatureToken() {
+  try {
+    return "abc123";
+  } catch (err) {
+    console.error("[createSignatureToken]>>", err);
+    throw err;
+  }
+}
+const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+async function createAccessToken(payload, expires) {
+  try {
+    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
+    const expiresStamp = prepareExpireTime(expires);
+    const signatureToken = createSignatureToken();
+    const tokenData = {
+      expires: expiresStamp,
+      payload,
+      signature: signatureToken
+    };
+    const token2 = await encryptJsonData(tokenData, KEY);
+    return token2;
+  } catch (err) {
+    throw err;
+  }
+}
+async function verifyAccessToken(token2) {
+  try {
+    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
+    const payload = JSON.parse(await decryptJsonData(token2, KEY));
+    if (payload.expires <= Date.now()) {
+      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    }
+    return payload;
+  } catch (err) {
+    throw err;
+  }
+}
+class ChapterService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      pathName: "path_name AS pathName",
+      icon: "icon",
+      iconType: "icon_type AS iconType",
+      chapterType: "chapter_type AS chapterType",
+      label: "label",
+      route: "route",
+      contentTitle: "content_title AS contentTitle",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    __publicField(this, "allFieldsForRec", {
+      pathName: "path_name",
+      icon: "icon",
+      iconType: "icon_type",
+      chapterType: "chapter_type",
+      label: "label",
+      contentTitle: "content_title",
+      updatedAt: "updated_at"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("materials");
+    if (!this.instanceDb) throw new Error("DB materials is not initialized");
+  }
+  // коррекция полей таблицы. Исключает те поля которые приходят в массиве
+  correctFieldsSqlForExclude(excludedFields) {
+    let correctFieldsSql;
+    if ((excludedFields == null ? void 0 : excludedFields.length) > 0) {
+      correctFieldsSql = Object.entries(this.allFields).filter(([key, __]) => {
+        if (!excludedFields.includes(key)) return true;
+        else return false;
+      }).map(([__, value]) => value).join(",");
+    } else correctFieldsSql = Object.values(this.allFields).join(",");
+    return correctFieldsSql;
+  }
+  // корректировка полей таблицы для выполнения записи данных sql
+  correctFieldsSqlForRec(dto) {
+    if (!dto || typeof dto !== "object")
+      throw new Error("[ChapterService.correctFieldsSqlForRec]>> dto is not defined");
+    const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+      if (Object.prototype.hasOwnProperty.call(dto, key)) {
+        return true;
+      } else return false;
+    });
+    const args = correctFieldsEntries.map(([k, __]) => {
+      return dto[k];
+    });
+    return {
+      keys: correctFieldsEntries.map(([__, val]) => val + " = ?").join(", "),
+      args
+    };
+  }
+  // region READ
+  // Получить массив разделов
+  async getAll(config2) {
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM chapters;
+        `);
+    return rows.payload;
+  }
+  // Получить массив разделов с их подразделами для формирования массива для панели меню
+  async getAllForMenu() {
+    const res = await this.instanceDb.all(`
+            SELECT 
+                chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
+                chapters.${this.allFields["icon"]}, chapters.${this.allFields["iconType"]},
+                chapters.${this.allFields["label"]}, chapters.${this.allFields["route"]},
+                chapters.${this.allFields["chapterType"]},
+                JSON_GROUP_ARRAY(
+                    JSON_OBJECT(
+                        'id', sub_chapters.id,
+                        'fullpath', sub_chapters.fullpath,
+                        'chapterType', sub_chapters.chapter_type,
+                        'icon', sub_chapters.icon,
+                        'iconType', sub_chapters.icon_type,
+                        'label', sub_chapters.label,
+                        'route', sub_chapters.route
+                    )
+                ) AS items
+            FROM chapters
+            LEFT JOIN sub_chapters
+            ON chapters.id = sub_chapters.chapter_id
+            GROUP BY chapters.id;
+        `);
+    if (!res || !(res == null ? void 0 : res.payload)) return null;
+    return res.payload;
+  }
+  // Найти раздел по ID
+  async findById(id, config2) {
+    var _a, _b, _c, _d;
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
+      let res;
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
+                        chapters.${this.allFields["contentTitle"]}, chapters.${this.allFields["createdAt"]},
+                        chapters.${this.allFields["updatedAt"]},
+                        chapters.${this.allFields["icon"]}, chapters.${this.allFields["iconType"]},
+                        chapters.${this.allFields["label"]}, chapters.${this.allFields["route"]},
+                        chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM chapters
+                    LEFT JOIN blocks
+                    ON chapters.id = blocks.chapter_id
+                    WHERE chapters.id = ?
+                    GROUP BY chapters.id;
+                `, [id]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM chapters WHERE path_name = ?;
+                `, [id]);
+      }
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      const data = res.payload;
+      if (data.blocks && typeof data.blocks === "string") {
+        data.blocks = JSON.parse(data.blocks);
+        data.blocks = !!((_d = data.blocks[0]) == null ? void 0 : _d.id) ? data.blocks : [];
+      }
+      return data;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Найти раздел по pathName
+  async findByPathName(pathName, config2) {
+    var _a, _b, _c;
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
+      let res;
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        chapters.${this.allFields["id"]}, chapters.${this.allFields["pathName"]},
+                        chapters.${this.allFields["contentTitle"]}, chapters.${this.allFields["createdAt"]},
+                        chapters.${this.allFields["updatedAt"]},
+                        chapters.${this.allFields["icon"]}, chapters.${this.allFields["iconType"]},
+                        chapters.${this.allFields["label"]}, chapters.${this.allFields["route"]},
+                        chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM chapters
+                    LEFT JOIN blocks
+                    ON chapters.id = blocks.chapter_id
+                    WHERE chapters.path_name = ?
+                    GROUP BY chapters.id;
+                `, [pathName]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM chapters WHERE path_name = ?;
+                `, [pathName]);
+      }
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // end region
+  // region CREATE
+  // Создать один раздел
+  async create(dto) {
+    await this.instanceDb.run(`
+            INSERT INTO chapters (
+                path_name,
+                icon,
+                icon_type,
+                chapter_type,
+                label,
+                route,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        `, [
+      dto.pathName,
+      dto.icon,
+      dto.iconType,
+      dto.chapterType,
+      dto.label,
+      dto.route,
+      dto.createdAt,
+      dto.updatedAt
+    ]);
+    const newChapter = await this.findByPathName(dto.pathName);
+    if (!newChapter) throw new Error("[ChapterService.create]>> newChapter was not created");
+    return newChapter;
+  }
+  // end region
+  // region UPDATE
+  // Обновление данных раздела
+  async update(id, dto) {
+    if (!id) throw new Error("[ChapterService.updateByPathName]>> id is not defined");
+    const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
+    await this.instanceDb.run(`
+            UPDATE chapters
+            SET
+                ${keys2}
+            WHERE id = ?;
+        `, [...args, id]);
+    const newChapter = await this.findById(id, {
+      includes: {
+        blocks: true
+      }
+    });
+    if (!newChapter) throw new Error("[ChapterService.updateByPathName]>> newChapter was not created");
+    return newChapter;
+  }
+  // end region
+  // region DELETE
+  // Удаление раздела по pathName
+  async deleteOneByPathName(pathName) {
+    if (!pathName) throw new Error("[ChapterService.deleteOneByPathName]>> pathName is not defined");
+    await this.instanceDb.run(`
+            DELETE FROM sub_chapters 
+            WHERE path_name = ?;
+        `, [pathName]);
+    await this.instanceDb.run(`
+            DELETE FROM chapters
+            WHERE path_name = ?;
+        `, [pathName]);
+    return void 0;
+  }
+  // end region
+}
+class SubChapterService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      pathName: "path_name AS pathName",
+      chapterId: "chapter_id AS chapterId",
+      fullpath: "fullpath",
+      icon: "icon",
+      iconType: "icon_type AS iconType",
+      chapterType: "chapter_type AS chapterType",
+      label: "label",
+      route: "route",
+      contentTitle: "content_title AS contentTitle",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    __publicField(this, "allFieldsForRec", {
+      icon: "icon",
+      iconType: "icon_type",
+      chapterType: "chapter_type",
+      label: "label",
+      contentTitle: "content_title",
+      updatedAt: "updated_at"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("materials");
+    if (!this.instanceDb) throw new Error("DB materials is not initialized");
+  }
+  // коррекция полей таблицы. Исключает те поля которые приходят в массиве
+  correctFieldsSqlForExclude(excludedFields) {
+    let correctFieldsSql;
+    if ((excludedFields == null ? void 0 : excludedFields.length) > 0) {
+      correctFieldsSql = Object.entries(this.allFields).filter(([key, __]) => {
+        if (!excludedFields.includes(key)) return true;
+        else return false;
+      }).map(([__, value]) => value).join(",");
+    } else correctFieldsSql = Object.values(this.allFields).join(",");
+    return correctFieldsSql;
+  }
+  // корректировка полей таблицы для выполнения записи данных sql
+  correctFieldsSqlForRec(dto) {
+    if (!dto || typeof dto !== "object")
+      throw new Error("[SubChapterService.correctFieldsSqlForRec]>> dto is not defined");
+    const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+      if (Object.prototype.hasOwnProperty.call(dto, key)) {
+        return true;
+      } else return false;
+    });
+    const args = correctFieldsEntries.map(([k, __]) => {
+      return dto[k];
+    });
+    return {
+      keys: correctFieldsEntries.map(([__, val]) => val + " = ?").join(", "),
+      args
+    };
+  }
+  // region READ
+  // Получить массив подразделов
+  async getAll(config2) {
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM sub_chapters;
+        `);
+    return rows.payload;
+  }
+  // Найти подраздел по ID
+  async findById(id, config2) {
+    var _a, _b, _c, _d;
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
+      let res;
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        sub_chapters.${this.allFields["id"]}, sub_chapters.${this.allFields["pathName"]},
+                        sub_chapters.${this.allFields["contentTitle"]}, sub_chapters.${this.allFields["createdAt"]},
+                        sub_chapters.${this.allFields["updatedAt"]}, sub_chapters.${this.allFields["fullpath"]},
+                        sub_chapters.${this.allFields["icon"]}, sub_chapters.${this.allFields["iconType"]},
+                        sub_chapters.${this.allFields["label"]}, sub_chapters.${this.allFields["route"]},
+                        sub_chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'chapterId', blocks.sub_chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM sub_chapters
+                    LEFT JOIN blocks
+                    ON sub_chapters.id = blocks.sub_chapter_id
+                    WHERE sub_chapters.id = ?
+                    GROUP BY sub_chapters.id;
+                `, [id]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM sub_chapters WHERE path_name = ?;
+                `, [id]);
+      }
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      const data = res.payload;
+      if (data.blocks && typeof data.blocks === "string") {
+        data.blocks = JSON.parse(data.blocks);
+        data.blocks = !!((_d = data.blocks[0]) == null ? void 0 : _d.id) ? data.blocks : [];
+      }
+      return data;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Найти подраздел по pathName
+  async findByPathName(pathName, config2) {
+    var _a, _b;
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
+      const res = await this.instanceDb.get(`
+                SELECT ${correctFieldsSql}
+                FROM sub_chapters
+                WHERE path_name = ?;
+            `, [pathName]);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Найти подраздел по fullpath
+  async findByFullpath(fullpath, config2) {
+    var _a, _b, _c;
+    try {
+      let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+      if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+        const excludesKeys = Object.keys(this.allFields).filter((key) => {
+          var _a2;
+          return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+        });
+        correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+      }
+      let res;
+      if (((_c = config2 == null ? void 0 : config2.includes) == null ? void 0 : _c.blocks) === true) {
+        res = await this.instanceDb.get(`
+                    SELECT 
+                        sub_chapters.${this.allFields["id"]}, sub_chapters.${this.allFields["pathName"]},
+                        sub_chapters.${this.allFields["fullpath"]},
+                        sub_chapters.${this.allFields["contentTitle"]}, sub_chapters.${this.allFields["createdAt"]},
+                        sub_chapters.${this.allFields["updatedAt"]},
+                        sub_chapters.${this.allFields["icon"]}, sub_chapters.${this.allFields["iconType"]},
+                        sub_chapters.${this.allFields["label"]}, sub_chapters.${this.allFields["route"]},
+                        sub_chapters.${this.allFields["chapterType"]},
+                        JSON_GROUP_ARRAY(
+                            JSON_OBJECT(
+                                'id', blocks.id,
+                                'subChapterId', blocks.sub_chapter_id,
+                                'title', blocks.title,
+                                'content', blocks.content,
+                                'createdAt', blocks.created_at,
+                                'updatedAt', blocks.updated_at
+                            )
+                        ) AS blocks
+                    FROM sub_chapters
+                    LEFT JOIN blocks
+                    ON sub_chapters.id = blocks.sub_chapter_id
+                    WHERE sub_chapters.fullpath = ?
+                    GROUP BY sub_chapters.id;
+                `, [fullpath]);
+      } else {
+        res = await this.instanceDb.get(`
+                    SELECT ${correctFieldsSql}
+                    FROM sub_chapters WHERE fullpath = ?;
+                `, [fullpath]);
+      }
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  //end region
+  // region CREATE
+  // Создать один подраздел
+  async create(dto) {
+    await this.instanceDb.run(`
+            INSERT INTO sub_chapters (
+                path_name,
+                fullpath,    
+                chapter_id,
+                icon,
+                icon_type,
+                chapter_type,
+                label,
+                route,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        `, [
+      dto.pathName,
+      dto.fullpath,
+      dto.chapterId,
+      dto.icon,
+      dto.iconType,
+      dto.chapterType,
+      dto.label,
+      dto.route,
+      dto.createdAt,
+      dto.updatedAt
+    ]);
+    const newSubChapter = await this.findByFullpath(dto.fullpath);
+    if (!newSubChapter) throw new Error("[SubChapterService.create]>> newSubChapter was not created");
+    return newSubChapter;
+  }
+  // end region
+  // region UPDATE
+  // Обновление данных ПОДраздела
+  async update(id, dto) {
+    if (!id) throw new Error("[SubChapterService.update]>> id is not defined");
+    const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
+    await this.instanceDb.run(`
+                UPDATE sub_chapters
+                SET
+                    ${keys2}
+                WHERE id = ?;
+            `, [...args, id]);
+    const updatedSubChapter = await this.findById(id, {
+      includes: {
+        blocks: true
+      }
+    });
+    if (!updatedSubChapter) throw new Error("[SubChapterService.update]>> subChapter was not updated");
+    return updatedSubChapter;
+  }
+  // end region
+  // region DELETE
+  async deleteOneByFullpath(fullpath) {
+    if (!fullpath) throw new Error("[SubChapterService.deleteOneByFullpath]>> fullpath is not defined");
+    await this.instanceDb.run(`
+            DELETE FROM sub_chapters 
+            WHERE fullpath LIKE ? || '%';
+        `, [fullpath]);
+    return void 0;
+  }
+  // end region
+}
+class BlocksService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      chapterId: "chapter_id AS chapterId",
+      subChapterId: "sub_chapter_id AS subChapterId",
+      title: "title",
+      content: "content",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    __publicField(this, "allFieldsForRec", {
+      chapterId: "chapter_id",
+      subChapterId: "sub_chapter_id",
+      title: "title",
+      content: "content",
+      updatedAt: "updated_at"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("materials");
+    if (!this.instanceDb) throw new Error("DB materials is not initialized");
+  }
+  // коррекция полей таблицы. Исключает те поля которые приходят в массиве
+  correctFieldsSqlForExclude(excludedFields) {
+    let correctFieldsSql;
+    if ((excludedFields == null ? void 0 : excludedFields.length) > 0) {
+      correctFieldsSql = Object.entries(this.allFields).filter(([key, __]) => {
+        if (!excludedFields.includes(key)) return true;
+        else return false;
+      }).map(([__, value]) => value).join(",");
+    } else correctFieldsSql = Object.values(this.allFields).join(",");
+    return correctFieldsSql;
+  }
+  // корректировка полей таблицы для выполнения записи данных sql
+  correctFieldsSqlForRec(dto) {
+    if (!dto || typeof dto !== "object")
+      throw new Error("[BlocksService.correctFieldsSqlForRec]>> dto is not defined");
+    const correctFieldsEntries = Object.entries(this.allFieldsForRec).filter(([key, __]) => {
+      if (Object.prototype.hasOwnProperty.call(dto, key)) {
+        return true;
+      } else return false;
+    });
+    const args = correctFieldsEntries.map(([k, __]) => {
+      return dto[k];
+    });
+    return {
+      keys: correctFieldsEntries.map(([__, val]) => val + " = ?").join(", "),
+      args
+    };
+  }
+  // region READ
+  // Получить массив блоков для раздела
+  async getAllForChapter(chapterId, config2) {
+    if (!chapterId) throw new Error("[BlocksService.getAllForChapter]>> chapterId is not defined");
+    if (typeof chapterId !== "number" || Object.is(+chapterId, NaN)) throw new Error("[BlocksService.getAllForChapter]>> invalid chapterId");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM blocks 
+            WHERE chapter_id = ${chapterId};
+            `, []);
+    return rows.payload;
+  }
+  // Получить массив блоков для подраздела
+  async getAllForSubChapter(chapterId, config2) {
+    if (!chapterId) throw new Error("[BlocksService.getAllForSubChapter]>> chapterId is not defined");
+    if (typeof chapterId !== "number" || Object.is(+chapterId, NaN)) throw new Error("[BlocksService.getAllForSubChapter]>> invalid chapterId");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    const rows = await this.instanceDb.all(`
+            SELECT ${correctFieldsSql} FROM blocks
+            WHERE sub_chapter_id = ${chapterId};
+        `, []);
+    return rows.payload;
+  }
+  // Получить раздел по title 
+  async getByTitle(dto, config2) {
+    var _a, _b;
+    if (!dto.title) throw new Error("[BlocksService.getByTitle]>> title is not defined");
+    if (!dto.chapterId && !dto.subChapterId) throw new Error("[BlocksService.getByTitle]>> either chapterId or subChapterId must be transmitted");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+      const excludesKeys = Object.keys(this.allFields).filter((key) => {
+        var _a2;
+        return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+      });
+      correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+    }
+    let sql = null;
+    let args = [];
+    if (dto.chapterId) {
+      sql = `
+                SELECT ${correctFieldsSql} FROM blocks
+                WHERE chapter_id = ? AND title = ?;
+            `;
+      args = [dto.chapterId, dto.title];
+    } else if (dto.subChapterId) {
+      sql = `
+                SELECT ${correctFieldsSql} FROM blocks
+                WHERE sub_chapter_id = ? AND title = ?;
+            `;
+      args = [dto.subChapterId, dto.title];
+    }
+    if (sql) {
+      const res = await this.instanceDb.get(sql, args);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } else throw new Error("[BlocksService.getByTitle]>> INTERNAL ERROR");
+  }
+  // Получить блок по ID 
+  async getById(blockId, config2) {
+    var _a, _b;
+    if (!blockId) throw new Error("[BlocksService.getById]>> blockId is not defined");
+    if (typeof blockId !== "number") throw new Error("[BlocksService.getById]>> invalid blockId");
+    let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
+    if (((_a = config2 == null ? void 0 : config2.select) == null ? void 0 : _a.length) && ((_b = config2 == null ? void 0 : config2.select) == null ? void 0 : _b.length) > 0) {
+      const excludesKeys = Object.keys(this.allFields).filter((key) => {
+        var _a2;
+        return !((_a2 = config2.select) == null ? void 0 : _a2.includes(key));
+      });
+      correctFieldsSql = this.correctFieldsSqlForExclude(excludesKeys);
+    }
+    const res = await this.instanceDb.get(`
+            SELECT ${correctFieldsSql} FROM blocks
+            WHERE id = ?;
+        `, [blockId]);
+    if (!res || !(res == null ? void 0 : res.payload)) return null;
+    return res.payload;
+  }
+  // end region
+  // region CREATE
+  // Создать блок для раздела
+  async createForChapter(dto) {
+    await this.instanceDb.run(`
+            INSERT INTO blocks (
+                chapter_id,
+                sub_chapter_id,
+                title,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?);
+        `, [
+      dto.chapterId,
+      dto.subChapterId,
+      dto.title,
+      formatDate(),
+      formatDate()
+    ]);
+    const newBlock = await this.getByTitle({
+      title: dto.title,
+      chapterId: dto.chapterId,
+      subChapterId: dto.subChapterId
+    });
+    if (!newBlock) throw new Error("[BlocksService.createForChapter]>> newBlock was not created");
+    return newBlock;
+  }
+  // end region
+  // region UPDATE
+  async update(blockId, dto) {
+    if (!blockId) throw new Error("[ChapterService.update]>> blockId is not defined");
+    if (typeof blockId !== "number") throw new Error("[ChapterService.update]>> invalid blockId");
+    const { args, keys: keys2 } = this.correctFieldsSqlForRec(dto);
+    await this.instanceDb.run(`
+            UPDATE blocks
+            SET
+                ${keys2}
+            WHERE id = ?;
+        `, [...args, blockId]);
+    const updatedBlock = await this.getById(blockId);
+    if (!updatedBlock) throw new Error("[BlocksService.update]>> updatedBlock is not defined");
+    return updatedBlock;
+  }
+  // end region
+  // region DELETE
+  // Удалить блок по айди
+  async deleteOne(blockId) {
+    if (!blockId) throw new Error("[ChapterService.deleteOne]>> blockId is not defined");
+    if (typeof blockId !== "number") throw new Error("[ChapterService.deleteOne]>> invalid blockId");
+    await this.instanceDb.run(`
+            DELETE FROM blocks 
+            WHERE id = ?;
+        `, [blockId]);
+    return void 0;
+  }
+  //end region
+}
 const MATERIALS_FILENAME = "materials.json";
 const MATERIALS_MENU_FILENAME = "materials-menu.json";
-const FSCONFIG = {
+const FSCONFIG$1 = {
   directory: "appData",
   encoding: "utf-8",
   filename: MATERIALS_FILENAME,
@@ -4723,30 +5622,14 @@ const FSCONFIG_MENU = {
   filename: MATERIALS_MENU_FILENAME,
   format: "json"
 };
-async function prepareMaterialsStore() {
-  console.log("[prepareMaterialsStore] => void");
-  return readFile(FSCONFIG).then((data) => {
-    return true;
-  }).catch(async (err) => {
-    try {
-      if (err.code === "ENOENT") {
-        await writeFile([], FSCONFIG);
-        return true;
-      }
-      return false;
-    } catch (err2) {
-      console.error("WRITE FILE", err2);
-      return false;
-    }
-  });
-}
-async function prepareMaterialsStoreForMenu() {
+async function prepareMaterialsStoreForMenu(username) {
+  const userDirPath = getAppUserDirname(username);
   console.log("[prepareMaterialsStoreForMenu] => void");
-  return readFile(FSCONFIG_MENU).then((data) => {
+  return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true }).then((_) => {
     return true;
   }).catch(async () => {
     try {
-      await writeFile([], FSCONFIG_MENU);
+      await writeFile([], { ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
       return true;
     } catch (err) {
       console.error("WRITE FILE", err);
@@ -4754,34 +5637,24 @@ async function prepareMaterialsStoreForMenu() {
     }
   });
 }
-async function createChapter(params) {
+async function createChapter(params, auth) {
   console.log("[createChapter] => ", params);
   try {
-    const materials = await readFile(FSCONFIG);
-    materials.forEach((chapter) => {
-      if (chapter.pathName === params.pathName) {
-        throw "[createChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
-      }
-    });
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[createChapter]>> 401 UNAUTHORIZATE");
+    const { payload } = await verifyAccessToken(auth.token);
+    const chapterService = new ChapterService();
     const timestamp = formatDate();
-    const newChapter = {
-      id: Date.now(),
+    const newChapter = await chapterService.create({
       chapterType: params.chapterType,
-      content: {
-        blocks: [],
-        title: null
-      },
       label: params.label,
       icon: params.icon,
       iconType: params.iconType,
       pathName: params.pathName,
       route: params.route,
-      items: params.chapterType === "dir" ? [] : null,
       createdAt: timestamp,
       updatedAt: timestamp
-    };
-    materials.push(newChapter);
-    await writeFile(materials, FSCONFIG);
+    });
+    await syncMaterialsStores(payload.username);
     return newChapter;
   } catch (err) {
     console.error(err);
@@ -4791,10 +5664,14 @@ async function createChapter(params) {
 async function getChapters(params) {
   console.log("getChapters => ", params);
   try {
+    if (!params) throw new Error("[getChapters]>> invalid params");
+    if (!params.token) new Error("[getChapters]>> 401 UNAUTHORIZATE");
+    const { payload: { username } } = await verifyAccessToken(params.token);
+    const userDirPath = getAppUserDirname(username);
     let chapters;
     if ((params == null ? void 0 : params.forMenu) === true) {
-      chapters = await readFile(FSCONFIG_MENU);
-    } else chapters = await readFile(FSCONFIG);
+      chapters = await readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+    } else chapters = await readFile(FSCONFIG$1);
     if (!chapters) throw "[getChapters]>> INTERNAL_ERROR";
     if (params && params.page && params.perPage) {
       const right = params.perPage * params.page;
@@ -4811,15 +5688,43 @@ async function getChapters(params) {
 async function getOneChapter(params) {
   console.log("[getOneChapter] => ", params);
   try {
-    const materials = await readFile(FSCONFIG);
-    if (params.chapterId) {
-      const findedChapter = materials.find((chapter) => chapter.id === params.chapterId);
+    const chapterService = new ChapterService();
+    if (params.pathName) {
+      const findedChapter = await chapterService.findByPathName(params.pathName, {
+        includes: {
+          blocks: true
+          // также прикрепить блоки в объект раздела
+        }
+      });
       if (!findedChapter) throw "[getOneChapter]>> NOT_EXISTS_RECORD";
-      return findedChapter;
-    } else if (params.pathName) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!findedChapter) throw "[getOneChapter]>> NOT_EXISTS_RECORD";
-      return findedChapter;
+      const correctChapter = {
+        id: findedChapter.id,
+        icon: findedChapter.icon,
+        chapterType: findedChapter.chapterType,
+        createdAt: findedChapter.createdAt,
+        label: findedChapter.label,
+        pathName: findedChapter.pathName,
+        route: findedChapter.route,
+        updatedAt: findedChapter.updatedAt,
+        iconType: findedChapter.iconType,
+        content: {
+          title: findedChapter.contentTitle,
+          blocks: []
+        },
+        items: findedChapter.chapterType === "dir" ? [] : null
+      };
+      if (findedChapter == null ? void 0 : findedChapter.blocks) {
+        let blocks = JSON.parse(findedChapter == null ? void 0 : findedChapter.blocks);
+        if (blocks.length === 1 && !blocks[0].id) {
+          blocks.length = 0;
+        } else if (!!blocks[0].id) {
+          correctChapter.content.blocks = blocks;
+        }
+      } else {
+      }
+      findedChapter == null ? void 0 : findedChapter.blocks;
+      console.log(correctChapter);
+      return correctChapter;
     } else {
       throw "[getOneChapter]>> NOT_EXISTS_RECORD";
     }
@@ -4828,181 +5733,189 @@ async function getOneChapter(params) {
     throw err;
   }
 }
-const bundleLabels = [];
-function findLevel(items, initPath, config2) {
-  if (items.length <= 0) return null;
-  const current = initPath.shift();
-  for (const chapter of items) {
-    const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
-    if (selfPath === current) {
-      if ((config2 == null ? void 0 : config2.labels) === true) bundleLabels.push(chapter.label);
-      if (initPath.length <= 0) {
-        if ((config2 == null ? void 0 : config2.labels) === true) {
-          const labels = [...bundleLabels];
-          bundleLabels.length = 0;
-          return { chapter, labels };
-        } else {
-          return chapter;
-        }
-      } else {
-        if (chapter.items && chapter.items.length > 0) {
-          return findLevel(chapter.items, initPath, config2);
-        } else {
-          throw `[Materials/findLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
-        }
-      }
-    }
-  }
-  return null;
-}
-async function createSubChapter(params) {
-  var _a;
+async function createSubChapter(params, auth) {
   console.log("[createSubChapter] => ", params);
   try {
-    if (!params) throw "[createSubChapter]>> INVALID_INPUT_DATA";
-    const materials = await readFile(FSCONFIG);
-    const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
-    if ((chapter == null ? void 0 : chapter.chapterType) === "dir" && chapter.items) {
-      const timestamp = formatDate();
-      const newSubChapter = {
-        id: Date.now(),
-        chapterType: params.chapterType,
-        content: {
-          blocks: [],
-          title: null
-        },
-        icon: params.icon,
-        iconType: params.iconType,
-        fullpath: trimPath(params.fullpath),
-        label: params.label,
-        route: params.route,
-        items: params.chapterType === "dir" ? [] : null,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      };
-      const correctFullPath = trimPath(params.fullpath, { split: true }).slice(1, -1);
-      if (correctFullPath.length <= 0) {
-        const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-        if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
-        chapter.items.push(newSubChapter);
-      } else {
-        const needLevel = findLevel(chapter.items, correctFullPath);
-        if (!needLevel) {
-          throw "[createSubChapter]>> Нужный уровень найти не удалось";
+    if (!params || !params.chapterId) throw "[createSubChapter]>> INVALID_INPUT_DATA";
+    if (!(auth == null ? void 0 : auth.token)) throw "[createSubChapter]>> 401 UNAUTHORIZATE";
+    const { payload: { username } } = await verifyAccessToken(auth.token);
+    const subChapterService = new SubChapterService();
+    const now2 = formatDate();
+    const res = await subChapterService.create({
+      chapterId: params.chapterId,
+      chapterType: params.chapterType,
+      fullpath: params.fullpath,
+      icon: params.icon,
+      iconType: params.iconType,
+      label: params.label,
+      pathName: params.pathName,
+      route: params.route,
+      createdAt: now2,
+      updatedAt: now2
+    });
+    await syncMaterialsStores(username);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function syncMaterialsStores(username) {
+  console.log("[syncMaterialsStores] =>", username);
+  try {
+    let sync = function(pathName, subchapters, envStack, stackLabels) {
+      const mappa = {};
+      const baseSubChapters = [];
+      for (let i = 0; i < subchapters.length; i++) {
+        const subChapter = subchapters[i];
+        if (!subChapter.pathName) subChapter.pathName = pathName;
+        const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length);
+        const basePath = correctFullpath.shift();
+        if (!mappa[basePath]) mappa[basePath] = [];
+        subChapter.fullLabels = [...stackLabels, subChapter.label];
+        if (correctFullpath.length > 0) {
+          mappa[basePath].push(subChapter);
+        } else {
+          baseSubChapters.push(subChapter);
         }
-        const alreadyExists = chapter.items.find((subCh) => trimPath(subCh.fullpath) === trimPath(newSubChapter.fullpath));
-        if (alreadyExists) throw "[createSubChapter]>> CONSTRAINT_VIOLATE_UNIQUE";
-        (_a = needLevel.items) == null ? void 0 : _a.push(newSubChapter);
       }
-      await writeFile(materials, FSCONFIG);
-      return newSubChapter;
+      return baseSubChapters.map((subChapter) => {
+        var _a;
+        const correctFullpath = trimPath(subChapter.fullpath, { split: true }).slice(envStack.length);
+        if (((_a = mappa[correctFullpath[0]]) == null ? void 0 : _a.length) <= 0) {
+          subChapter.items = subChapter.chapterType === "dir" ? [] : null;
+          subChapter.pathName = envStack[0];
+          return subChapter;
+        } else {
+          stackLabels.push(subChapter.label);
+          const env = correctFullpath.shift();
+          subChapter.items = sync(pathName, mappa[env], [...envStack, env], stackLabels);
+          return subChapter;
+        }
+      });
+    };
+    if (!username) throw new Error("[syncMaterialsStores]>> invalid username");
+    const chapterService = new ChapterService();
+    const result = await chapterService.getAllForMenu();
+    const mapped = result.map((chapter) => {
+      var _a, _b;
+      if (typeof chapter.items === "string") {
+        chapter.items = JSON.parse(chapter.items);
+      }
+      if (chapter.items && chapter.items.length > 0) {
+        if (((_a = chapter.items) == null ? void 0 : _a.length) === 1 && !((_b = chapter.items[0]) == null ? void 0 : _b.id)) {
+          chapter.items = chapter.chapterType === "dir" ? [] : null;
+        }
+        if (chapter.items) {
+          chapter.items = sync(chapter.pathName, chapter.items, [chapter.pathName], [chapter.label]);
+        }
+      } else {
+        console.error("[syncMaterialsStores]>> chapter.length is NULL");
+      }
+      return chapter;
+    });
+    const userDirPath = getAppUserDirname(username);
+    await writeFile(mapped, { ...FSCONFIG_MENU, directory: userDirPath, customPath: true });
+    return mapped;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function getOneSubChapter(params, auth) {
+  console.log("[getOneSubChapter] => ", params);
+  try {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZATE");
+    await verifyAccessToken(auth.token);
+    const subChapterService = new SubChapterService();
+    await subChapterService.findByFullpath(params.fullpath);
+    if (params.fullpath) {
+      const findedSubChapter = await subChapterService.findByFullpath(params.fullpath, {
+        includes: {
+          blocks: true
+          // также прикрепить блоки в объект подраздела
+        }
+      });
+      if (!findedSubChapter) throw "[getOneSubChapter]>> NOT_EXISTS_RECORD";
+      const correctSubChapter = {
+        id: findedSubChapter.id,
+        icon: findedSubChapter.icon,
+        fullpath: findedSubChapter.fullpath,
+        chapterType: findedSubChapter.chapterType,
+        createdAt: findedSubChapter.createdAt,
+        label: findedSubChapter.label,
+        pathName: findedSubChapter.pathName,
+        route: findedSubChapter.route,
+        updatedAt: findedSubChapter.updatedAt,
+        iconType: findedSubChapter.iconType,
+        content: {
+          title: findedSubChapter.contentTitle,
+          blocks: []
+        },
+        items: findedSubChapter.chapterType === "dir" ? [] : null
+      };
+      if (findedSubChapter == null ? void 0 : findedSubChapter.blocks) {
+        let blocks = JSON.parse(findedSubChapter == null ? void 0 : findedSubChapter.blocks);
+        if (blocks.length === 1 && !blocks[0].id) {
+          blocks.length = 0;
+        } else if (!!blocks[0].id) {
+          correctSubChapter.content.blocks = blocks;
+        }
+      } else {
+      }
+      return correctSubChapter;
     } else {
-      throw "[createSubChapter]>> INVALID_CHAPTER_TYPE";
+      throw "[getOneSubChapter]>> NOT_EXISTS_RECORD";
     }
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-async function syncMaterialsStores() {
-  console.log("[syncMaterialsStores] => void");
-  function correctChapter(chapter, initPathName) {
-    const { icon, iconType, id, label, pathName: pathName2, fullpath, route, items } = chapter;
-    return { icon, iconType, id, label, pathName: initPathName ? initPathName : pathName2, fullpath, route, items };
-  }
-  let pathName;
-  function sync(chapters) {
-    return chapters.map((chapter) => {
-      if (chapter.pathName && chapter.pathName !== pathName) {
-        pathName = chapter.pathName;
-      }
-      if (chapter.chapterType === "file" && !chapter.items) {
-        return correctChapter(chapter, pathName);
-      } else if (chapter.chapterType === "dir" && chapter.items) {
-        if (chapter.items.length > 0) {
-          const syncCh = correctChapter(chapter, pathName);
-          syncCh.items = sync(chapter.items);
-          return syncCh;
-        } else {
-          return correctChapter(chapter, pathName);
-        }
-      } else throw "[syncMaterialsStores]>> INVALID_CHAPTER_TYPE";
-    });
-  }
-  try {
-    const materials = await readFile(FSCONFIG);
-    const syncMaterials = sync(materials);
-    await writeFile(syncMaterials, FSCONFIG_MENU);
-    return syncMaterials;
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-async function getOneSubChapter(params) {
-  console.log("[getOneSubChapter] => ", params);
-  try {
-    const materials = await readFile(FSCONFIG);
-    const chapter = materials.find((chapter2) => chapter2.pathName === params.pathName);
-    if ((chapter == null ? void 0 : chapter.items) && chapter.items.length) {
-      const correctFullpath = trimPath(params.fullpath, { split: true }).slice(1);
-      const { chapter: findedChapter, labels } = findLevel(chapter == null ? void 0 : chapter.items, correctFullpath, { labels: true });
-      if (!findedChapter) throw "[getOneSubChapter]>> NOT_FOUND";
-      labels.unshift(chapter.label);
-      return { chapter: findedChapter, labels };
-    } else throw "[getOneSubChapter]>> INTERNAL_ERROR";
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-function updateChapter(chapter, params) {
-  try {
-    if (params.chapterType) chapter.chapterType = params.chapterType;
-    if (params.icon) chapter.icon = params.icon;
-    if (params.iconType) chapter.iconType = params.iconType;
-    if (params.label) chapter.label = params.label;
-    if (params.pathName && chapter.pathName) chapter.pathName = params.pathName;
-  } catch (err) {
-    console.error("[editChapter]>> Ошибка при обновлении раздела/подраздела");
-    throw err;
-  }
-}
-async function editChapter(input) {
+async function editChapter(input, auth) {
   console.log("[editChapter] => ", input);
   try {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapter]>> 401 UNAUTHORIZATE");
+    const { payload: { username } } = await verifyAccessToken(auth.token);
     const { params, fullpath, pathName } = input;
-    const materials = await readFile(FSCONFIG);
     if (!fullpath && pathName) {
-      let findedChapter = materials.find((chapter) => chapter.pathName === pathName);
+      const chapterService = new ChapterService();
+      const findedChapter = await chapterService.findByPathName(pathName);
       if (findedChapter) {
         if (params.chapterType === "file" && findedChapter.chapterType === "dir") {
           throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
         }
-        updateChapter(findedChapter, params);
-        if (params.chapterType === "dir") findedChapter.items = [];
-        findedChapter.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-        await writeFile(materials, FSCONFIG);
-        return findedChapter;
-      } else throw "[editChapter]>> NOT_FOUND";
+        const updatedChapter = await chapterService.update(findedChapter.id, params);
+        await syncMaterialsStores(username);
+        const resultChapter = {
+          ...updatedChapter,
+          content: {
+            title: updatedChapter.contentTitle ?? null,
+            blocks: Array.isArray(updatedChapter.blocks) ? updatedChapter.blocks : []
+          }
+        };
+        Reflect.deleteProperty(resultChapter, "blocks");
+        return resultChapter;
+      } else throw "[editChapter]>> NOT_FOUND [1]";
     } else if (fullpath && pathName) {
-      const correctPath = trimPath(fullpath, { split: true });
-      const root = correctPath[0];
-      const findedChapter = materials.find((chapter) => chapter.pathName === root);
-      const lastPath = correctPath.slice(1);
-      if (findedChapter == null ? void 0 : findedChapter.items) {
-        let subchapter = findLevel(findedChapter.items, lastPath);
-        if (params.chapterType === "file" && subchapter.chapterType === "dir") {
-          throw "[editChapter]>> INVALID_CHAPTER_TYPE[2]";
+      const subChapterService = new SubChapterService();
+      const findedSubChapter = await subChapterService.findByFullpath(fullpath);
+      if (findedSubChapter) {
+        if (params.chapterType === "file" && findedSubChapter.chapterType === "dir") {
+          throw "[editChapter]>> INVALID_CHAPTER_TYPE[1]";
         }
-        if (params.pathName) correctPath[correctPath.length - 1] = params.pathName;
-        updateChapter(subchapter, params);
-        subchapter.fullpath = correctPath.join("/");
-        if (params.chapterType === "dir" && !subchapter.items) subchapter.items = [];
-        subchapter.updatedAt = formatDate(Date.now());
-        await writeFile(materials, FSCONFIG);
-        return subchapter;
-      } else throw "[editChapter]>> INTERNAL_ERROR[2]";
+        const updatedSubChapter = await subChapterService.update(findedSubChapter.id, params);
+        await syncMaterialsStores(username);
+        const resultSubChapter = {
+          ...updatedSubChapter,
+          content: {
+            title: updatedSubChapter.contentTitle ?? null,
+            blocks: Array.isArray(updatedSubChapter.blocks) ? updatedSubChapter.blocks : []
+          }
+        };
+        Reflect.deleteProperty(resultSubChapter, "blocks");
+        return resultSubChapter;
+      } else throw "[editChapter]>> NOT_FOUND [2]";
     } else throw "[editChapter]>> INTERNAL_ERROR[3]";
   } catch (err) {
     console.error(err);
@@ -5013,62 +5926,53 @@ async function deleteChapter(params) {
   console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
-    let materials = await readFile(FSCONFIG);
+    const chapterService = new ChapterService();
     if (params.pathName) {
-      materials = materials.filter((chapter) => chapter.pathName !== params.pathName);
+      await chapterService.deleteOneByPathName(params.pathName);
     } else if (params.chapterId) {
-      materials = materials.filter((chapter) => chapter.id !== params.chapterId);
+      return "success";
     } else {
       return "failed";
     }
-    await writeFile(materials, FSCONFIG);
     return "success";
+  } catch (err) {
+    console.error(err);
+    return "failed";
+  }
+}
+async function deleteSubChapter(params) {
+  console.log("[deleteChapter] => ", params);
+  try {
+    if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
+    const subChapterService = new SubChapterService();
+    if (params.fullpath) {
+      await subChapterService.deleteOneByFullpath(params.fullpath);
+    } else {
+      return "failed";
+    }
+    return "success";
+  } catch (err) {
+    console.error(err);
+    return "failed";
+  }
+}
+async function getChapterBlocks(params) {
+  console.log("[getChapterBlocks] => ", params);
+  try {
+    const blockService = new BlocksService();
+    const blocks = await blockService.getAllForChapter(params.chapterId);
+    return blocks;
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-function findAndDeleteLevel(items, initPath) {
-  if (items.length <= 0) return false;
-  const current = initPath.shift();
-  for (let i = 0; i < items.length; i++) {
-    const chapter = items[i];
-    const selfPath = trimPath(chapter.fullpath, { split: true }).at(-1);
-    if (selfPath === current) {
-      if (initPath.length <= 0) {
-        return items.filter((ch) => ch.id !== chapter.id);
-      } else {
-        if (chapter.items && chapter.items.length > 0) {
-          const updateItems = findAndDeleteLevel(chapter.items, initPath);
-          if (updateItems && Array.isArray(updateItems)) {
-            chapter.items = updateItems;
-          }
-          return items;
-        } else {
-          throw `[Materials/findAndDeleteLevel]>> Ожидается, что items для "${selfPath}" не будет пустым, но он пуст`;
-        }
-      }
-    }
-  }
-  return false;
-}
-async function deleteSubChapter(params) {
-  console.log("[deleteSubChapter] => ", params);
+async function getSubChapterBlocks(params) {
+  console.log("[getSubChapterBlocks] => ", params);
   try {
-    if (!params || !params.fullpath) throw new Error("[deleteSubChapter]>> INVALID_INPUT");
-    let materials = await readFile(FSCONFIG);
-    let correctPath = trimPath(params.fullpath, { split: true });
-    const rootName = correctPath[0];
-    const rootChapter = materials.find((chapter) => chapter.pathName === rootName);
-    if (!rootChapter) throw new Error("[deleteSubChapter]>> NOT_FOUND_ROOT_CHAPTER");
-    if (!rootChapter.items) throw new Error("[deleteSubChapter]>> INVALID_CHAPTER_TYPE");
-    const updatedChapterItems = findAndDeleteLevel(rootChapter.items, correctPath.slice(1));
-    if (Array.isArray(updatedChapterItems)) rootChapter.items = updatedChapterItems;
-    else {
-      throw new Error("[deleteSubChapter]>> INTERNAL_ERROR");
-    }
-    await writeFile(materials, FSCONFIG);
-    return "success";
+    const blockService = new BlocksService();
+    const blocks = await blockService.getAllForSubChapter(params.chapterId);
+    return blocks;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5077,86 +5981,47 @@ async function deleteSubChapter(params) {
 async function createChapterBlock(params) {
   console.log("[createChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName || !params.title || params.title.length < 3) {
+    if (!params || !params.pathName || !params.title)
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
-    }
-    const materials = await readFile(FSCONFIG);
-    const timestamp = formatDate();
-    const newBlock = {
-      id: Date.now(),
-      title: params.title,
-      content: null,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    };
-    if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[createChapterBlock]>> Ключа content не существует!");
-      findedChapter.content.blocks.push(newBlock);
-    } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
-      if (!findedChapter || !findedChapter.items) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
-      if (!subChapter || !subChapter.content) throw new Error("[createChapterBlock]>> INTERNAL_ERROR[2]!");
-      subChapter.content.blocks.push(newBlock);
-    } else {
-      throw new Error("[createChapterBlock]>> INTERNAL_ERROR[3]");
-    }
-    await writeFile(materials, FSCONFIG);
-    return newBlock;
+    const blockService = new BlocksService();
+    const chapterService = new ChapterService();
+    const subChapterService = new SubChapterService();
+    if (!params.fullpath && params.pathName) {
+      const findedChapter = await chapterService.findByPathName(params.pathName, { select: ["id"] });
+      if (!findedChapter || !findedChapter.id) throw new Error("[createChapterBlock]>> NOT_FOUND [1]");
+      const newBlock = await blockService.createForChapter({
+        chapterId: findedChapter.id,
+        subChapterId: null,
+        title: params.title
+      });
+      return newBlock;
+    } else if (params.fullpath && params.pathName) {
+      const findedSubChapter = await subChapterService.findByFullpath(params.fullpath, { select: ["id"] });
+      if (!findedSubChapter || !findedSubChapter.id) throw new Error("[createChapterBlock]>> NOT_FOUND [2]");
+      const newBlock = await blockService.createForChapter({
+        chapterId: null,
+        subChapterId: findedSubChapter.id,
+        title: params.title
+      });
+      return newBlock;
+    } else
+      throw new Error("[createChapterBlock]>> INTERNAL_ERROR");
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-function updateBlock(oldBlock, newBlock) {
-  if (!oldBlock || !newBlock) throw new Error("[editChapterBlock]>>[updateBlock]>> INVALID_INPUT");
-  oldBlock.content = newBlock.content;
-  oldBlock.title = newBlock.title;
-}
 async function editChapterBlock(params) {
-  var _a;
   console.log("[editChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName) {
+    if (!params || !params.pathName || !params.block)
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
-    }
-    const materials = await readFile(FSCONFIG);
-    const blockId = ((_a = params == null ? void 0 : params.block) == null ? void 0 : _a.id) || (params == null ? void 0 : params.blockId);
-    const timestamp = formatDate();
-    if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[editChapterBlock]>> Ключа content не существует!");
-      const findedBlock = findedChapter.content.blocks.find((block) => block.id === blockId);
-      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[1]");
-      if (!params.blockTitle) {
-        updateBlock(findedBlock, params.block);
-      } else {
-        findedBlock.title = params.blockTitle;
-      }
-      findedChapter.updatedAt = timestamp;
-      findedBlock.updatedAt = timestamp;
-    } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
-      if (!findedChapter || !findedChapter.items) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
-      if (!subChapter || !subChapter.content) throw new Error("[editChapterBlock]>> INTERNAL_ERROR[2]!");
-      const findedBlock = subChapter.content.blocks.find((block) => block.id === blockId);
-      if (!findedBlock) throw new Error("[editChapterBlock]>> NOT_FOUND_RECORD[2]");
-      if (!params.blockTitle) {
-        updateBlock(findedBlock, params.block);
-      } else {
-        findedBlock.title = params.blockTitle;
-      }
-      findedChapter.updatedAt = timestamp;
-      findedBlock.updatedAt = timestamp;
-    } else {
-      throw new Error("[editChapterBlock]>> INTERNAL_ERROR[3]");
-    }
-    await writeFile(materials, FSCONFIG);
-    return materials;
+    const blockService = new BlocksService();
+    const updatedBlock = await blockService.update(params.block.id, {
+      ...params.block,
+      updatedAt: formatDate()
+    });
+    return updatedBlock;
   } catch (err) {
     console.error(err);
     throw err;
@@ -5165,40 +6030,22 @@ async function editChapterBlock(params) {
 async function deleteChapterBlock(params) {
   console.log("[deleteChapterBlock] => ", params);
   try {
-    if (!params || !params.pathName) {
+    if (!params || !params.pathName)
       throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
-    }
-    const materials = await readFile(FSCONFIG);
-    if (params.pathName && !params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      if (!(findedChapter == null ? void 0 : findedChapter.content)) throw new Error("[deleteChapterBlock]>> Ключа content не существует!");
-      findedChapter.content.blocks = findedChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials, FSCONFIG);
-      return findedChapter;
-    } else if (params.pathName && params.fullpath) {
-      const findedChapter = materials.find((chapter) => chapter.pathName === params.pathName);
-      const correctPath = trimPath(params.fullpath, { split: true });
-      if (!findedChapter || !findedChapter.items) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[1]");
-      const subChapter = findLevel(findedChapter.items, correctPath.slice(1));
-      if (!subChapter || !subChapter.content) throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[2]!");
-      subChapter.content.blocks = subChapter.content.blocks.filter((block) => block.id !== params.blockId);
-      await writeFile(materials, FSCONFIG);
-      return subChapter;
-    } else {
-      throw new Error("[deleteChapterBlock]>> INTERNAL_ERROR[3]");
-    }
+    const blockService = new BlocksService();
+    return await blockService.deleteOne(params.blockId);
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-async function prepareUserStore(win2, params) {
-  console.log("[prepareUserStore]>> ", params);
+async function prepareUserStore(win2, username) {
+  console.log("[prepareUserStore]>> ", username);
   try {
     let isReliableStores = true;
-    isReliableStores = await prepareUsersStore();
-    isReliableStores = await prepareMaterialsStore();
-    isReliableStores = await prepareMaterialsStoreForMenu();
+    const manager = DatabaseManager.instance();
+    if (!await manager.initOnUser(username, { migrate: true })) isReliableStores = false;
+    if (!await prepareMaterialsStoreForMenu(username)) isReliableStores = false;
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
     win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
     console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
@@ -5207,8 +6054,161 @@ async function prepareUserStore(win2, params) {
     throw err;
   }
 }
-createRequire(import.meta.url);
-const __dirname = path$2.dirname(fileURLToPath(import.meta.url));
+function logoutIpc(win2) {
+  if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
+  win2.webContents.send("logout");
+}
+const storeTTL$1 = TTLStore.getInstance();
+const FILENAME = "users.json";
+const FSCONFIG = {
+  directory: "appData",
+  encoding: "utf-8",
+  filename: FILENAME,
+  format: "json"
+};
+async function getUsers(config2) {
+  try {
+    const users = await readFile(FSCONFIG);
+    if (config2 && config2.page && config2.perPage) {
+      const right = config2.perPage * config2.page;
+      const left = right - config2.perPage;
+      return users.slice(left, right);
+    } else return users;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function initUserDir(user) {
+  console.log("[initUserDir] =>", user);
+  if (!user) throw new Error("user - обязательный аргумент");
+  try {
+    if (typeof user.id !== "number" || user.id !== user.id) {
+      throw new TypeError("[initUserDir]>> ID пользователя неверный");
+    }
+    const userDirName = `user_${user.username}`;
+    const isExistUserDir = await isExistFileOrDir(userDirName);
+    if (isExistUserDir === false) {
+      console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
+      await mkDir(userDirName);
+      if (await isExistFileOrDir(userDirName)) {
+        console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
+        await prepareUserStore(null, user.username);
+        return true;
+      } else {
+        console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
+        return false;
+      }
+    } else {
+      console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
+      return false;
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+async function createUser(win2, params) {
+  console.log("[createUser] =>", params);
+  try {
+    if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
+    const userService = new UserService();
+    const user = await userService.findByUsername({ username: params.username });
+    if (user) {
+      throw "[createUser]>> CONSTRAINT_VIOLATE_UNIQUE";
+    }
+    const now2 = formatDate();
+    const hash = await encrypt(params.password);
+    const keyDB = await encryptPragmaKey(params.username, params.password);
+    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
+    console.log("KEY CIPHER", keyDB);
+    const newUser = await userService.create({
+      username: params.username,
+      password: hash,
+      avatar: null,
+      createdAt: now2,
+      updatedAt: now2
+    });
+    const isCreationNewDir = await initUserDir(newUser);
+    if (!isCreationNewDir) {
+      throw new Error(`[createUser]>> directory for user ${newUser.id} was not created!`);
+    }
+    return newUser;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+async function updatePassword(params) {
+  try {
+    if (params.newPassword === params.oldPassword) throw "[updatePassword]>> INVALID_DATA";
+    if (!params.username) throw "[updatePassword]>> INVALID_DATA";
+    const userService = new UserService();
+    const user = await userService.findByUsername({ username: params.username });
+    if (!user) {
+      throw "[updatePassword]>> NOT_EXISTS_RECORD";
+    }
+    if (!await verify(params.oldPassword, user.password)) {
+      throw "[updatePassword]>> INVALID_CREDENTIALS";
+    }
+    const hash = await encrypt(params.newPassword);
+    await userService.updatePassword({
+      username: params.username,
+      password: hash
+    });
+    return true;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+const storeTTL = TTLStore.getInstance();
+async function validateAccessToken(params) {
+  console.log("[validateAccessToken] =>", params);
+  try {
+    if (!(params == null ? void 0 : params.token)) throw "[validateAccessToken]>> INVALID_DATA";
+    return !!await verifyAccessToken(params.token);
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
+async function loginUser(win2, params, config2) {
+  console.log("[loginUser] =>", params);
+  try {
+    if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
+    const userService = new UserService();
+    const user = await userService.findByUsername({ username: params.username });
+    if (!user) {
+      throw "[loginUser]>> NOT_EXISTS_RECORD";
+    }
+    const isVerifyPassword = await verify(params.password, user.password).catch((err) => {
+      console.log("[loginUser]>> INTERNAL_ERROR", err);
+    });
+    if (isVerifyPassword === true) {
+      const readyUser = { ...user };
+      Reflect.deleteProperty(readyUser, "hash_salt");
+      Reflect.deleteProperty(readyUser, "password");
+      const keyDB = await encryptPragmaKey(params.username, params.password);
+      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
+      console.log("KEY CIPHER", keyDB);
+      const token2 = await createAccessToken({
+        userId: readyUser.id,
+        username: readyUser.username
+      }, config2.expiresToken);
+      await prepareUserStore(win2, params.username);
+      return {
+        token: token2,
+        user: readyUser
+      };
+    } else {
+      throw "[loginUser]>> INVALID_CREDENTIALS";
+    }
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+const __dirname = path$2.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path$2.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path$2.join(process.env.APP_ROOT, "dist-electron");
@@ -5220,7 +6220,15 @@ function createWindow() {
     icon: path$2.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path$2.join(__dirname, "preload.mjs")
+    },
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#2f3241",
+      symbolColor: "#74b1be",
+      height: 20
     }
+    // expose window controls in Windows/Linux
+    // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
   });
   win.webContents.on("did-finish-load", async () => {
   });
@@ -5242,59 +6250,72 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(async () => {
+  TTLStore.getInstance();
+  const isReadyDB = await DatabaseManager.instance().initOnApp({ migrate: true });
+  if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
+  console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
-  ipcMain.handle("prepare-user-storage", async (event, params) => {
-    return await prepareUserStore(win, params);
+  ipcMain.handle("validate-access-token", async (_, params) => {
+    return await validateAccessToken(params);
   });
-  ipcMain.handle("get-users", async (event, config2) => {
+  ipcMain.handle("prepare-user-store", async (_, params) => {
+    const { payload: { username } } = await verifyAccessToken(params.token);
+    return await prepareUserStore(win, username);
+  });
+  ipcMain.handle("get-users", async (_, config2) => {
     return await getUsers(config2);
   });
-  ipcMain.handle("create-user", async (event, params) => {
-    return await createUser(params);
+  ipcMain.handle("create-user", async (_, params) => {
+    return await createUser(win, params);
   });
-  ipcMain.handle("login-user", async (event, params) => {
-    return await loginUser(params);
+  ipcMain.handle("login-user", async (_, params) => {
+    return await loginUser(win, params, { expiresToken: { Y: 1 } });
   });
-  ipcMain.handle("update-password", async (event, params) => {
+  ipcMain.handle("update-password", async (_, params) => {
     return await updatePassword(params);
   });
-  ipcMain.handle("create-chapter", async (event, params) => {
-    return await createChapter(params);
+  ipcMain.handle("create-chapter", async (_, params, auth) => {
+    return await createChapter(params, auth);
   });
-  ipcMain.handle("get-menu-chapters", async (event, params) => {
+  ipcMain.handle("get-menu-chapters", async (_, params) => {
     return await getChapters(params);
   });
-  ipcMain.handle("get-one-chapter", async (event, params) => {
+  ipcMain.handle("get-one-chapter", async (_, params) => {
     return await getOneChapter(params);
   });
-  ipcMain.handle("create-sub-chapter", async (event, params) => {
-    return await createSubChapter(params);
+  ipcMain.handle("create-sub-chapter", async (_, params, auth) => {
+    return await createSubChapter(params, auth);
   });
-  ipcMain.handle("sync-materials", async (event) => {
-    return await syncMaterialsStores();
+  ipcMain.handle("sync-materials", async (_, auth) => {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
+    const { payload: { username } } = await verifyAccessToken(auth.token);
+    return await syncMaterialsStores(username);
   });
-  ipcMain.handle("get-one-sub-chapter", async (event, params) => {
-    return await getOneSubChapter(params);
+  ipcMain.handle("get-one-sub-chapter", async (_, params, auth) => {
+    return await getOneSubChapter(params, auth);
   });
-  ipcMain.handle("edit-chapter", async (event, params) => {
-    return await editChapter(params);
+  ipcMain.handle("edit-chapter", async (_, params, auth) => {
+    return await editChapter(params, auth);
   });
-  ipcMain.handle("delete-chapter", async (event, params) => {
+  ipcMain.handle("delete-chapter", async (_, params) => {
     return await deleteChapter(params);
   });
-  ipcMain.handle("delete-sub-chapter", async (event, params) => {
+  ipcMain.handle("delete-sub-chapter", async (_, params) => {
     return await deleteSubChapter(params);
   });
-  ipcMain.handle("create-chapter-block", async (event, params) => {
+  ipcMain.handle("get-chapter-blocks", async (_, params) => {
+    return await getChapterBlocks(params);
+  });
+  ipcMain.handle("get-sub-chapter-blocks", async (_, params) => {
+    return await getSubChapterBlocks(params);
+  });
+  ipcMain.handle("create-chapter-block", async (_, params) => {
     return await createChapterBlock(params);
   });
-  ipcMain.handle("edit-chapter-block", async (event, params) => {
+  ipcMain.handle("edit-chapter-block", async (_, params) => {
     return await editChapterBlock(params);
   });
-  ipcMain.handle("edit-chapter-block-title", async (event, params) => {
-    return await editChapterBlock(params);
-  });
-  ipcMain.handle("delete-chapter-block", async (event, params) => {
+  ipcMain.handle("delete-chapter-block", async (_, params) => {
     return await deleteChapterBlock(params);
   });
 });

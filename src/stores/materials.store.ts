@@ -14,15 +14,17 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     const loadingChapterItem = { type: 'loading', meta: true }
     const materialChaptersMenu: Ref<ChapterForMenu[]> = ref([loadingChapterItem, addChapterItem]);
     const materialChapters: Ref<Chapter[]> = ref([]);
-    const loadingGetMenuChapters = ref(true);
+    const loadingGetMenuChapters = ref(false);
     const loadingGetChapter = ref(false);
     const loadingCreateChapter = ref(false);
     const loadingEditChapter = ref(false);
     const loadingDeleteChapter = ref(false);
+    const materialsLabel: Ref<Array<string>> = ref([]);
 
     // Состояние определяет какую либо асинхронную операцию для отображение прогресс бара в заголовке стр materials
     const globalLoadingMaterials = computed(() => {
         const deps = [
+            loadingGetMenuChapters.value,
             loadingGetChapter.value,
             loadingCreateChapter.value,
         ]
@@ -40,7 +42,9 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         try {
             loadingGetMenuChapters.value = true;
             if(materialChaptersMenu.value[0].type === 'loading') {
-                const items = await getChapters({ forMenu: true });
+                const token = localStorage.getItem('token') ?? '';
+                const items = await getChapters({ forMenu: true, token: token });
+                console.log(items);
                 updateMenuItems(items);
             } 
         } catch (err) {
@@ -51,15 +55,38 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         }
     }
 
+    // Обновить полный лэйбл для материалов
+    function updateMaterialsFullLabels(labels: string[]): void {
+        materialsLabel.value = labels;
+        localStorage.setItem('materials-full-label', JSON.stringify(labels))
+    }
+
+    // Получить полный лэйбл материалов
+    function getMaterialsFullLabels(): string[] {
+        if(materialsLabel.value.length > 0) {
+           return materialsLabel.value;
+        }
+        return JSON.parse(localStorage.getItem('materials-full-label')!) ?? [];
+    }
+    function removeMaterialsFullLabels() {
+        materialsLabel.value.length = 0;
+        localStorage.removeItem('materials-full-label');
+    }
+
     return {
+        materialsLabel,
         materialChaptersMenu,
         materialChapters,
         loadingGetChapter,
         globalLoadingMaterials,
+        loadingGetMenuChapters,
         loadingCreateChapter,
         loadingEditChapter,
         loadingDeleteChapter,
         getMaterialsMenu,
         updateMenuItems,
+        updateMaterialsFullLabels,
+        getMaterialsFullLabels,
+        removeMaterialsFullLabels,
     }
 });
