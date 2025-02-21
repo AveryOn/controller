@@ -542,7 +542,6 @@ const _TTLStore = class _TTLStore {
     const timerId = setTimeout(() => {
       this.delete(key);
       cb == null ? void 0 : cb.call(null);
-      clearInterval(this.TimersIds.get(`T_${key}`));
     }, ttl);
     this.TimersIds.set(`T_${key}`, timerId);
   }
@@ -581,7 +580,6 @@ const _TTLStore = class _TTLStore {
   }
 };
 __publicField(_TTLStore, "instance");
-__publicField(_TTLStore, "win", null);
 let TTLStore = _TTLStore;
 const _InstanceDatabase = class _InstanceDatabase {
   constructor(dbname, username, state) {
@@ -5772,7 +5770,7 @@ async function createChapter(params, auth) {
   console.log("[createChapter] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[createChapter]>> 401 UNAUTHORIZE");
-    const { payload } = await verifyAccessToken(auth.token);
+    await verifyAccessToken(auth.token, { refresh: true });
     const chapterService = new ChapterService();
     const timestamp = formatDate();
     const newChapter = await chapterService.create({
@@ -5785,19 +5783,19 @@ async function createChapter(params, auth) {
       createdAt: timestamp,
       updatedAt: timestamp
     });
-    await syncMaterialsStores(payload.username);
+    await syncMaterialsStores(auth);
     return newChapter;
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-async function getChapters(params) {
+async function getChapters(params, auth) {
   console.log("getChapters => ", params);
   try {
     if (!params) throw new Error("[getChapters]>> invalid params");
     if (!params.token) new Error("[getChapters]>> 401 UNAUTHORIZE");
-    const { payload: { username } } = await verifyAccessToken(params.token);
+    const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
     const userDirPath = getAppUserDirname(username);
     let chapters;
     if ((params == null ? void 0 : params.forMenu) === true) {
@@ -5816,9 +5814,11 @@ async function getChapters(params) {
     throw err;
   }
 }
-async function getOneChapter(params) {
+async function getOneChapter(params, auth) {
   console.log("[getOneChapter] => ", params);
   try {
+    if (!auth.token) new Error("[getChapters]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const chapterService = new ChapterService();
     if (params.pathName) {
       const findedChapter = await chapterService.findByPathName(params.pathName, {
@@ -5869,7 +5869,7 @@ async function createSubChapter(params, auth) {
   try {
     if (!params || !params.chapterId) throw "[createSubChapter]>> INVALID_INPUT_DATA";
     if (!(auth == null ? void 0 : auth.token)) throw "[createSubChapter]>> 401 UNAUTHORIZE";
-    const { payload: { username } } = await verifyAccessToken(auth.token);
+    await verifyAccessToken(auth.token, { refresh: true });
     const subChapterService = new SubChapterService();
     const now2 = formatDate();
     const res = await subChapterService.create({
@@ -5884,15 +5884,15 @@ async function createSubChapter(params, auth) {
       createdAt: now2,
       updatedAt: now2
     });
-    await syncMaterialsStores(username);
+    await syncMaterialsStores(auth);
     return res;
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
-async function syncMaterialsStores(username) {
-  console.log("[syncMaterialsStores] =>", username);
+async function syncMaterialsStores(auth) {
+  console.log("[syncMaterialsStores] =>", 0);
   try {
     let sync = function(pathName, subchapters, envStack, stackLabels) {
       const mappa = {};
@@ -5925,6 +5925,8 @@ async function syncMaterialsStores(username) {
         }
       });
     };
+    if (!(auth == null ? void 0 : auth.token)) throw "[syncMaterialsStores]>> 401 UNAUTHORIZE";
+    const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
     if (!username) throw new Error("[syncMaterialsStores]>> invalid username");
     const chapterService = new ChapterService();
     const result = await chapterService.getAllForMenu();
@@ -5957,7 +5959,7 @@ async function getOneSubChapter(params, auth) {
   console.log("[getOneSubChapter] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZE");
-    await verifyAccessToken(auth.token);
+    await verifyAccessToken(auth.token, { refresh: true });
     const subChapterService = new SubChapterService();
     await subChapterService.findByFullpath(params.fullpath);
     if (params.fullpath) {
@@ -6007,7 +6009,7 @@ async function editChapter(input, auth) {
   console.log("[editChapter] => ", input);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapter]>> 401 UNAUTHORIZE");
-    const { payload: { username } } = await verifyAccessToken(auth.token);
+    await verifyAccessToken(auth.token, { refresh: true });
     const { params, fullpath, pathName } = input;
     if (!fullpath && pathName) {
       const chapterService = new ChapterService();
@@ -6023,7 +6025,7 @@ async function editChapter(input, auth) {
             updatedAt: formatDate()
           }
         );
-        await syncMaterialsStores(username);
+        await syncMaterialsStores(auth);
         const resultChapter = {
           ...updatedChapter,
           content: {
@@ -6048,7 +6050,7 @@ async function editChapter(input, auth) {
             updatedAt: formatDate()
           }
         );
-        await syncMaterialsStores(username);
+        await syncMaterialsStores(auth);
         const resultSubChapter = {
           ...updatedSubChapter,
           content: {
@@ -6065,10 +6067,12 @@ async function editChapter(input, auth) {
     throw err;
   }
 }
-async function deleteChapter(params) {
+async function deleteChapter(params, auth) {
   console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[deleteChapter]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const chapterService = new ChapterService();
     if (params.pathName) {
       await chapterService.deleteOneByPathName(params.pathName);
@@ -6083,10 +6087,12 @@ async function deleteChapter(params) {
     return "failed";
   }
 }
-async function deleteSubChapter(params) {
+async function deleteSubChapter(params, auth) {
   console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[deleteChapter]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const subChapterService = new SubChapterService();
     if (params.fullpath) {
       await subChapterService.deleteOneByFullpath(params.fullpath);
@@ -6099,9 +6105,11 @@ async function deleteSubChapter(params) {
     return "failed";
   }
 }
-async function getChapterBlocks(params) {
+async function getChapterBlocks(params, auth) {
   console.log("[getChapterBlocks] => ", params);
   try {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[getChapterBlocks]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
     const blocks = await blockService.getAllForChapter(params.chapterId);
     return blocks;
@@ -6110,9 +6118,11 @@ async function getChapterBlocks(params) {
     throw err;
   }
 }
-async function getSubChapterBlocks(params) {
+async function getSubChapterBlocks(params, auth) {
   console.log("[getSubChapterBlocks] => ", params);
   try {
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[getSubChapterBlocks]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
     const blocks = await blockService.getAllForSubChapter(params.chapterId);
     return blocks;
@@ -6121,11 +6131,13 @@ async function getSubChapterBlocks(params) {
     throw err;
   }
 }
-async function createChapterBlock(params) {
+async function createChapterBlock(params, auth) {
   console.log("[createChapterBlock] => ", params);
   try {
     if (!params || !params.pathName || !params.title)
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[createChapterBlock]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
     const chapterService = new ChapterService();
     const subChapterService = new SubChapterService();
@@ -6154,11 +6166,13 @@ async function createChapterBlock(params) {
     throw err;
   }
 }
-async function editChapterBlock(params) {
+async function editChapterBlock(params, auth) {
   console.log("[editChapterBlock] => ", params);
   try {
     if (!params || !params.pathName || !params.block)
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapterBlock]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
     const updatedBlock = await blockService.update(params.block.id, {
       ...params.block,
@@ -6170,11 +6184,13 @@ async function editChapterBlock(params) {
     throw err;
   }
 }
-async function deleteChapterBlock(params) {
+async function deleteChapterBlock(params, auth) {
   console.log("[deleteChapterBlock] => ", params);
   try {
     if (!params || !params.pathName)
       throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
+    if (!(auth == null ? void 0 : auth.token)) throw new Error("[deleteChapterBlock]>> 401 UNAUTHORIZE");
+    await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
     return await blockService.deleteOne(params.blockId);
   } catch (err) {
@@ -6311,7 +6327,7 @@ async function validateAccessToken(params) {
   console.log("[validateAccessToken] =>", params);
   try {
     if (!(params == null ? void 0 : params.token)) throw "[validateAccessToken]>> INVALID_DATA";
-    return !!await verifyAccessToken(params.token);
+    return !!await verifyAccessToken(params.token, { refresh: true });
   } catch (err) {
     console.error(err);
     return false;
@@ -6401,7 +6417,6 @@ app.whenReady().then(async () => {
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
   globalThis.win = win$1;
-  TTLStore.win = win$1;
   ipcMain.handle("check-access", async (_) => {
     return checkAccess();
   });
@@ -6409,7 +6424,7 @@ app.whenReady().then(async () => {
     return await validateAccessToken(params);
   });
   ipcMain.handle("prepare-user-store", async (_, params) => {
-    const { payload: { username } } = await verifyAccessToken(params.token);
+    const { payload: { username } } = await verifyAccessToken(params.token, { refresh: true });
     return await prepareUserStore(win$1, username);
   });
   ipcMain.handle("get-users", async (_, config2) => {
@@ -6427,23 +6442,18 @@ app.whenReady().then(async () => {
   ipcMain.handle("create-chapter", async (_, params, auth) => {
     return await createChapter(params, auth);
   });
-  ipcMain.handle("get-menu-chapters", async (_, params) => {
-    return await getChapters(params);
+  ipcMain.handle("get-menu-chapters", async (_, params, auth) => {
+    return await getChapters(params, auth);
   });
-  ipcMain.handle("get-one-chapter", async (_, params) => {
-    return await getOneChapter(params);
+  ipcMain.handle("get-one-chapter", async (_, params, auth) => {
+    return await getOneChapter(params, auth);
   });
   ipcMain.handle("create-sub-chapter", async (_, params, auth) => {
     return await createSubChapter(params, auth);
   });
   ipcMain.handle("sync-materials", async (_, auth) => {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
-    const store = TTLStore.getInstance();
-    console.log("BEFORE", formatDate(store.getTTL("EXAMPLE")));
-    store.set("EXAMPLE", "__test_text__", 6e3);
-    console.log("AFTER", formatDate(store.getTTL("EXAMPLE")));
-    const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
-    return await syncMaterialsStores(username);
+    return await syncMaterialsStores(auth);
   });
   ipcMain.handle("get-one-sub-chapter", async (_, params, auth) => {
     return await getOneSubChapter(params, auth);
@@ -6451,26 +6461,26 @@ app.whenReady().then(async () => {
   ipcMain.handle("edit-chapter", async (_, params, auth) => {
     return await editChapter(params, auth);
   });
-  ipcMain.handle("delete-chapter", async (_, params) => {
-    return await deleteChapter(params);
+  ipcMain.handle("delete-chapter", async (_, params, auth) => {
+    return await deleteChapter(params, auth);
   });
-  ipcMain.handle("delete-sub-chapter", async (_, params) => {
-    return await deleteSubChapter(params);
+  ipcMain.handle("delete-sub-chapter", async (_, params, auth) => {
+    return await deleteSubChapter(params, auth);
   });
-  ipcMain.handle("get-chapter-blocks", async (_, params) => {
-    return await getChapterBlocks(params);
+  ipcMain.handle("get-chapter-blocks", async (_, params, auth) => {
+    return await getChapterBlocks(params, auth);
   });
-  ipcMain.handle("get-sub-chapter-blocks", async (_, params) => {
-    return await getSubChapterBlocks(params);
+  ipcMain.handle("get-sub-chapter-blocks", async (_, params, auth) => {
+    return await getSubChapterBlocks(params, auth);
   });
-  ipcMain.handle("create-chapter-block", async (_, params) => {
-    return await createChapterBlock(params);
+  ipcMain.handle("create-chapter-block", async (_, params, auth) => {
+    return await createChapterBlock(params, auth);
   });
-  ipcMain.handle("edit-chapter-block", async (_, params) => {
-    return await editChapterBlock(params);
+  ipcMain.handle("edit-chapter-block", async (_, params, auth) => {
+    return await editChapterBlock(params, auth);
   });
-  ipcMain.handle("delete-chapter-block", async (_, params) => {
-    return await deleteChapterBlock(params);
+  ipcMain.handle("delete-chapter-block", async (_, params, auth) => {
+    return await deleteChapterBlock(params, auth);
   });
 });
 export {

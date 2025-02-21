@@ -22,21 +22,21 @@ contextBridge.exposeInMainWorld('electron', {
 
     // ===== MATERIALS ========
     createChapter: (params: ChapterCreate, auth: AuthParams) => ipcRenderer.invoke('create-chapter', params, auth),
-    getChapters: (params: GetChaptersConfig) => ipcRenderer.invoke('get-menu-chapters', params),
-    getChapter: (params: GetChapterOneParams) => ipcRenderer.invoke('get-one-chapter', params),
+    getChapters: (params: GetChaptersConfig, auth: AuthParams) => ipcRenderer.invoke('get-menu-chapters', params, auth),
+    getChapter: (params: GetChapterOneParams, auth: AuthParams) => ipcRenderer.invoke('get-one-chapter', params, auth),
     createSubChapter: (params: SubChapterCreate, auth: AuthParams) => ipcRenderer.invoke('create-sub-chapter', params, auth),
     syncMaterials: (auth: AuthParams) => ipcRenderer.invoke('sync-materials', auth),
     getOneSubChapter: (params: GetSubChapterOneParams, auth: AuthParams) => ipcRenderer.invoke('get-one-sub-chapter', params, auth),
     editChapter: (params: EditChapterParams, auth: AuthParams) => ipcRenderer.invoke('edit-chapter', params, auth),
-    deleteChapter: (params: DeleteChapterParams) => ipcRenderer.invoke('delete-chapter', params),
-    deleteSubChapter: (params: DeleteSubChapterParams) => ipcRenderer.invoke('delete-sub-chapter', params),
+    deleteChapter: (params: DeleteChapterParams, auth: AuthParams) => ipcRenderer.invoke('delete-chapter', params, auth),
+    deleteSubChapter: (params: DeleteSubChapterParams, auth: AuthParams) => ipcRenderer.invoke('delete-sub-chapter', params, auth),
 
     // ======= MATERIALS > BLOCKS ========
-    getChapterBlocks: (params: GetChapterBlocks) => ipcRenderer.invoke('get-chapter-blocks', params),
-    getSubChapterBlocks: (params: GetChapterBlocks) => ipcRenderer.invoke('get-sub-chapter-blocks', params),
-    createChapterBlock: (params: CreateChapterBlock) => ipcRenderer.invoke('create-chapter-block', params),
-    editChapterBlock: (params: EditChapterBlock) => ipcRenderer.invoke('edit-chapter-block', params),
-    deleteChapterBlock: (params: DeleteChapterBlock) => ipcRenderer.invoke('delete-chapter-block', params),
+    getChapterBlocks: (params: GetChapterBlocks, auth: AuthParams) => ipcRenderer.invoke('get-chapter-blocks', params, auth),
+    getSubChapterBlocks: (params: GetChapterBlocks, auth: AuthParams) => ipcRenderer.invoke('get-sub-chapter-blocks', params, auth),
+    createChapterBlock: (params: CreateChapterBlock, auth: AuthParams) => ipcRenderer.invoke('create-chapter-block', params, auth),
+    editChapterBlock: (params: EditChapterBlock, auth: AuthParams) => ipcRenderer.invoke('edit-chapter-block', params, auth),
+    deleteChapterBlock: (params: DeleteChapterBlock, auth: AuthParams) => ipcRenderer.invoke('delete-chapter-block', params, auth),
 });
 
 

@@ -24,7 +24,7 @@ export async function getChapters(params?: GetChaptersParams): Promise<ChapterFo
         // Имитация того что запрос не настолько быстрый
         setTimeout(() => {
             try {
-                resolve(window.electron.getChapters(params));
+                resolve(window.electron.getChapters(params, { token: localStorage.getItem('token') }));
             } catch (err) {
                 reject(err);
             }
@@ -38,7 +38,7 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                resolve(await window.electron.getChapter(params));
+                resolve(await window.electron.getChapter(params, { token: localStorage.getItem('token') }));
             } catch (err) {
                 reject(err);
             }
@@ -128,7 +128,7 @@ export async function deleteChapterApi(params: DeleteChapterParams): Promise<voi
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.deleteChapter(params);
+                const result = await window.electron.deleteChapter(params, { token: localStorage.getItem('token') });
                 // await syncMaterials(); // Синхронизация данных в панели меню
                 resolve(result);
             } catch (err) {
@@ -144,7 +144,7 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.deleteSubChapter(params);
+                const result = await window.electron.deleteSubChapter(params, { token: localStorage.getItem('token') });
                 // await syncMaterials();  // Синхронизация панели меню материалов
                 resolve(result);
             } catch (err) {
@@ -160,7 +160,7 @@ export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Arr
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.getChapterBlocks(params);
+                const result = await window.electron.getChapterBlocks(params, { token: localStorage.getItem('token') });
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -175,7 +175,7 @@ export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.getSubChapterBlocks(params);
+                const result = await window.electron.getSubChapterBlocks(params, { token: localStorage.getItem('token') });
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -190,7 +190,7 @@ export async function createChapterBlockApi(params: CreateChapterBlock) {
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.createChapterBlock(params);
+                const result = await window.electron.createChapterBlock(params, { token: localStorage.getItem('token') });
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -205,7 +205,7 @@ export async function editChapterBlockApi(params: EditChapterBlock): Promise<Cha
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.editChapterBlock(params);
+                const result = await window.electron.editChapterBlock(params, { token: localStorage.getItem('token') });
                 resolve(result);
             } catch (err) {
                 reject(err);
@@ -220,7 +220,7 @@ export async function deleteChapterBlockApi(params: DeleteChapterBlock): Promise
         // Имитация того что запрос не настолько быстрый
         setTimeout(async () => {
             try {
-                const result = await window.electron.deleteChapterBlock(params);
+                const result = await window.electron.deleteChapterBlock(params, { token: localStorage.getItem('token') });
                 resolve(result);
             } catch (err) {
                 reject(err);
