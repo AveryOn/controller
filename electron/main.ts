@@ -48,7 +48,6 @@ import { AuthParams } from './server/types/controllers/index.types';
 import { checkAccess, prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
 import { TTLStore } from './server/services/ttl-store.service';
-import { formatDate } from './server/services/date.service';
 
 
 // const require = createRequire(import.meta.url);
@@ -193,7 +192,6 @@ app.whenReady().then(async () => {
 
     // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
     ipcMain.handle("sync-materials", async (_, auth: AuthParams) => {
-        if(!auth?.token) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
         return await syncMaterialsStores(auth);
     });
 
