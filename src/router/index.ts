@@ -5,6 +5,8 @@ import { useLoginStore } from "../stores/login.store";
 import MaterialsView from "../views/MaterialsView.vue";
 import { validateAccessTokenApi } from "../api/auth.api";
 import { prepareUserStore } from "../api/users.api";
+import { checkAccessApi } from "../api/system.api";
+import { logout } from "../utils/auth";
 
 const router = createRouter({
     history: createMemoryHistory(),
@@ -65,6 +67,12 @@ router.beforeEach(async (to, from, next) => {
         // При первоначальном входе в приложение когда у нас выписан токен и мы на main странице
         // То в этот момент пользовательское хранилище не активно, потому его нужно активировать
         if(!from.name && to.name) {
+            /**
+             * Доп проверка на то есть ли у пользователя доступ к приложению. Если нет, то происходит разлогин
+             */
+            if(!await checkAccessApi()) {
+                logout()
+            }
             await prepareUserStore()
         }
         localStorage.setItem('current_route', JSON.stringify({ 

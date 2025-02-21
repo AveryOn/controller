@@ -6067,6 +6067,14 @@ async function prepareUserStore(win2, username) {
     throw err;
   }
 }
+function checkAccess() {
+  const store = TTLStore.getInstance();
+  const { USER_PRAGMA_KEY } = GlobalNames;
+  if (!store.get(USER_PRAGMA_KEY)) {
+    return false;
+  }
+  return true;
+}
 function logoutIpc(win2) {
   if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
   win2.webContents.send("logout");
@@ -6268,6 +6276,9 @@ app.whenReady().then(async () => {
   if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
+  ipcMain.handle("check-access", async (_) => {
+    return checkAccess();
+  });
   ipcMain.handle("validate-access-token", async (_, params) => {
     return await validateAccessToken(params);
   });

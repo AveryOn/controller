@@ -5,6 +5,8 @@ function logout() {
   window.location.reload();
 }
 electron.contextBridge.exposeInMainWorld("electron", {
+  // ================= SYSTEM  ==================
+  checkAccess: () => electron.ipcRenderer.invoke("check-access"),
   // ============= AUTH =============
   validateAccessToken: (params) => electron.ipcRenderer.invoke("validate-access-token", params),
   // ============= USERS =============

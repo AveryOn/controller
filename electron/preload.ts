@@ -7,6 +7,9 @@ import { logout } from '../src/utils/auth';
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
+    // ================= SYSTEM  ==================
+    checkAccess: () => ipcRenderer.invoke('check-access'),
+
     // ============= AUTH =============
     validateAccessToken: (params: ValidateAccessTokenParams) => ipcRenderer.invoke('validate-access-token', params),
 

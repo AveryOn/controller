@@ -45,7 +45,7 @@ import { DatabaseManager } from './server/database/manager';
 import { loginUser, validateAccessToken } from './server/controllers/auth.controller';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 import { AuthParams } from './server/types/controllers/index.types';
-import { prepareUserStore } from './server/controllers/system.controller';
+import { checkAccess, prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
 import { TTLStore } from './server/services/ttl-store.service';
 
@@ -132,6 +132,9 @@ app.whenReady().then(async () => {
 
     // Обработчики IPC
     // ==========  SYSTEM  ==========
+    ipcMain.handle("check-access", async (_) => {
+        return checkAccess()
+    })
 
     // ==========  AUTH  ===========
     ipcMain.handle("validate-access-token", async (_, params: ValidateAccessTokenParams) => {
