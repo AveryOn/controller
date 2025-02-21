@@ -1,11 +1,10 @@
-import { GlobalNames, Vars } from "../../config/global";
+import { GlobalNames, SESSION_TTL, Vars } from "../../config/global";
 import { TTLStore } from "../services/ttl-store.service";
 import UserService from "../database/services/users.service";
 import { encryptPragmaKey, verify } from "../services/crypto.service";
 import { createAccessToken, verifyAccessToken } from "../services/tokens.service";
 import { ValidateAccessTokenParams } from "../types/controllers/auth.types";
 import { LoginParams, LoginResponse } from "../types/controllers/users.types";
-import { ExpiresToken } from "../types/services/tokens.types";
 import { prepareUserStore } from "./system.controller";
 import { BrowserWindow } from "electron";
 import { logoutIpc } from "../ipc/users.ipc";
@@ -28,7 +27,7 @@ export async function validateAccessToken(params: ValidateAccessTokenParams) {
 
 
 // Подтверждение учетных данных пользователя при входе в систему
-export async function loginUser(win: BrowserWindow | null, params: LoginParams, config: { expiresToken: ExpiresToken }): Promise<LoginResponse> {
+export async function loginUser(win: BrowserWindow | null, params: LoginParams): Promise<LoginResponse> {
     console.log('[loginUser] =>', params);
 
     try {
@@ -60,7 +59,7 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams, 
             const token = await createAccessToken({ 
                 userId: readyUser.id, 
                 username: readyUser.username 
-            }, config.expiresToken);
+            }, { m: SESSION_TTL });
 
             // вызов подготовки пользовательского хранилища
             await prepareUserStore(win, params.username);

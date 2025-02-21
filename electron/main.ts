@@ -48,6 +48,7 @@ import { AuthParams } from './server/types/controllers/index.types';
 import { checkAccess, prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
 import { TTLStore } from './server/services/ttl-store.service';
+import { formatDate } from './server/services/date.service';
 
 
 // const require = createRequire(import.meta.url);
@@ -125,6 +126,7 @@ app.whenReady().then(async () => {
     if(!isReadyDB) throw new Error('DATABASE MANAGER WAS NOT INITIALIZED')
     console.debug('APPLICATION DATABASES ARE READY');
     createWindow();
+    globalThis.win = win
 
     // await DatabaseManager
     // .instance().initOnUser('root')
@@ -160,7 +162,7 @@ app.whenReady().then(async () => {
 
     // Вход пользователя в систему
     ipcMain.handle("login-user", async (_, params: LoginParams) => {
-        return await loginUser(win, params, { expiresToken: { Y: 1 } });
+        return await loginUser(win, params);
     });
 
     // Обновление пароля
@@ -192,7 +194,13 @@ app.whenReady().then(async () => {
     // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
     ipcMain.handle("sync-materials", async (_, auth: AuthParams) => {
         if(!auth?.token) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
-        const { payload: { username } } = await verifyAccessToken(auth.token);
+        const store = TTLStore.getInstance()
+        
+        console.log('BEFORE', formatDate(store.getTTL('EXAMPLE')));
+        store.set('EXAMPLE', '__test_text__', 6000)
+        console.log('AFTER', formatDate(store.getTTL('EXAMPLE')));
+
+        const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
         return await syncMaterialsStores(username);
     });
 

@@ -1,5 +1,8 @@
+import { GlobalNames, SESSION_TTL, Vars } from "../../config/global";
+import { logoutIpc, refreshTokenIpc } from "../ipc/users.ipc";
 import { AccessTokenData, AccessTokenPayload, ExpiresToken } from "../types/services/tokens.types";
 import { decryptJsonData, encryptJsonData } from "./crypto.service";
+import { TTLStore } from "./ttl-store.service";
 
 // Создать время со смещением вперед
 function prepareExpireTime(expires: ExpiresToken) {
@@ -18,14 +21,67 @@ function prepareExpireTime(expires: ExpiresToken) {
 // Создать сигнатуру токена для исключения риска его подделки
 function createSignatureToken() {
     try {
-        return 'abc123';
+        return Vars.TOKEN_SIGNATURE;
     } catch (err) {
         console.error('[createSignatureToken]>>', err);
         throw err;
     }        
 }
 
-const KEY = process.env.APP_KEY || 'a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e';
+/**
+ *  Перебить токен
+ */
+export async function brokeAccessToken(value: string): Promise<{ value: string, salt: string }> {
+    try {
+        if(!value || typeof value !== 'string') 
+            throw new Error('invalid value');
+        value = await encryptJsonData(value, Vars.USER_TOKEN_SALT) 
+        let processValue = value.split('')
+        if(processValue.length >= 64) {
+            // Salt
+            let salt: string | string[] = processValue.slice(processValue.length - 32)
+            salt = salt.reverse().join()
+            salt = await encryptJsonData(salt, Vars.USER_TOKEN_SALT);
+            salt = salt.split('').reverse().join('$')
+
+            // broken token
+            let brokenToken: string | string[] = processValue.slice(0, processValue.length - 32)
+            brokenToken = brokenToken.reverse().join()
+            brokenToken = await encryptJsonData(brokenToken, Vars.USER_TOKEN_SALT);
+            brokenToken = brokenToken.split('').reverse().join('#')
+            return { value: brokenToken, salt }
+        }
+        return { value, salt: '' }
+    } catch (err) {
+        throw err;
+    }
+}
+
+/**
+ * Восстановить токен
+ */
+export async function repairToken(brokenToken: string, salt: string): Promise<string> {
+    try {
+        if(!brokenToken || typeof brokenToken !== 'string') throw new Error('invalid brokenToken');
+        if(!salt || typeof salt !== 'string') throw new Error('invalid salt');
+        // broken token
+        let repairToken: string | string[] = brokenToken.split('#').reverse().join('');
+        repairToken = await decryptJsonData(repairToken, Vars.USER_TOKEN_SALT);
+        repairToken = repairToken.split(',').reverse();
+        
+        // salt
+        let repairSalt: string | string[] = salt.split('$').reverse().join('');
+        repairSalt = await decryptJsonData(repairSalt, Vars.USER_TOKEN_SALT);
+        repairSalt = repairSalt.split(',').reverse();
+
+        const token = await decryptJsonData((repairToken.join('') + repairSalt.join('')), Vars.USER_TOKEN_SALT);
+        return token
+
+    } catch (err) {
+        throw err;
+    }
+}
+
 // Формирование токена доступа
 export async function createAccessToken(payload: AccessTokenPayload, expires: ExpiresToken): Promise<string> {
     try {
@@ -37,22 +93,75 @@ export async function createAccessToken(payload: AccessTokenPayload, expires: Ex
             payload,
             signature: signatureToken,
         }
-        const token = await encryptJsonData(tokenData, KEY);
-        return token;
+        let token = await encryptJsonData(tokenData, Vars.TOKEN_SIGNATURE);
+        const hashedToken = await encryptJsonData(token, Vars.USER_TOKEN_SALT)
+        const { value: brokenToken, salt } = await brokeAccessToken(token)
+        token = ''
+
+        const store = TTLStore.getInstance();
+        store.set(GlobalNames.USER_TOKEN, hashedToken, Vars.USER_TOKEN_TTL)
+        store.set(GlobalNames.USER_BROKEN_TOKEN, brokenToken, Vars.USER_BROKEN_TOKEN_TTL);
+        store.set(GlobalNames.USER_TOKEN_SALT, salt, Vars.USER_TOKEN_SALT_TTL);
+        return brokenToken;
     } catch (err) {
         throw err;
     }
 }
 
 // Верификация токена доступа и получение payload
-export async function verifyAccessToken(token: string): Promise<AccessTokenData> {
+export async function verifyAccessToken(token: string, config?: { refresh?: boolean }): Promise<{ newToken: string | null, payload: AccessTokenPayload }> {
     try {
         if(!token || typeof token !== 'string') throw new Error('[verifyAccessToken]>> INVALID_INPUT');
-        const payload: AccessTokenData = JSON.parse(await decryptJsonData(token, KEY));
+        const store = TTLStore.getInstance();
+        const hashedToken = store.get(GlobalNames.USER_TOKEN) as string;
+        const brokenToken = store.get(GlobalNames.USER_BROKEN_TOKEN) as string;
+        const tokenSalt = store.get(GlobalNames.USER_TOKEN_SALT) as string;
+        // Если нет хотя бы одной необходимой части для восстановления токена, то запрещаем доступ в приложение 
+        if(!brokenToken || !hashedToken || !tokenSalt) {
+            logoutIpc(win)
+            throw new Error('[verifyAccessToken]>> ACCESS_FORBIDDEN [1]');
+        }
+        // Если пришедший битый токен не соответствует битому токену в хранилище
+        if(token !== brokenToken) {
+            logoutIpc(win)
+            throw new Error('[verifyAccessToken]>> ACCESS_FORBIDDEN [2]');
+        }
+        const decryptedRealToken = await decryptJsonData(hashedToken, Vars.USER_TOKEN_SALT);
+        const repairedToken = await repairToken(brokenToken, tokenSalt);
+
+        if(repairedToken !== decryptedRealToken) {
+            logoutIpc(win)
+            throw new Error('[verifyAccessToken]>> ACCESS_FORBIDDEN [3]');
+        }
+
+        const payload: AccessTokenData = JSON.parse(await decryptJsonData(decryptedRealToken, Vars.TOKEN_SIGNATURE));
         if(payload.expires <= Date.now()) {
+            logoutIpc(win)
             throw new Error('[verifyAccessToken]>> EXPIRES_LIFE_TOKEN');
         }
-        return payload;
+        // обновление токена
+        else {
+            if(config?.refresh === true) {
+                const { payload: { userId, username } } = payload
+                store.set(
+                    GlobalNames.USER_PRAGMA_KEY,
+                    store.get(GlobalNames.USER_PRAGMA_KEY),
+                    Vars.USER_PRAGMA_KEY_TTL,
+                    () => logoutIpc(win)
+                );
+                const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL })
+                // Отправить команду на обновление токена на клиент
+                refreshTokenIpc(newBrokenToken, win)
+                return { 
+                    newToken: newBrokenToken, 
+                    payload: { userId, username } 
+                }
+            }
+        }
+        return { 
+            newToken: null, 
+            payload: payload.payload 
+        };
     } catch (err) {
         throw err;
     }

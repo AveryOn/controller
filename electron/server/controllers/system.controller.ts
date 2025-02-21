@@ -14,8 +14,6 @@ export async function prepareUserStore(win: BrowserWindow | null, username: stri
         if(!await prepareMaterialsStoreForMenu(username)) isReliableStores = false;
         
         if(!win) console.debug('[prepareUserStore]>> win is null', win);
-        win?.webContents.send('main-process-message', isReliableStores);
-        console.log('ГОТОВНОСТЬ БАЗ ДАННЫХ:', isReliableStores);
     } catch (err) {
         console.error('[prepareUserStore]>> ', err);
         throw err;
