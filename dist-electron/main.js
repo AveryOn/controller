@@ -315,11 +315,22 @@ var cliOptions = function optionMatcher(args) {
   );
 })();
 const GlobalNames = {
-  USER_PRAGMA_KEY: "USER_PRAGMA_KEY"
+  USER_PRAGMA_KEY: "USER_PRAGMA_KEY",
+  USER_TOKEN: "USER_TOKEN_001",
+  USER_BROKEN_TOKEN: "USER_BROKEN_TOKEN",
+  USER_TOKEN_SALT: "USER_TOKEN_SALT"
 };
+const SESSION_TTL = 5;
 const Vars = {
   APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb",
-  USER_PRAGMA_KEY_TTL: 1e3 * 60 * 0.25
+  USER_TOKEN_SALT: "4af29447-8908-413d-83ad-1717df1d429d",
+  TOKEN_SIGNATURE: "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e",
+  USER_PRAGMA_KEY_TTL: 1e3 * 60 * SESSION_TTL,
+  // 5 min
+  USER_BROKEN_TOKEN_TTL: 1e3 * 60 * SESSION_TTL,
+  USER_TOKEN_TTL: 1e3 * 60 * SESSION_TTL,
+  // 5 min
+  USER_TOKEN_SALT_TTL: 1e3 * 60 * SESSION_TTL
   // 5 min
 };
 const KEYLEN = 64;
@@ -384,12 +395,12 @@ async function verify(input, hash) {
 }
 async function encryptJsonData(data, signature) {
   if (!data) throw new Error("[Services.encryptJsonData]>> NOT_DATA");
-  if (typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
+  if (!signature || typeof signature !== "string") throw new Error("[Services.encryptJsonData]>> INVALID_SIGNATURE");
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
       const SALT = crypto$1.randomBytes(16).toString("hex");
-      const KEY2 = crypto$1.scryptSync(signature, SALT, 32);
+      const KEY = crypto$1.scryptSync(signature, SALT, 32);
       const IV = crypto$1.randomBytes(16);
       let readyData = null;
       if (data && typeof data === "object") {
@@ -397,7 +408,7 @@ async function encryptJsonData(data, signature) {
       } else {
         readyData = String(data);
       }
-      const cipher = crypto$1.createCipheriv(ALG, KEY2, IV);
+      const cipher = crypto$1.createCipheriv(ALG, KEY, IV);
       let encryptedData = cipher.update(readyData, "utf8", "hex");
       readyData = null;
       encryptedData += cipher.final("hex");
@@ -409,16 +420,16 @@ async function encryptJsonData(data, signature) {
 }
 async function decryptJsonData(data, signature) {
   if (!data) throw new Error("[Services.decryptJsonData]>> NOT_DATA");
-  if (typeof signature !== "string") throw new Error("[Services.decryptJsonData]>> INVALID_SIGNATURE");
+  if (!signature || typeof signature !== "string") throw new Error("[Services.decryptJsonData]>> INVALID_SIGNATURE");
   return new Promise((resolve, reject) => {
     try {
       const ALG = "aes-256-cbc";
       const SALT = data.slice(data.length - 32);
-      const KEY2 = crypto$1.scryptSync(signature, SALT, 32);
+      const KEY = crypto$1.scryptSync(signature, SALT, 32);
       const IV = Buffer.from(data.slice(0, 32), "hex");
       if (IV.length < 16) throw new Error("[Services.decryptJsonData]>> INVALID_INIT_VECTOR");
       let readyData = data.slice(32, data.length - 32);
-      const decipher = crypto$1.createDecipheriv(ALG, KEY2, IV);
+      const decipher = crypto$1.createDecipheriv(ALG, KEY, IV);
       let decryptedData = decipher.update(readyData, "hex", "utf8");
       readyData = null;
       decryptedData += decipher.final("utf8");
@@ -499,6 +510,7 @@ async function isExistFileOrDir(pathName, config2) {
 const _TTLStore = class _TTLStore {
   constructor() {
     __publicField(this, "store");
+    __publicField(this, "TimersIds", /* @__PURE__ */ new Map());
     this.store = /* @__PURE__ */ new Map();
   }
   static getInstance() {
@@ -526,10 +538,13 @@ const _TTLStore = class _TTLStore {
   set(key, value, ttl = 60 * 60 * 1, cb) {
     const expiresAt = Date.now() + ttl;
     this.store.set(key, { value, expiresAt });
-    setTimeout(() => {
+    clearInterval(this.TimersIds.get(`T_${key}`));
+    const timerId = setTimeout(() => {
       this.delete(key);
       cb == null ? void 0 : cb.call(null);
+      clearInterval(this.TimersIds.get(`T_${key}`));
     }, ttl);
+    this.TimersIds.set(`T_${key}`, timerId);
   }
   /**
    * Позволяет получить значение хранимое по ключу
@@ -545,6 +560,19 @@ const _TTLStore = class _TTLStore {
     return entry.value;
   }
   /**
+   * Позволяет получить оставшийся TTL для строки по её ключу
+   * @param key название ключа для извлечения значения
+   * @returns значение из существующей записи
+   */
+  getTTL(key) {
+    const entry = this.store.get(key);
+    if (!entry || entry.expiresAt < Date.now()) {
+      this.store.delete(key);
+      return void 0;
+    }
+    return entry.expiresAt;
+  }
+  /**
    * Удаление строки по ключу
    * @param key название ключа
    */
@@ -553,6 +581,7 @@ const _TTLStore = class _TTLStore {
   }
 };
 __publicField(_TTLStore, "instance");
+__publicField(_TTLStore, "win", null);
 let TTLStore = _TTLStore;
 const _InstanceDatabase = class _InstanceDatabase {
   constructor(dbname, username, state) {
@@ -4856,6 +4885,16 @@ function formatDate(date, template, utcOffset) {
     throw err;
   }
 }
+function logoutIpc(win2) {
+  if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
+  const store = TTLStore.getInstance();
+  store.cleanup();
+  win2.webContents.send("logout");
+}
+function refreshTokenIpc(token2, win2) {
+  if (!win2) throw new Error("IPC > refreshTokenIpc > win is not defined");
+  win2.webContents.send("refresh-token", token2);
+}
 function prepareExpireTime(expires) {
   let ready = 0;
   if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
@@ -4870,13 +4909,50 @@ function prepareExpireTime(expires) {
 }
 function createSignatureToken() {
   try {
-    return "abc123";
+    return Vars.TOKEN_SIGNATURE;
   } catch (err) {
     console.error("[createSignatureToken]>>", err);
     throw err;
   }
 }
-const KEY = process.env.APP_KEY || "a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e";
+async function brokeAccessToken(value) {
+  try {
+    if (!value || typeof value !== "string")
+      throw new Error("invalid value");
+    value = await encryptJsonData(value, Vars.USER_TOKEN_SALT);
+    let processValue = value.split("");
+    if (processValue.length >= 64) {
+      let salt = processValue.slice(processValue.length - 32);
+      salt = salt.reverse().join();
+      salt = await encryptJsonData(salt, Vars.USER_TOKEN_SALT);
+      salt = salt.split("").reverse().join("$");
+      let brokenToken = processValue.slice(0, processValue.length - 32);
+      brokenToken = brokenToken.reverse().join();
+      brokenToken = await encryptJsonData(brokenToken, Vars.USER_TOKEN_SALT);
+      brokenToken = brokenToken.split("").reverse().join("#");
+      return { value: brokenToken, salt };
+    }
+    return { value, salt: "" };
+  } catch (err) {
+    throw err;
+  }
+}
+async function repairToken(brokenToken, salt) {
+  try {
+    if (!brokenToken || typeof brokenToken !== "string") throw new Error("invalid brokenToken");
+    if (!salt || typeof salt !== "string") throw new Error("invalid salt");
+    let repairToken2 = brokenToken.split("#").reverse().join("");
+    repairToken2 = await decryptJsonData(repairToken2, Vars.USER_TOKEN_SALT);
+    repairToken2 = repairToken2.split(",").reverse();
+    let repairSalt = salt.split("$").reverse().join("");
+    repairSalt = await decryptJsonData(repairSalt, Vars.USER_TOKEN_SALT);
+    repairSalt = repairSalt.split(",").reverse();
+    const token2 = await decryptJsonData(repairToken2.join("") + repairSalt.join(""), Vars.USER_TOKEN_SALT);
+    return token2;
+  } catch (err) {
+    throw err;
+  }
+}
 async function createAccessToken(payload, expires) {
   try {
     if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
@@ -4887,20 +4963,65 @@ async function createAccessToken(payload, expires) {
       payload,
       signature: signatureToken
     };
-    const token2 = await encryptJsonData(tokenData, KEY);
-    return token2;
+    let token2 = await encryptJsonData(tokenData, Vars.TOKEN_SIGNATURE);
+    const hashedToken = await encryptJsonData(token2, Vars.USER_TOKEN_SALT);
+    const { value: brokenToken, salt } = await brokeAccessToken(token2);
+    token2 = "";
+    const store = TTLStore.getInstance();
+    store.set(GlobalNames.USER_TOKEN, hashedToken, Vars.USER_TOKEN_TTL);
+    store.set(GlobalNames.USER_BROKEN_TOKEN, brokenToken, Vars.USER_BROKEN_TOKEN_TTL);
+    store.set(GlobalNames.USER_TOKEN_SALT, salt, Vars.USER_TOKEN_SALT_TTL);
+    return brokenToken;
   } catch (err) {
     throw err;
   }
 }
-async function verifyAccessToken(token2) {
+async function verifyAccessToken(token2, config2) {
   try {
     if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
-    const payload = JSON.parse(await decryptJsonData(token2, KEY));
-    if (payload.expires <= Date.now()) {
-      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    const store = TTLStore.getInstance();
+    const hashedToken = store.get(GlobalNames.USER_TOKEN);
+    const brokenToken = store.get(GlobalNames.USER_BROKEN_TOKEN);
+    const tokenSalt = store.get(GlobalNames.USER_TOKEN_SALT);
+    if (!brokenToken || !hashedToken || !tokenSalt) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [1]");
     }
-    return payload;
+    if (token2 !== brokenToken) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [2]");
+    }
+    const decryptedRealToken = await decryptJsonData(hashedToken, Vars.USER_TOKEN_SALT);
+    const repairedToken = await repairToken(brokenToken, tokenSalt);
+    if (repairedToken !== decryptedRealToken) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [3]");
+    }
+    const payload = JSON.parse(await decryptJsonData(decryptedRealToken, Vars.TOKEN_SIGNATURE));
+    if (payload.expires <= Date.now()) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    } else {
+      if ((config2 == null ? void 0 : config2.refresh) === true) {
+        const { payload: { userId, username } } = payload;
+        store.set(
+          GlobalNames.USER_PRAGMA_KEY,
+          store.get(GlobalNames.USER_PRAGMA_KEY),
+          Vars.USER_PRAGMA_KEY_TTL,
+          () => logoutIpc(win)
+        );
+        const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
+        refreshTokenIpc(newBrokenToken, win);
+        return {
+          newToken: newBrokenToken,
+          payload: { userId, username }
+        };
+      }
+    }
+    return {
+      newToken: null,
+      payload: payload.payload
+    };
   } catch (err) {
     throw err;
   }
@@ -6069,8 +6190,6 @@ async function prepareUserStore(win2, username) {
     if (!await manager.initOnUser(username, { migrate: true })) isReliableStores = false;
     if (!await prepareMaterialsStoreForMenu(username)) isReliableStores = false;
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
-    win2 == null ? void 0 : win2.webContents.send("main-process-message", isReliableStores);
-    console.log("ГОТОВНОСТЬ БАЗ ДАННЫХ:", isReliableStores);
   } catch (err) {
     console.error("[prepareUserStore]>> ", err);
     throw err;
@@ -6083,12 +6202,6 @@ function checkAccess() {
     return false;
   }
   return true;
-}
-function logoutIpc(win2) {
-  if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
-  const store = TTLStore.getInstance();
-  store.cleanup();
-  win2.webContents.send("logout");
 }
 const storeTTL$1 = TTLStore.getInstance();
 const FILENAME = "users.json";
@@ -6204,7 +6317,7 @@ async function validateAccessToken(params) {
     return false;
   }
 }
-async function loginUser(win2, params, config2) {
+async function loginUser(win2, params) {
   console.log("[loginUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
@@ -6226,7 +6339,7 @@ async function loginUser(win2, params, config2) {
       const token2 = await createAccessToken({
         userId: readyUser.id,
         username: readyUser.username
-      }, config2.expiresToken);
+      }, { m: SESSION_TTL });
       await prepareUserStore(win2, params.username);
       return {
         token: token2,
@@ -6246,9 +6359,9 @@ const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path$2.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path$2.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$2.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win;
+let win$1;
 function createWindow() {
-  win = new BrowserWindow({
+  win$1 = new BrowserWindow({
     icon: path$2.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path$2.join(__dirname, "preload.mjs")
@@ -6262,18 +6375,18 @@ function createWindow() {
     // expose window controls in Windows/Linux
     // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
   });
-  win.webContents.on("did-finish-load", async () => {
+  win$1.webContents.on("did-finish-load", async () => {
   });
   if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
+    win$1.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path$2.join(RENDERER_DIST, "index.html"));
+    win$1.loadFile(path$2.join(RENDERER_DIST, "index.html"));
   }
 }
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
-    win = null;
+    win$1 = null;
   }
 });
 app.on("activate", () => {
@@ -6287,6 +6400,8 @@ app.whenReady().then(async () => {
   if (!isReadyDB) throw new Error("DATABASE MANAGER WAS NOT INITIALIZED");
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
+  globalThis.win = win$1;
+  TTLStore.win = win$1;
   ipcMain.handle("check-access", async (_) => {
     return checkAccess();
   });
@@ -6295,16 +6410,16 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("prepare-user-store", async (_, params) => {
     const { payload: { username } } = await verifyAccessToken(params.token);
-    return await prepareUserStore(win, username);
+    return await prepareUserStore(win$1, username);
   });
   ipcMain.handle("get-users", async (_, config2) => {
     return await getUsers(config2);
   });
   ipcMain.handle("create-user", async (_, params) => {
-    return await createUser(win, params);
+    return await createUser(win$1, params);
   });
   ipcMain.handle("login-user", async (_, params) => {
-    return await loginUser(win, params, { expiresToken: { Y: 1 } });
+    return await loginUser(win$1, params);
   });
   ipcMain.handle("update-password", async (_, params) => {
     return await updatePassword(params);
@@ -6323,7 +6438,11 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("sync-materials", async (_, auth) => {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
-    const { payload: { username } } = await verifyAccessToken(auth.token);
+    const store = TTLStore.getInstance();
+    console.log("BEFORE", formatDate(store.getTTL("EXAMPLE")));
+    store.set("EXAMPLE", "__test_text__", 6e3);
+    console.log("AFTER", formatDate(store.getTTL("EXAMPLE")));
+    const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
     return await syncMaterialsStores(username);
   });
   ipcMain.handle("get-one-sub-chapter", async (_, params, auth) => {

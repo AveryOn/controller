@@ -4,6 +4,9 @@ function logout() {
   localStorage.clear();
   window.location.reload();
 }
+function refreshToken(token) {
+  localStorage.setItem("token", token);
+}
 electron.contextBridge.exposeInMainWorld("electron", {
   // ================= SYSTEM  ==================
   checkAccess: () => electron.ipcRenderer.invoke("check-access"),
@@ -32,9 +35,9 @@ electron.contextBridge.exposeInMainWorld("electron", {
   editChapterBlock: (params) => electron.ipcRenderer.invoke("edit-chapter-block", params),
   deleteChapterBlock: (params) => electron.ipcRenderer.invoke("delete-chapter-block", params)
 });
-electron.ipcRenderer.on("main-process-message", (_, message) => {
-  console.log("Сообщение от основного процесса:", message);
-});
 electron.ipcRenderer.on("logout", (_) => {
   logout();
+});
+electron.ipcRenderer.on("refresh-token", (_, token) => {
+  refreshToken(token);
 });

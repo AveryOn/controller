@@ -11,3 +11,13 @@ export function logoutIpc(win?: BrowserWindow | null) {
     store.cleanup()
     win.webContents.send('logout');
 }
+
+/**
+ * Отправка клиенту сигнала для обновления токена
+ * @param token - битый токен
+ * @param win - экземпляр окна через который идет отправка сигнала
+ */
+export function refreshTokenIpc(token: string, win?: BrowserWindow | null) {
+    if(!win) throw new Error('IPC > refreshTokenIpc > win is not defined');
+    win.webContents.send('refresh-token', token);
+}

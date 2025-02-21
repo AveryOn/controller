@@ -3,7 +3,7 @@ import type { CreateUserParams, GetUsersConfig, LoginParams, PrepareUserStorePar
 import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterParams, GetChapterBlocks, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 import { AuthParams } from './server/types/controllers/index.types';
-import { logout } from '../src/utils/auth';
+import { logout, refreshToken } from '../src/utils/auth';
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
@@ -40,10 +40,10 @@ contextBridge.exposeInMainWorld('electron', {
 });
 
 
-ipcRenderer.on('main-process-message', (_, message) => {
-    console.log('Сообщение от основного процесса:', message);
-});
-
 ipcRenderer.on('logout', (_) => {
     logout();
+});
+
+ipcRenderer.on('refresh-token', (_, token: string) => {
+    refreshToken(token);
 });
