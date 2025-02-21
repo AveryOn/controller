@@ -15,6 +15,17 @@ export class TTLStore<T> {
     }
 
     /**
+     * Полная очистка хранилища
+     */
+    cleanup() {
+        for (const key of this.store.keys()) {
+            // @ts-ignore
+            this.store.set(key, { value: null, expiresAt: null })
+        }
+        this.store.clear()
+    }
+
+    /**
      * Создает новую запись в временном хранилище
      * @param key название ключа по которому происходит взаимодействие с записью
      * @param value значение которое будет хранится

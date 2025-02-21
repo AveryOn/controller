@@ -71,7 +71,7 @@ router.beforeEach(async (to, from, next) => {
              * Доп проверка на то есть ли у пользователя доступ к приложению. Если нет, то происходит разлогин
              */
             if(!await checkAccessApi()) {
-                logout()
+                return logout()
             }
             await prepareUserStore()
         }

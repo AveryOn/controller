@@ -319,7 +319,7 @@ const GlobalNames = {
 };
 const Vars = {
   APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb",
-  USER_PRAGMA_KEY_TTL: 1e3 * 60 * 5 * 100
+  USER_PRAGMA_KEY_TTL: 1e3 * 60 * 0.25
   // 5 min
 };
 const KEYLEN = 64;
@@ -506,6 +506,15 @@ const _TTLStore = class _TTLStore {
       _TTLStore.instance = new _TTLStore();
     }
     return _TTLStore.instance;
+  }
+  /**
+   * Полная очистка хранилища
+   */
+  cleanup() {
+    for (const key of this.store.keys()) {
+      this.store.set(key, { value: null, expiresAt: null });
+    }
+    this.store.clear();
   }
   /**
    * Создает новую запись в временном хранилище
@@ -6077,6 +6086,8 @@ function checkAccess() {
 }
 function logoutIpc(win2) {
   if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
+  const store = TTLStore.getInstance();
+  store.cleanup();
   win2.webContents.send("logout");
 }
 const storeTTL$1 = TTLStore.getInstance();
