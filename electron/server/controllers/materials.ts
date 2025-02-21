@@ -46,7 +46,6 @@ const FSCONFIG_MENU: FsOperationConfig = {
 // Подготовить базу данных для меню материалов
 export async function prepareMaterialsStoreForMenu(username: string): Promise<boolean> {
     const userDirPath = getAppUserDirname(username);
-    console.log('[prepareMaterialsStoreForMenu] => void');
     return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true })
         .then((_) => {
             return true;
@@ -64,7 +63,6 @@ export async function prepareMaterialsStoreForMenu(username: string): Promise<bo
 
 // Создание нового раздела в материалах
 export async function createChapter(params: ChapterCreate, auth: AuthParams) {
-    console.log('[createChapter] => ', params);
     try {
         if(!auth?.token) throw new Error("[createChapter]>> 401 UNAUTHORIZE");
         await verifyAccessToken(auth.token, { refresh: true });
@@ -92,7 +90,6 @@ export async function createChapter(params: ChapterCreate, auth: AuthParams) {
 
 // Получение данных сущности Материалы (Либо для панели меню, либо оригинальные данные)
 export async function getChapters(params: GetChaptersConfig, auth: AuthParams): Promise<ChapterForMenu[] | Chapter[]> {
-    console.log('getChapters => ', params);
     try {
         if(!params) throw new Error('[getChapters]>> invalid params');
         if(!params.token) new Error('[getChapters]>> 401 UNAUTHORIZE');
@@ -123,7 +120,6 @@ export async function getChapters(params: GetChaptersConfig, auth: AuthParams): 
 
 // Получение конкретного раздела
 export async function getOneChapter(params: GetChapterOneParams, auth: AuthParams): Promise<Chapter> {
-    console.log('[getOneChapter] => ', params);
     try {
         if(!auth.token) new Error('[getChapters]>> 401 UNAUTHORIZE');
         await verifyAccessToken(auth.token, { refresh: true });
@@ -164,7 +160,6 @@ export async function getOneChapter(params: GetChapterOneParams, auth: AuthParam
             }
             else {  }
             findedChapter?.blocks
-            console.log(correctChapter);
             return correctChapter;
         }
         else {
@@ -178,7 +173,6 @@ export async function getOneChapter(params: GetChapterOneParams, auth: AuthParam
 
 // Создание нового подраздела
 export async function createSubChapter(params: SubChapterCreate, auth: AuthParams): Promise<SubChapterCreateResponse> {
-    console.log('[createSubChapter] => ', params);
     try {
         if (!params || !params.chapterId) throw '[createSubChapter]>> INVALID_INPUT_DATA';
         if(!auth?.token) throw '[createSubChapter]>> 401 UNAUTHORIZE';
@@ -207,7 +201,6 @@ export async function createSubChapter(params: SubChapterCreate, auth: AuthParam
 
 // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
 export async function syncMaterialsStores(auth: AuthParams): Promise<Array<ChapterForMenu>> {
-    console.log('[syncMaterialsStores] =>', 0);
     try {
         if(!auth?.token) throw '[syncMaterialsStores]>> 401 UNAUTHORIZE';
         const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
@@ -294,7 +287,6 @@ export async function syncMaterialsStores(auth: AuthParams): Promise<Array<Chapt
 
 // Получить конкретный ПОДраздел с БД материалов
 export async function getOneSubChapter(params: GetSubChapterOneParams, auth: AuthParams): Promise<SubChapter> {
-    console.log('[getOneSubChapter] => ', params);
     try {
         if(!auth?.token) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZE");
         await verifyAccessToken(auth.token, { refresh: true });
@@ -349,7 +341,6 @@ export async function getOneSubChapter(params: GetSubChapterOneParams, auth: Aut
 
 // Редактирование общих данных раздела/подраздела
 export async function editChapter(input: EditChapterParams, auth: AuthParams): Promise<Chapter> {
-    console.log('[editChapter] => ', input);
     try {
         if(!auth?.token) throw new Error("[editChapter]>> 401 UNAUTHORIZE");
         await verifyAccessToken(auth.token, { refresh: true });
@@ -421,7 +412,6 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
 
 // Удаление раздела из materials
 export async function deleteChapter(params: DeleteChapterParams, auth: AuthParams): Promise<DeleteResponseMessage> {
-    console.log('[deleteChapter] => ', params);
     try {
         if(!params) throw new Error('[deleteChapter]>> INVALID_INPUT');
         if(!auth?.token) throw new Error("[deleteChapter]>> 401 UNAUTHORIZE");
@@ -449,7 +439,6 @@ export async function deleteChapter(params: DeleteChapterParams, auth: AuthParam
 
 // Удаление подраздела из materials
 export async function deleteSubChapter(params: DeleteSubChapterParams, auth: AuthParams): Promise<DeleteResponseMessage> {
-    console.log('[deleteChapter] => ', params);
     try {
         if(!params) throw new Error('[deleteChapter]>> INVALID_INPUT');
         if(!auth?.token) throw new Error("[deleteChapter]>> 401 UNAUTHORIZE");
@@ -473,7 +462,6 @@ export async function deleteSubChapter(params: DeleteSubChapterParams, auth: Aut
 
 // Получить блоки раздела по его айди
 export async function getChapterBlocks(params: GetChapterBlocks, auth: AuthParams) {
-    console.log('[getChapterBlocks] => ', params);
     try {
         if(!auth?.token) throw new Error("[getChapterBlocks]>> 401 UNAUTHORIZE");
         await verifyAccessToken(auth.token, { refresh: true });
@@ -489,7 +477,6 @@ export async function getChapterBlocks(params: GetChapterBlocks, auth: AuthParam
 
 // Получить блоки подраздела по его айди
 export async function getSubChapterBlocks(params: GetChapterBlocks, auth: AuthParams) {
-    console.log('[getSubChapterBlocks] => ', params);
     try {
         if(!auth?.token) throw new Error("[getSubChapterBlocks]>> 401 UNAUTHORIZE");
         await verifyAccessToken(auth.token, { refresh: true });
@@ -505,7 +492,6 @@ export async function getSubChapterBlocks(params: GetChapterBlocks, auth: AuthPa
 
 // Создание нового блока для раздела
 export async function createChapterBlock(params: CreateChapterBlock, auth: AuthParams) {
-    console.log('[createChapterBlock] => ', params);
     try {
         if(!params || !params.pathName || !params.title)
             throw new Error('[createChapterBlock]>> INVALID_INPUT');
@@ -547,7 +533,6 @@ export async function createChapterBlock(params: CreateChapterBlock, auth: AuthP
 
 // Редактирование нового блока для раздела
 export async function editChapterBlock(params: EditChapterBlock, auth: AuthParams) {
-    console.log('[editChapterBlock] => ', params);
     try {
         if(!params || !params.pathName || !params.block)
             throw new Error('[editChapterBlock]>> INVALID_INPUT');
@@ -569,7 +554,6 @@ export async function editChapterBlock(params: EditChapterBlock, auth: AuthParam
 
 // Удаление блока из раздела
 export async function deleteChapterBlock(params: DeleteChapterBlock, auth: AuthParams): Promise<void> {
-    console.log('[deleteChapterBlock] => ', params);
     try {
         if(!params || !params.pathName)
             throw new Error('[deleteChapterBlock]>> INVALID_INPUT');

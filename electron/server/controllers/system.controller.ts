@@ -6,7 +6,6 @@ import { GlobalNames } from "../../config/global";
 
 // Подготовить хранилище пользователя
 export async function prepareUserStore(win: BrowserWindow | null, username: string) {
-    console.log('[prepareUserStore]>> ', username);
     try {
         let isReliableStores: boolean = true;
         const manager = DatabaseManager.instance();

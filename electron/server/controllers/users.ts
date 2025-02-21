@@ -50,7 +50,6 @@ export async function getUsers(config?: GetUsersConfig): Promise<Array<User>> {
 
 // Зарегистрировать пользовательскую директорию (при регистрации нового пользователя)
 async function initUserDir(user: UserCreateResponse): Promise<boolean> {
-    console.log('[initUserDir] =>', user);
     if(!user) throw new Error('user - обязательный аргумент');
     try {
         // Если id пользователя невалидный
@@ -62,23 +61,19 @@ async function initUserDir(user: UserCreateResponse): Promise<boolean> {
         const isExistUserDir = await isExistFileOrDir(userDirName);
         // Если пользовательская директория НЕ существует
         if(isExistUserDir === false) {
-            console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
             // Сначала создать директорию
             await mkDir(userDirName);
             if(await isExistFileOrDir(userDirName)) {
-                console.log('СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО');
                 // Инициализация баз данных
                 await prepareUserStore(null, user.username);
                 return true;
             }
             else {
-                console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
                 return false;
             }
         }
         // Если пользовательская директория существует
         else {
-            console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
             return false;
         }
     } catch (err) {
@@ -88,7 +83,6 @@ async function initUserDir(user: UserCreateResponse): Promise<boolean> {
 
 // Создание нового пользователя при регистрации
 export async function createUser(win: BrowserWindow | null, params: CreateUserParams): Promise<UserCreateResponse> {
-    console.log('[createUser] =>', params);
     try {
         if (!params.password || !params.username) throw '[createUser]>> INVALID_USER_DATA';
         // Получение экземпляра сервиса
@@ -104,7 +98,6 @@ export async function createUser(win: BrowserWindow | null, params: CreateUserPa
         // Формируется ключ шифрования баз данных уровня пользователь
         const keyDB = await encryptPragmaKey(params.username, params.password);
         storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win))
-        console.log('KEY CIPHER', keyDB);
 
         // Запись нового пользователя в БД
         const newUser = await userService.create({

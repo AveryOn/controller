@@ -35,7 +35,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     function updateMenuItems(items: ChapterForMenu[]) {
         materialChaptersMenu.value.length = 0;
         materialChaptersMenu.value.push(...items, addChapterItem);
-        console.log('MENU', materialChaptersMenu.value);
     }
 
     // Запросить элементы меню панели материалов

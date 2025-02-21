@@ -50,7 +50,6 @@ function handlerSignUp(state: boolean): void {
 
 function handlerLogin(state: boolean, token: string | null): void {
     if(state === true) {
-        console.log(token);
         router.push({ name: 'main' });
     }
 }
@@ -60,12 +59,6 @@ function handlerUpdate(state: boolean) {
         selectMode.value = 'Login';
     }
 }
-
-onMounted(() => {
-    console.log();
-    
-})
-
 </script>
 
 <style scoped>

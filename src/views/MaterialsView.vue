@@ -19,7 +19,7 @@
             :full-label="labelChapter"
             :root-chapter-id="rootChapterId"
             v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
-            @open-chapter="(label) => console.log(label)"
+            @open-chapter="(label) => { label }"
             @update-root-chapter-id="(id: number) => rootChapterId = id"
             @update-full-label="(label: string) => updateFullLabel(label)"
             @delete-current-label="() => excludeLabelOfDeletedChapter()"

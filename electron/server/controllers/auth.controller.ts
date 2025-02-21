@@ -15,7 +15,6 @@ const storeTTL = TTLStore.getInstance<string>()
 
 // Валидация токена доступа
 export async function validateAccessToken(params: ValidateAccessTokenParams) {
-    console.log('[validateAccessToken] =>', params);
     try {
         if(!params?.token) throw '[validateAccessToken]>> INVALID_DATA';
         return !!(await verifyAccessToken(params.token, { refresh: true }));
@@ -28,8 +27,6 @@ export async function validateAccessToken(params: ValidateAccessTokenParams) {
 
 // Подтверждение учетных данных пользователя при входе в систему
 export async function loginUser(win: BrowserWindow | null, params: LoginParams): Promise<LoginResponse> {
-    console.log('[loginUser] =>', params);
-
     try {
         if (!params.password || !params.username) throw '[loginUser]>> INVALID_USER_DATA';
         // Получение экземпляра сервиса
@@ -53,7 +50,6 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams):
             // Формируется ключ шифрования баз данных уровня пользователь
             const keyDB = await encryptPragmaKey(params.username, params.password);
             storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win));
-            console.log('KEY CIPHER', keyDB);
 
             // Формируем токен доступа
             const token = await createAccessToken({ 

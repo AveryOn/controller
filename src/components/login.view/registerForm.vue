@@ -41,7 +41,6 @@ async function submit() {
                 username: form.value.username,
                 password: form.value.password, 
             })
-            console.log(newUser);
         }
         emit('confirm:register', true);
     } catch (error) {

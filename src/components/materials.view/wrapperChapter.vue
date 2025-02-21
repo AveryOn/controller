@@ -163,7 +163,6 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
         if (!pathName) throw '[requestForCreateSubChapter]>> pathName is not defined';
         if(!props.rootChapterId) throw '[requestForCreateSubChapter]>> rootChapterId is not defined';
         const currentPath = opennedChapter.value?.fullpath ? opennedChapter.value?.fullpath : opennedChapter.value?.pathName;
-        console.log('opennedChapter', opennedChapter.value);
         const correctSubChapter: SubChapterCreate = {
             chapterId: props.rootChapterId,
             pathName: pathName,
@@ -306,7 +305,6 @@ async function requestForEdit(data: ChapterCreate) {
                 return result;
             }
         }
-        else console.log('[requestForEdit] Копии формы для редактирования нет');
     } catch (err) {
         console.error(err);
         throw err;
@@ -337,7 +335,6 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
         // Обработка сырого query-параметра вида to>path>name в вид to/path/name
         const correctFullpath = rawQuery.split('>').join('/');
         const chapter = await getOneSubChapter({ pathName, fullpath: correctFullpath });
-        console.log('OPENNED SUB CHAPTER', chapter);
         opennedChapter.value = chapter;
         emit('openChapter', chapter.label);
     } catch (err) {

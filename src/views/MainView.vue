@@ -12,10 +12,6 @@
 <script setup lang="ts">
 import cPanelMenu from '../components/main.view/cPanelMenu.vue';
 
-async function getUsers() {
-    console.log(await window.electron.getUsers({ perPage: 1, page: 2 }));
-}
-
 </script>
 
 <style scoped>

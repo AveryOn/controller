@@ -24,7 +24,6 @@ export function trimPath(fullpath: string, config?: { split?: boolean, separator
         else correctFullPath = fullpath;
         pathChunks = undefined;
         if(config?.split === true) {
-            console.log('correctFullPath', correctFullPath);
             return correctFullPath?.split(separator);
         }
         return correctFullPath;

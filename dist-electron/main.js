@@ -620,7 +620,6 @@ const _InstanceDatabase = class _InstanceDatabase {
       if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
       if (onApp === true) {
         const key = Vars.APP_KEY;
-        console.log("APP PRAGMA KEY", key);
         return key;
       } else {
         if (!this.storeTTL) throw new Error("fetchPragmaKey > storeTTL is not defined");
@@ -628,7 +627,6 @@ const _InstanceDatabase = class _InstanceDatabase {
         if (!key) {
           throw new Error("fetchPragmaKey > ");
         }
-        console.log("USER PRAGMA KEY", key);
         return key;
       }
     } catch (err) {
@@ -785,7 +783,6 @@ const _DatabaseManager = class _DatabaseManager {
         await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
         console.debug("initOnUser>> migrations were applied");
       }
-      console.log("WAS CALLED initOnUser", username);
       return await promise;
     } catch (err) {
       console.error("[DatabaseManager.initOnUser]>> ", err);
@@ -5753,7 +5750,6 @@ const FSCONFIG_MENU = {
 };
 async function prepareMaterialsStoreForMenu(username) {
   const userDirPath = getAppUserDirname(username);
-  console.log("[prepareMaterialsStoreForMenu] => void");
   return readFile({ ...FSCONFIG_MENU, directory: userDirPath, customPath: true }).then((_) => {
     return true;
   }).catch(async () => {
@@ -5767,7 +5763,6 @@ async function prepareMaterialsStoreForMenu(username) {
   });
 }
 async function createChapter(params, auth) {
-  console.log("[createChapter] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[createChapter]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
@@ -5791,7 +5786,6 @@ async function createChapter(params, auth) {
   }
 }
 async function getChapters(params, auth) {
-  console.log("getChapters => ", params);
   try {
     if (!params) throw new Error("[getChapters]>> invalid params");
     if (!params.token) new Error("[getChapters]>> 401 UNAUTHORIZE");
@@ -5815,7 +5809,6 @@ async function getChapters(params, auth) {
   }
 }
 async function getOneChapter(params, auth) {
-  console.log("[getOneChapter] => ", params);
   try {
     if (!auth.token) new Error("[getChapters]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
@@ -5854,7 +5847,6 @@ async function getOneChapter(params, auth) {
       } else {
       }
       findedChapter == null ? void 0 : findedChapter.blocks;
-      console.log(correctChapter);
       return correctChapter;
     } else {
       throw "[getOneChapter]>> NOT_EXISTS_RECORD";
@@ -5865,7 +5857,6 @@ async function getOneChapter(params, auth) {
   }
 }
 async function createSubChapter(params, auth) {
-  console.log("[createSubChapter] => ", params);
   try {
     if (!params || !params.chapterId) throw "[createSubChapter]>> INVALID_INPUT_DATA";
     if (!(auth == null ? void 0 : auth.token)) throw "[createSubChapter]>> 401 UNAUTHORIZE";
@@ -5892,7 +5883,6 @@ async function createSubChapter(params, auth) {
   }
 }
 async function syncMaterialsStores(auth) {
-  console.log("[syncMaterialsStores] =>", 0);
   try {
     let sync = function(pathName, subchapters, envStack, stackLabels) {
       const mappa = {};
@@ -5956,7 +5946,6 @@ async function syncMaterialsStores(auth) {
   }
 }
 async function getOneSubChapter(params, auth) {
-  console.log("[getOneSubChapter] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getOneSubChapter]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
@@ -6006,7 +5995,6 @@ async function getOneSubChapter(params, auth) {
   }
 }
 async function editChapter(input, auth) {
-  console.log("[editChapter] => ", input);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[editChapter]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
@@ -6068,7 +6056,6 @@ async function editChapter(input, auth) {
   }
 }
 async function deleteChapter(params, auth) {
-  console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[deleteChapter]>> 401 UNAUTHORIZE");
@@ -6088,7 +6075,6 @@ async function deleteChapter(params, auth) {
   }
 }
 async function deleteSubChapter(params, auth) {
-  console.log("[deleteChapter] => ", params);
   try {
     if (!params) throw new Error("[deleteChapter]>> INVALID_INPUT");
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[deleteChapter]>> 401 UNAUTHORIZE");
@@ -6106,7 +6092,6 @@ async function deleteSubChapter(params, auth) {
   }
 }
 async function getChapterBlocks(params, auth) {
-  console.log("[getChapterBlocks] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getChapterBlocks]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
@@ -6119,7 +6104,6 @@ async function getChapterBlocks(params, auth) {
   }
 }
 async function getSubChapterBlocks(params, auth) {
-  console.log("[getSubChapterBlocks] => ", params);
   try {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getSubChapterBlocks]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
@@ -6132,7 +6116,6 @@ async function getSubChapterBlocks(params, auth) {
   }
 }
 async function createChapterBlock(params, auth) {
-  console.log("[createChapterBlock] => ", params);
   try {
     if (!params || !params.pathName || !params.title)
       throw new Error("[createChapterBlock]>> INVALID_INPUT");
@@ -6167,7 +6150,6 @@ async function createChapterBlock(params, auth) {
   }
 }
 async function editChapterBlock(params, auth) {
-  console.log("[editChapterBlock] => ", params);
   try {
     if (!params || !params.pathName || !params.block)
       throw new Error("[editChapterBlock]>> INVALID_INPUT");
@@ -6185,7 +6167,6 @@ async function editChapterBlock(params, auth) {
   }
 }
 async function deleteChapterBlock(params, auth) {
-  console.log("[deleteChapterBlock] => ", params);
   try {
     if (!params || !params.pathName)
       throw new Error("[deleteChapterBlock]>> INVALID_INPUT");
@@ -6199,7 +6180,6 @@ async function deleteChapterBlock(params, auth) {
   }
 }
 async function prepareUserStore(win2, username) {
-  console.log("[prepareUserStore]>> ", username);
   try {
     let isReliableStores = true;
     const manager = DatabaseManager.instance();
@@ -6241,7 +6221,6 @@ async function getUsers(config2) {
   }
 }
 async function initUserDir(user) {
-  console.log("[initUserDir] =>", user);
   if (!user) throw new Error("user - обязательный аргумент");
   try {
     if (typeof user.id !== "number" || user.id !== user.id) {
@@ -6250,18 +6229,14 @@ async function initUserDir(user) {
     const userDirName = `user_${user.username}`;
     const isExistUserDir = await isExistFileOrDir(userDirName);
     if (isExistUserDir === false) {
-      console.log(`Директория ${userDirName} пользователя ${user.id} НЕ существует`);
       await mkDir(userDirName);
       if (await isExistFileOrDir(userDirName)) {
-        console.log("СОЗДАНИЕ ДИРЕКТОРИИ ПРОШЛО УСПЕШНО");
         await prepareUserStore(null, user.username);
         return true;
       } else {
-        console.log(`ДИРЕКТОРИИ ${userDirName} не существует`);
         return false;
       }
     } else {
-      console.log(`Директория ${userDirName} пользователя ${user.id} существует`);
       return false;
     }
   } catch (err) {
@@ -6269,7 +6244,6 @@ async function initUserDir(user) {
   }
 }
 async function createUser(win2, params) {
-  console.log("[createUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[createUser]>> INVALID_USER_DATA";
     const userService = new UserService();
@@ -6281,7 +6255,6 @@ async function createUser(win2, params) {
     const hash = await encrypt(params.password);
     const keyDB = await encryptPragmaKey(params.username, params.password);
     storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
-    console.log("KEY CIPHER", keyDB);
     const newUser = await userService.create({
       username: params.username,
       password: hash,
@@ -6324,7 +6297,6 @@ async function updatePassword(params) {
 }
 const storeTTL = TTLStore.getInstance();
 async function validateAccessToken(params) {
-  console.log("[validateAccessToken] =>", params);
   try {
     if (!(params == null ? void 0 : params.token)) throw "[validateAccessToken]>> INVALID_DATA";
     return !!await verifyAccessToken(params.token, { refresh: true });
@@ -6334,7 +6306,6 @@ async function validateAccessToken(params) {
   }
 }
 async function loginUser(win2, params) {
-  console.log("[loginUser] =>", params);
   try {
     if (!params.password || !params.username) throw "[loginUser]>> INVALID_USER_DATA";
     const userService = new UserService();
@@ -6351,7 +6322,6 @@ async function loginUser(win2, params) {
       Reflect.deleteProperty(readyUser, "password");
       const keyDB = await encryptPragmaKey(params.username, params.password);
       storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
-      console.log("KEY CIPHER", keyDB);
       const token2 = await createAccessToken({
         userId: readyUser.id,
         username: readyUser.username
@@ -6452,7 +6422,6 @@ app.whenReady().then(async () => {
     return await createSubChapter(params, auth);
   });
   ipcMain.handle("sync-materials", async (_, auth) => {
-    if (!(auth == null ? void 0 : auth.token)) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
     return await syncMaterialsStores(auth);
   });
   ipcMain.handle("get-one-sub-chapter", async (_, params, auth) => {

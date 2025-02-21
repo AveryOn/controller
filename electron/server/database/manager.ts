@@ -58,7 +58,6 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
             if(!onApp && typeof onApp !== 'boolean') throw new Error('[fetchPragmaKey]>> onApp is not defined');
             if(onApp === true) {
                 const key = Vars.APP_KEY
-                console.log('APP PRAGMA KEY', key);
                 return key;
             }
             else {
@@ -68,7 +67,6 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
                 if(!key) {
                     throw new Error('fetchPragmaKey > ')
                 }
-                console.log('USER PRAGMA KEY', key);
                 return key;
             }
         } catch (err) {
@@ -245,7 +243,6 @@ export class DatabaseManager {
                 await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
                 console.debug("initOnUser>> migrations were applied");
             }
-            console.log('WAS CALLED initOnUser', username);
             return await promise;
         } catch (err) {
             console.error('[DatabaseManager.initOnUser]>> ', err);

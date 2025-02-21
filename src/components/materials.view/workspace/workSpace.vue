@@ -224,7 +224,6 @@ watch(
     async (newVals, oldVals) => {
         const [newFullpath, newPathName] = newVals;
         const [oldFullpath, oldPathName] = oldVals;
-        console.log('WATCH props.chapter', props.chapter?.id);
         
         if(newFullpath ?? '' + newPathName !== oldFullpath ?? '' + oldPathName) {
             // выполнить запрос на получение блоков раздела
@@ -246,7 +245,6 @@ function editContentTitle() {
         // запрос на изменение title
         try {
             isLoadingEditContentTitle.value = true;
-            console.log('Запрос');
         } finally {
             isLoadingEditContentTitle.value = false;
         }
