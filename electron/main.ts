@@ -48,7 +48,6 @@ import { AuthParams } from './server/types/controllers/index.types';
 import { checkAccess, prepareUserStore } from './server/controllers/system.controller';
 import { verifyAccessToken } from './server/services/tokens.service';
 import { TTLStore } from './server/services/ttl-store.service';
-import { formatDate } from './server/services/date.service';
 
 
 // const require = createRequire(import.meta.url);
@@ -146,7 +145,7 @@ app.whenReady().then(async () => {
     // ==========  USERS  ===========
     // Подготовить пользовательское хранилище
     ipcMain.handle("prepare-user-store", async (_, params: PrepareUserStoreParams) => {
-        const { payload: { username } } = await verifyAccessToken(params.token)
+        const { payload: { username } } = await verifyAccessToken(params.token, { refresh: true })
         return await prepareUserStore(win, username);
     });
 
@@ -177,13 +176,13 @@ app.whenReady().then(async () => {
     });
 
     // Получение разделов для меню
-    ipcMain.handle("get-menu-chapters", async (_, params: GetChaptersConfig) => {
-        return await getChapters(params);
+    ipcMain.handle("get-menu-chapters", async (_, params: GetChaptersConfig, auth: AuthParams) => {
+        return await getChapters(params, auth);
     });
 
     // Получение раздела
-    ipcMain.handle("get-one-chapter", async (_, params: GetChapterOneParams) => {
-        return await getOneChapter(params);
+    ipcMain.handle("get-one-chapter", async (_, params: GetChapterOneParams, auth: AuthParams) => {
+        return await getOneChapter(params, auth);
     });
 
     // Создание подраздела
@@ -193,15 +192,7 @@ app.whenReady().then(async () => {
 
     // Синхронизация БД Материалов и БД Меню Материалов. Для того чтобы панель меню содержала актуальное состояние данных
     ipcMain.handle("sync-materials", async (_, auth: AuthParams) => {
-        if(!auth?.token) throw new Error("[IPC > sync-materials]>> 401 UNAUTHORIZE");
-        const store = TTLStore.getInstance()
-        
-        console.log('BEFORE', formatDate(store.getTTL('EXAMPLE')));
-        store.set('EXAMPLE', '__test_text__', 6000)
-        console.log('AFTER', formatDate(store.getTTL('EXAMPLE')));
-
-        const { payload: { username } } = await verifyAccessToken(auth.token, { refresh: true });
-        return await syncMaterialsStores(username);
+        return await syncMaterialsStores(auth);
     });
 
     // Получить конкретный ПОДраздел с БД материалов
@@ -215,37 +206,37 @@ app.whenReady().then(async () => {
     });
 
     // Удаление раздела
-    ipcMain.handle("delete-chapter", async (_, params: DeleteChapterParams) => {
-        return await deleteChapter(params);
+    ipcMain.handle("delete-chapter", async (_, params: DeleteChapterParams, auth: AuthParams) => {
+        return await deleteChapter(params, auth);
     });
 
     // Удаление подраздела
-    ipcMain.handle("delete-sub-chapter", async (_, params: DeleteSubChapterParams) => {
-        return await deleteSubChapter(params);
+    ipcMain.handle("delete-sub-chapter", async (_, params: DeleteSubChapterParams, auth: AuthParams) => {
+        return await deleteSubChapter(params, auth);
     });
 
     // получение блоков раздела
-    ipcMain.handle("get-chapter-blocks", async (_, params: GetChapterBlocks) => {
-        return await getChapterBlocks(params);
+    ipcMain.handle("get-chapter-blocks", async (_, params: GetChapterBlocks, auth: AuthParams) => {
+        return await getChapterBlocks(params, auth);
     });
 
     // получение блоков раздела
-    ipcMain.handle("get-sub-chapter-blocks", async (_, params: GetChapterBlocks) => {
-        return await getSubChapterBlocks(params);
+    ipcMain.handle("get-sub-chapter-blocks", async (_, params: GetChapterBlocks, auth: AuthParams) => {
+        return await getSubChapterBlocks(params, auth);
     });
 
     // Создание блока для раздела
-    ipcMain.handle("create-chapter-block", async (_, params: CreateChapterBlock) => {
-        return await createChapterBlock(params);
+    ipcMain.handle("create-chapter-block", async (_, params: CreateChapterBlock, auth: AuthParams) => {
+        return await createChapterBlock(params, auth);
     });
 
     // Редактирование блока для раздела
-    ipcMain.handle("edit-chapter-block", async (_, params: EditChapterBlock) => {
-        return await editChapterBlock(params);
+    ipcMain.handle("edit-chapter-block", async (_, params: EditChapterBlock, auth: AuthParams) => {
+        return await editChapterBlock(params, auth);
     });
 
     // Удаление блока из раздела
-    ipcMain.handle("delete-chapter-block", async (_, params: DeleteChapterBlock) => {
-        return await deleteChapterBlock(params);
+    ipcMain.handle("delete-chapter-block", async (_, params: DeleteChapterBlock, auth: AuthParams) => {
+        return await deleteChapterBlock(params, auth);
     });
 })
