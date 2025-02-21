@@ -7,5 +7,5 @@ export const GlobalNames = {
 
 export const Vars = {
     APP_KEY: '24ca469e-b258-4e08-a4f2-54fd70c86aeb',
-    USER_PRAGMA_KEY_TTL: 1000 * 60 * 5 * 100, // 5 min
+    USER_PRAGMA_KEY_TTL: 1000 * 60 * 0.25, // 5 min
 } as const
