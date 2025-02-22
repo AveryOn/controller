@@ -2,7 +2,7 @@ import { GlobalNames, SESSION_TTL, Vars } from "../../config/global";
 import { TTLStore } from "../services/ttl-store.service";
 import UserService from "../database/services/users.service";
 import { encryptPragmaKey, verify } from "../services/crypto.service";
-import { createAccessToken, verifyAccessToken } from "../services/tokens.service";
+import { brokeKey, createAccessToken, verifyAccessToken } from "../services/tokens.service";
 import { ValidateAccessTokenParams } from "../types/controllers/auth.types";
 import { LoginParams, LoginResponse } from "../types/controllers/users.types";
 import { prepareUserStore } from "./system.controller";
@@ -52,11 +52,17 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams):
 
             // Формируется ключ шифрования баз данных уровня пользователь
             const keyDB = await encryptPragmaKey(params.username, params.password);
+            const { salt, value } = await brokeKey(keyDB);
             storeTTL.set(
                 GlobalNames.USER_PRAGMA_KEY, 
-                keyDB, 
+                value, 
                 Vars.USER_PRAGMA_KEY_TTL, 
-                () => logoutIpc(win, { fromServer: true }),
+                () => logoutIpc(win),
+            );
+            storeTTL.set(
+                GlobalNames.USER_PRAGMA_SALT, 
+                salt, 
+                Vars.USER_PRAGMA_KEY_TTL, 
             );
 
             // Формируем токен доступа

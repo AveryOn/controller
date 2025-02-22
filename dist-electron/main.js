@@ -316,6 +316,7 @@ var cliOptions = function optionMatcher(args) {
 })();
 const GlobalNames = {
   USER_PRAGMA_KEY: "USER_PRAGMA_KEY",
+  USER_PRAGMA_SALT: "USER_PRAGMA_SALT",
   USER_TOKEN: "USER_TOKEN_001",
   USER_BROKEN_TOKEN: "USER_BROKEN_TOKEN",
   USER_TOKEN_SALT: "USER_TOKEN_SALT",
@@ -587,6 +588,161 @@ const _TTLStore = class _TTLStore {
 };
 __publicField(_TTLStore, "instance");
 let TTLStore = _TTLStore;
+function logoutIpc(win2, config2) {
+  if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
+  const store = TTLStore.getInstance();
+  const TimerRef = store.get(GlobalNames.THROTTLER_TIMER);
+  clearTimeout(TimerRef);
+  store.cleanup();
+  win2.webContents.send("logout", config2);
+}
+function refreshTokenIpc(token2, win2) {
+  if (!win2) throw new Error("IPC > refreshTokenIpc > win is not defined");
+  win2.webContents.send("refresh-token", token2);
+}
+function prepareExpireTime(expires) {
+  let ready = 0;
+  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
+  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
+  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
+  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
+  if (expires.m) ready += 1e3 * 60 * Math.max(expires.m, 1);
+  if (expires.s) ready += 1e3 * Math.max(expires.s, 1);
+  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
+  ready += Date.now();
+  return ready;
+}
+function createSignatureToken() {
+  try {
+    return Vars.TOKEN_SIGNATURE;
+  } catch (err) {
+    console.error("[createSignatureToken]>>", err);
+    throw err;
+  }
+}
+async function brokeKey(value) {
+  try {
+    if (!value || typeof value !== "string")
+      throw new Error("invalid value");
+    value = await encryptJsonData(value, Vars.USER_TOKEN_SALT);
+    let processValue = value.split("");
+    if (processValue.length >= 64) {
+      let salt = processValue.slice(processValue.length - 32);
+      salt = salt.reverse().join();
+      salt = await encryptJsonData(salt, Vars.USER_TOKEN_SALT);
+      salt = salt.split("").reverse().join("$");
+      let brokenToken = processValue.slice(0, processValue.length - 32);
+      brokenToken = brokenToken.reverse().join();
+      brokenToken = await encryptJsonData(brokenToken, Vars.USER_TOKEN_SALT);
+      brokenToken = brokenToken.split("").reverse().join("#");
+      return { value: brokenToken, salt };
+    }
+    return { value, salt: "" };
+  } catch (err) {
+    throw err;
+  }
+}
+async function repairKey(brokenToken, salt) {
+  try {
+    if (!brokenToken || typeof brokenToken !== "string") throw new Error("invalid brokenToken");
+    if (!salt || typeof salt !== "string") throw new Error("invalid salt");
+    let repairToken = brokenToken.split("#").reverse().join("");
+    repairToken = await decryptJsonData(repairToken, Vars.USER_TOKEN_SALT);
+    repairToken = repairToken.split(",").reverse();
+    let repairSalt = salt.split("$").reverse().join("");
+    repairSalt = await decryptJsonData(repairSalt, Vars.USER_TOKEN_SALT);
+    repairSalt = repairSalt.split(",").reverse();
+    const token2 = await decryptJsonData(repairToken.join("") + repairSalt.join(""), Vars.USER_TOKEN_SALT);
+    return token2;
+  } catch (err) {
+    throw err;
+  }
+}
+async function createAccessToken(payload, expires) {
+  try {
+    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
+    const expiresStamp = prepareExpireTime(expires);
+    const signatureToken = createSignatureToken();
+    const tokenData = {
+      expires: expiresStamp,
+      payload,
+      signature: signatureToken
+    };
+    let token2 = await encryptJsonData(tokenData, Vars.TOKEN_SIGNATURE);
+    const hashedToken = await encryptJsonData(token2, Vars.USER_TOKEN_SALT);
+    const { value: brokenToken, salt } = await brokeKey(token2);
+    token2 = "";
+    const store = TTLStore.getInstance();
+    store.set(GlobalNames.USER_TOKEN, hashedToken, Vars.USER_TOKEN_TTL);
+    store.set(GlobalNames.USER_BROKEN_TOKEN, brokenToken, Vars.USER_BROKEN_TOKEN_TTL);
+    store.set(GlobalNames.USER_TOKEN_SALT, salt, Vars.USER_TOKEN_SALT_TTL);
+    return brokenToken;
+  } catch (err) {
+    throw err;
+  }
+}
+const RefreshTokenQueue = [];
+const refreshTimer = { t: null };
+let RefreshTokenCount = 0;
+async function verifyAccessToken(token2, config2) {
+  try {
+    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
+    const store = TTLStore.getInstance();
+    const hashedToken = store.get(GlobalNames.USER_TOKEN);
+    const brokenToken = store.get(GlobalNames.USER_BROKEN_TOKEN);
+    const tokenSalt = store.get(GlobalNames.USER_TOKEN_SALT);
+    if (!brokenToken || !hashedToken || !tokenSalt) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [1]");
+    }
+    if (token2 !== brokenToken) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [2]");
+    }
+    const decryptedRealToken = await decryptJsonData(hashedToken, Vars.USER_TOKEN_SALT);
+    const repairedToken = await repairKey(brokenToken, tokenSalt);
+    if (repairedToken !== decryptedRealToken) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [3]");
+    }
+    const payload = JSON.parse(await decryptJsonData(decryptedRealToken, Vars.TOKEN_SIGNATURE));
+    if (payload.expires <= Date.now()) {
+      logoutIpc(win);
+      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
+    } else {
+      if ((config2 == null ? void 0 : config2.refresh) === true) {
+        RefreshTokenQueue.push(`R_${RefreshTokenCount}`);
+        clearInterval(refreshTimer.t);
+        refreshTimer.t = setTimeout(async () => {
+          console.log("INVOKED REFRESH TOKEN", ++RefreshTokenCount);
+          RefreshTokenQueue.length = 0;
+          refreshTimer.t = null;
+          const { payload: { userId, username } } = payload;
+          store.set(
+            GlobalNames.USER_PRAGMA_KEY,
+            store.get(GlobalNames.USER_PRAGMA_KEY),
+            Vars.USER_PRAGMA_KEY_TTL,
+            () => logoutIpc(win, { fromServer: true })
+          );
+          store.set(
+            GlobalNames.USER_PRAGMA_SALT,
+            store.get(GlobalNames.USER_PRAGMA_SALT),
+            Vars.USER_PRAGMA_KEY_TTL
+          );
+          const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
+          refreshTokenIpc(newBrokenToken, win);
+        }, Vars.THROTTLER_REFRESH_TOKEN_TTL);
+        store.set(GlobalNames.THROTTLER_TIMER, refreshTimer.t, Vars.THROTTLER_REFRESH_TOKEN_TTL);
+      }
+    }
+    return {
+      newToken: null,
+      payload: payload.payload
+    };
+  } catch (err) {
+    throw err;
+  }
+}
 const _InstanceDatabase = class _InstanceDatabase {
   constructor(dbname, username, state) {
     __publicField(this, "dbname", null);
@@ -621,7 +777,7 @@ const _InstanceDatabase = class _InstanceDatabase {
     });
   }
   // Извлечь ключ шифрования базы данных
-  fetchPragmaKey(onApp) {
+  async fetchPragmaKey(onApp) {
     try {
       if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
       if (onApp === true) {
@@ -630,10 +786,11 @@ const _InstanceDatabase = class _InstanceDatabase {
       } else {
         if (!this.storeTTL) throw new Error("fetchPragmaKey > storeTTL is not defined");
         const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY);
-        if (!key) {
+        const salt = this.storeTTL.get(GlobalNames.USER_PRAGMA_SALT);
+        if (!key || !salt) {
           throw new Error("fetchPragmaKey > ");
         }
-        return key;
+        return await repairKey(key, salt);
       }
     } catch (err) {
       console.debug("requestIPC>>", err);
@@ -644,7 +801,7 @@ const _InstanceDatabase = class _InstanceDatabase {
   async requestIPC(data, onApp) {
     try {
       if (this.process) {
-        const pragmaKey = this.fetchPragmaKey(onApp);
+        const pragmaKey = await this.fetchPragmaKey(onApp);
         const action = `${data.action}-${Date.now()}`;
         let returnData;
         const promise = new Promise((resolve, reject) => {
@@ -4886,156 +5043,6 @@ function formatDate(date, template, utcOffset) {
     throw err;
   }
 }
-function logoutIpc(win2, config2) {
-  if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
-  const store = TTLStore.getInstance();
-  const TimerRef = store.get(GlobalNames.THROTTLER_TIMER);
-  clearTimeout(TimerRef);
-  store.cleanup();
-  win2.webContents.send("logout", config2);
-}
-function refreshTokenIpc(token2, win2) {
-  if (!win2) throw new Error("IPC > refreshTokenIpc > win is not defined");
-  win2.webContents.send("refresh-token", token2);
-}
-function prepareExpireTime(expires) {
-  let ready = 0;
-  if (expires.Y) ready += 1e3 * 60 * 60 * 24 * 365 * Math.max(expires.Y, 1);
-  if (expires.M) ready += 1e3 * 60 * 60 * 24 * 30 * Math.max(expires.M, 1);
-  if (expires.d) ready += 1e3 * 60 * 60 * 24 * Math.max(expires.d, 1);
-  if (expires.h) ready += 1e3 * 60 * 60 * Math.max(expires.h, 1);
-  if (expires.m) ready += 1e3 * 60 * Math.max(expires.m, 1);
-  if (expires.s) ready += 1e3 * Math.max(expires.s, 1);
-  if (!ready) throw new Error("[prepareExpireTime]>> INVALID_INPUT");
-  ready += Date.now();
-  return ready;
-}
-function createSignatureToken() {
-  try {
-    return Vars.TOKEN_SIGNATURE;
-  } catch (err) {
-    console.error("[createSignatureToken]>>", err);
-    throw err;
-  }
-}
-async function brokeAccessToken(value) {
-  try {
-    if (!value || typeof value !== "string")
-      throw new Error("invalid value");
-    value = await encryptJsonData(value, Vars.USER_TOKEN_SALT);
-    let processValue = value.split("");
-    if (processValue.length >= 64) {
-      let salt = processValue.slice(processValue.length - 32);
-      salt = salt.reverse().join();
-      salt = await encryptJsonData(salt, Vars.USER_TOKEN_SALT);
-      salt = salt.split("").reverse().join("$");
-      let brokenToken = processValue.slice(0, processValue.length - 32);
-      brokenToken = brokenToken.reverse().join();
-      brokenToken = await encryptJsonData(brokenToken, Vars.USER_TOKEN_SALT);
-      brokenToken = brokenToken.split("").reverse().join("#");
-      return { value: brokenToken, salt };
-    }
-    return { value, salt: "" };
-  } catch (err) {
-    throw err;
-  }
-}
-async function repairToken(brokenToken, salt) {
-  try {
-    if (!brokenToken || typeof brokenToken !== "string") throw new Error("invalid brokenToken");
-    if (!salt || typeof salt !== "string") throw new Error("invalid salt");
-    let repairToken2 = brokenToken.split("#").reverse().join("");
-    repairToken2 = await decryptJsonData(repairToken2, Vars.USER_TOKEN_SALT);
-    repairToken2 = repairToken2.split(",").reverse();
-    let repairSalt = salt.split("$").reverse().join("");
-    repairSalt = await decryptJsonData(repairSalt, Vars.USER_TOKEN_SALT);
-    repairSalt = repairSalt.split(",").reverse();
-    const token2 = await decryptJsonData(repairToken2.join("") + repairSalt.join(""), Vars.USER_TOKEN_SALT);
-    return token2;
-  } catch (err) {
-    throw err;
-  }
-}
-async function createAccessToken(payload, expires) {
-  try {
-    if (!payload || !expires) throw new Error("[createAccessToken]>> INVALID_INPUT");
-    const expiresStamp = prepareExpireTime(expires);
-    const signatureToken = createSignatureToken();
-    const tokenData = {
-      expires: expiresStamp,
-      payload,
-      signature: signatureToken
-    };
-    let token2 = await encryptJsonData(tokenData, Vars.TOKEN_SIGNATURE);
-    const hashedToken = await encryptJsonData(token2, Vars.USER_TOKEN_SALT);
-    const { value: brokenToken, salt } = await brokeAccessToken(token2);
-    token2 = "";
-    const store = TTLStore.getInstance();
-    store.set(GlobalNames.USER_TOKEN, hashedToken, Vars.USER_TOKEN_TTL);
-    store.set(GlobalNames.USER_BROKEN_TOKEN, brokenToken, Vars.USER_BROKEN_TOKEN_TTL);
-    store.set(GlobalNames.USER_TOKEN_SALT, salt, Vars.USER_TOKEN_SALT_TTL);
-    return brokenToken;
-  } catch (err) {
-    throw err;
-  }
-}
-const RefreshTokenQueue = [];
-const refreshTimer = { t: null };
-let RefreshTokenCount = 0;
-async function verifyAccessToken(token2, config2) {
-  try {
-    if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
-    const store = TTLStore.getInstance();
-    const hashedToken = store.get(GlobalNames.USER_TOKEN);
-    const brokenToken = store.get(GlobalNames.USER_BROKEN_TOKEN);
-    const tokenSalt = store.get(GlobalNames.USER_TOKEN_SALT);
-    if (!brokenToken || !hashedToken || !tokenSalt) {
-      logoutIpc(win);
-      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [1]");
-    }
-    if (token2 !== brokenToken) {
-      logoutIpc(win);
-      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [2]");
-    }
-    const decryptedRealToken = await decryptJsonData(hashedToken, Vars.USER_TOKEN_SALT);
-    const repairedToken = await repairToken(brokenToken, tokenSalt);
-    if (repairedToken !== decryptedRealToken) {
-      logoutIpc(win);
-      throw new Error("[verifyAccessToken]>> ACCESS_FORBIDDEN [3]");
-    }
-    const payload = JSON.parse(await decryptJsonData(decryptedRealToken, Vars.TOKEN_SIGNATURE));
-    if (payload.expires <= Date.now()) {
-      logoutIpc(win);
-      throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
-    } else {
-      if ((config2 == null ? void 0 : config2.refresh) === true) {
-        RefreshTokenQueue.push(`R_${RefreshTokenCount}`);
-        clearInterval(refreshTimer.t);
-        refreshTimer.t = setTimeout(async () => {
-          console.log("INVOKED REFRESH TOKEN", ++RefreshTokenCount);
-          RefreshTokenQueue.length = 0;
-          refreshTimer.t = null;
-          const { payload: { userId, username } } = payload;
-          store.set(
-            GlobalNames.USER_PRAGMA_KEY,
-            store.get(GlobalNames.USER_PRAGMA_KEY),
-            Vars.USER_PRAGMA_KEY_TTL,
-            () => logoutIpc(win, { fromServer: true })
-          );
-          const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
-          refreshTokenIpc(newBrokenToken, win);
-        }, Vars.THROTTLER_REFRESH_TOKEN_TTL);
-        store.set(GlobalNames.THROTTLER_TIMER, refreshTimer.t, Vars.THROTTLER_REFRESH_TOKEN_TTL);
-      }
-    }
-    return {
-      newToken: null,
-      payload: payload.payload
-    };
-  } catch (err) {
-    throw err;
-  }
-}
 class ChapterService {
   constructor() {
     __publicField(this, "instanceDb", null);
@@ -6205,8 +6212,8 @@ async function prepareUserStore(win2, username) {
 }
 function checkAccess() {
   const store = TTLStore.getInstance();
-  const { USER_PRAGMA_KEY, USER_TOKEN } = GlobalNames;
-  if (!store.get(USER_PRAGMA_KEY) || !store.get(USER_TOKEN)) {
+  const { USER_PRAGMA_KEY, USER_PRAGMA_SALT, USER_TOKEN } = GlobalNames;
+  if (!store.get(USER_PRAGMA_KEY) || !store.get(USER_TOKEN) || !store.get(USER_PRAGMA_SALT)) {
     return false;
   }
   return true;
@@ -6266,7 +6273,18 @@ async function createUser(win2, params) {
     const now2 = formatDate();
     const hash = await encrypt(params.password);
     const keyDB = await encryptPragmaKey(params.username, params.password);
-    storeTTL$1.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
+    const { salt, value } = await brokeKey(keyDB);
+    storeTTL$1.set(
+      GlobalNames.USER_PRAGMA_KEY,
+      value,
+      Vars.USER_PRAGMA_KEY_TTL,
+      () => logoutIpc(win2)
+    );
+    storeTTL$1.set(
+      GlobalNames.USER_PRAGMA_SALT,
+      salt,
+      Vars.USER_PRAGMA_KEY_TTL
+    );
     const newUser = await userService.create({
       username: params.username,
       password: hash,
@@ -6336,11 +6354,17 @@ async function loginUser(win2, params) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const keyDB = await encryptPragmaKey(params.username, params.password);
+      const { salt, value } = await brokeKey(keyDB);
       storeTTL.set(
         GlobalNames.USER_PRAGMA_KEY,
-        keyDB,
+        value,
         Vars.USER_PRAGMA_KEY_TTL,
-        () => logoutIpc(win2, { fromServer: true })
+        () => logoutIpc(win2)
+      );
+      storeTTL.set(
+        GlobalNames.USER_PRAGMA_SALT,
+        salt,
+        Vars.USER_PRAGMA_KEY_TTL
       );
       const token2 = await createAccessToken({
         userId: readyUser.id,

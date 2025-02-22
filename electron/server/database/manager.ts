@@ -5,6 +5,7 @@ import { getDistProjectDir } from '../services/fs.service';
 import { DbNamesType, InitDbItem, InstanceDatabaseDoc, IpcContractReq, IpcContractRes, UsernameType } from '../types/database/index.types';
 import { GlobalNames, Vars } from '../../config/global';
 import { TTLStore } from '../services/ttl-store.service';
+import { repairKey } from '../services/tokens.service';
 
 
 // Экземпляр базы данных
@@ -53,7 +54,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
     }
 
     // Извлечь ключ шифрования базы данных
-    private fetchPragmaKey(onApp: boolean): string | undefined | null {
+    private async fetchPragmaKey(onApp: boolean): Promise<string | undefined | null> {
         try {
             if(!onApp && typeof onApp !== 'boolean') throw new Error('[fetchPragmaKey]>> onApp is not defined');
             if(onApp === true) {
@@ -62,12 +63,12 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
             }
             else {
                 if(!this.storeTTL) throw new Error('fetchPragmaKey > storeTTL is not defined');
-                
-                const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY)
-                if(!key) {
-                    throw new Error('fetchPragmaKey > ')
+                const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY);
+                const salt = this.storeTTL.get(GlobalNames.USER_PRAGMA_SALT);
+                if(!key || !salt) {
+                    throw new Error('fetchPragmaKey > ');
                 }
-                return key;
+                return await repairKey(key, salt);
             }
         } catch (err) {
             console.debug('requestIPC>>', err);
@@ -79,7 +80,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
     private async requestIPC(data: IpcContractReq, onApp: boolean) {
         try {
             if(this.process) {
-                const pragmaKey = this.fetchPragmaKey(onApp);
+                const pragmaKey = await this.fetchPragmaKey(onApp);
                 const action = `${data.action}-${Date.now()}`;
                 let returnData: (data: IpcContractRes) => any;
                 const promise: Promise<IpcContractRes> = new Promise((resolve, reject) => {

@@ -8,6 +8,7 @@ import { GlobalNames, Vars } from '../../config/global';
 import { TTLStore } from '../services/ttl-store.service';
 import { logoutIpc } from '../ipc/users.ipc';
 import { BrowserWindow } from 'electron';
+import { brokeKey } from '../services/tokens.service';
 
 
 // инициализация TTL хранилища 
@@ -97,7 +98,18 @@ export async function createUser(win: BrowserWindow | null, params: CreateUserPa
         
         // Формируется ключ шифрования баз данных уровня пользователь
         const keyDB = await encryptPragmaKey(params.username, params.password);
-        storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win))
+        const { salt, value } = await brokeKey(keyDB);
+        storeTTL.set(
+            GlobalNames.USER_PRAGMA_KEY, 
+            value, 
+            Vars.USER_PRAGMA_KEY_TTL, 
+            () => logoutIpc(win),
+        );
+        storeTTL.set(
+            GlobalNames.USER_PRAGMA_SALT, 
+            salt, 
+            Vars.USER_PRAGMA_KEY_TTL, 
+        );
 
         // Запись нового пользователя в БД
         const newUser = await userService.create({
