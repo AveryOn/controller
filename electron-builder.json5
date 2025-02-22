@@ -5,7 +5,8 @@
   "asar": true,
   "asarUnpack": [
     "dist-electron/database/**/*",
-    "*init.js"
+    "*init.js",
+    "node_modules/**",
   ],
   "productName": "Controller",
   "directories": {

@@ -1,6 +1,6 @@
 import sqlite3Pkg  from '@journeyapps/sqlcipher';
-import materialsMigration from './migrations/materials.migration.js';
-import usersMigration from './migrations/users.migration.js';
+import materialsMigration from './migrations/materials.migration.mjs';
+import usersMigration from './migrations/users.migration.mjs';
 import dotenv from 'dotenv';
 dotenv.config();
 

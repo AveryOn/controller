@@ -46,7 +46,7 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         else {
             this.dbpath = path.join(app.getPath('appData'), 'controller', `${dbname}.db`);
         }
-        this.processPath = path.join(getDistProjectDir(), 'database/init.js');
+        this.processPath = path.join(getDistProjectDir(), 'database/init.mjs');
 
         // Инит процесса и ожидание его доступности
         this.process = fork(this.processPath);
