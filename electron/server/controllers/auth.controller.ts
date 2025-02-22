@@ -16,7 +16,10 @@ const storeTTL = TTLStore.getInstance<string>()
 // Валидация токена доступа
 export async function validateAccessToken(params: ValidateAccessTokenParams) {
     try {
-        if(!params?.token) throw '[validateAccessToken]>> INVALID_DATA';
+        if(!params?.token) {
+            logoutIpc(win)
+            throw '[validateAccessToken]>> INVALID_DATA';
+        }
         return !!(await verifyAccessToken(params.token, { refresh: true }));
     } catch (err) {
         console.error(err);

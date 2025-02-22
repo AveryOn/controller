@@ -2,7 +2,6 @@
 const electron = require("electron");
 function logout() {
   localStorage.clear();
-  window.location.reload();
 }
 function refreshToken(token) {
   localStorage.setItem("token", token);

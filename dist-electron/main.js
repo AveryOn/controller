@@ -6195,6 +6195,7 @@ async function prepareUserStore(win2, username) {
     if (!win2) console.debug("[prepareUserStore]>> win is null", win2);
   } catch (err) {
     console.error("[prepareUserStore]>> ", err);
+    logoutIpc(win2);
     throw err;
   }
 }
@@ -6305,7 +6306,10 @@ async function updatePassword(params) {
 const storeTTL = TTLStore.getInstance();
 async function validateAccessToken(params) {
   try {
-    if (!(params == null ? void 0 : params.token)) throw "[validateAccessToken]>> INVALID_DATA";
+    if (!(params == null ? void 0 : params.token)) {
+      logoutIpc(win);
+      throw "[validateAccessToken]>> INVALID_DATA";
+    }
     return !!await verifyAccessToken(params.token, { refresh: true });
   } catch (err) {
     console.error(err);

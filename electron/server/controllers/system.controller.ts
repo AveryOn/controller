@@ -3,6 +3,7 @@ import { prepareMaterialsStoreForMenu } from "./materials";
 import { DatabaseManager } from "../database/manager";
 import { TTLStore } from "../services/ttl-store.service";
 import { GlobalNames } from "../../config/global";
+import { logoutIpc } from "../ipc/users.ipc";
 
 // Подготовить хранилище пользователя
 export async function prepareUserStore(win: BrowserWindow | null, username: string) {
@@ -15,6 +16,7 @@ export async function prepareUserStore(win: BrowserWindow | null, username: stri
         if(!win) console.debug('[prepareUserStore]>> win is null', win);
     } catch (err) {
         console.error('[prepareUserStore]>> ', err);
+        logoutIpc(win)
         throw err;
     }
 }

@@ -46,6 +46,7 @@ const router = createRouter({
 // Защита ранжирования маршрутов
 router.beforeEach(async (to, from, next) => {
     const store = useLoginStore();
+    await validateAccessTokenApi()
     const hasAccess = await checkAccessApi()
     console.log('HAS ACCESS', hasAccess);
     
@@ -72,10 +73,18 @@ router.beforeEach(async (to, from, next) => {
             /**
              * Доп проверка на то есть ли у пользователя доступ к приложению. Если нет, то происходит разлогин
              */
+            // const isValid = await validateAccessTokenApi()
+            // if(isValid !== true) {
+            //     return void logout();
+            // }
+            console.log('ЭТОТ БЛОК');
+            
             if(!await checkAccessApi()) {
-                return logout()
+                return void logout();
             }
-            await prepareUserStore()
+            else {
+                await prepareUserStore();
+            }
         }
         localStorage.setItem('current_route', JSON.stringify({ 
             name: to.name, 
