@@ -330,8 +330,9 @@ const Vars = {
   USER_BROKEN_TOKEN_TTL: 1e3 * 60 * SESSION_TTL,
   USER_TOKEN_TTL: 1e3 * 60 * SESSION_TTL,
   // 5 min
-  USER_TOKEN_SALT_TTL: 1e3 * 60 * SESSION_TTL
-  // 5 min
+  USER_TOKEN_SALT_TTL: 1e3 * 60 * SESSION_TTL,
+  // 5 min,
+  THROTTLER_REFRESH_TOKEN_TTL: 1e4
 };
 const KEYLEN = 64;
 const N = 16384;
@@ -4971,6 +4972,9 @@ async function createAccessToken(payload, expires) {
     throw err;
   }
 }
+const RefreshTokenQueue = [];
+const refreshTimer = { t: null };
+let RefreshTokenCount = 0;
 async function verifyAccessToken(token2, config2) {
   try {
     if (!token2 || typeof token2 !== "string") throw new Error("[verifyAccessToken]>> INVALID_INPUT");
@@ -4998,19 +5002,22 @@ async function verifyAccessToken(token2, config2) {
       throw new Error("[verifyAccessToken]>> EXPIRES_LIFE_TOKEN");
     } else {
       if ((config2 == null ? void 0 : config2.refresh) === true) {
-        const { payload: { userId, username } } = payload;
-        store.set(
-          GlobalNames.USER_PRAGMA_KEY,
-          store.get(GlobalNames.USER_PRAGMA_KEY),
-          Vars.USER_PRAGMA_KEY_TTL,
-          () => logoutIpc(win)
-        );
-        const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
-        refreshTokenIpc(newBrokenToken, win);
-        return {
-          newToken: newBrokenToken,
-          payload: { userId, username }
-        };
+        RefreshTokenQueue.push(`R_${RefreshTokenCount}`);
+        clearInterval(refreshTimer.t);
+        refreshTimer.t = setTimeout(async () => {
+          console.log("INVOKED REFRESH TOKEN", ++RefreshTokenCount);
+          RefreshTokenQueue.length = 0;
+          refreshTimer.t = null;
+          const { payload: { userId, username } } = payload;
+          store.set(
+            GlobalNames.USER_PRAGMA_KEY,
+            store.get(GlobalNames.USER_PRAGMA_KEY),
+            Vars.USER_PRAGMA_KEY_TTL,
+            () => logoutIpc(win)
+          );
+          const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
+          refreshTokenIpc(newBrokenToken, win);
+        }, Vars.THROTTLER_REFRESH_TOKEN_TTL);
       }
     }
     return {
@@ -6193,8 +6200,8 @@ async function prepareUserStore(win2, username) {
 }
 function checkAccess() {
   const store = TTLStore.getInstance();
-  const { USER_PRAGMA_KEY } = GlobalNames;
-  if (!store.get(USER_PRAGMA_KEY)) {
+  const { USER_PRAGMA_KEY, USER_TOKEN } = GlobalNames;
+  if (!store.get(USER_PRAGMA_KEY) || !store.get(USER_TOKEN)) {
     return false;
   }
   return true;
@@ -6394,7 +6401,7 @@ app.whenReady().then(async () => {
     return await validateAccessToken(params);
   });
   ipcMain.handle("prepare-user-store", async (_, params) => {
-    const { payload: { username } } = await verifyAccessToken(params.token, { refresh: true });
+    const { payload: { username } } = await verifyAccessToken(params.token, { refresh: false });
     return await prepareUserStore(win$1, username);
   });
   ipcMain.handle("get-users", async (_, config2) => {

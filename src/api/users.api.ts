@@ -5,7 +5,6 @@ import {
 } from "../@types/entities/user.types";
 
 
-const TIMEOUT = 1000;
 // Подготовить пользовательское хранилище
 export async function prepareUserStore() {
     return new Promise((resolve, reject) => {
@@ -20,27 +19,21 @@ export async function prepareUserStore() {
 // Регистрация нового пользователя в системе
 export async function createUserApi(params: CreateUserParamsApi): Promise<UserCreateResponseApi> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
-            try {
-                resolve(window.electron.createUser(params));
-            } catch (err) {
-                reject(err);
-            }
-        }, TIMEOUT);
+        try {
+            resolve(window.electron.createUser(params));
+        } catch (err) {
+            reject(err);
+        }
     });
 }
 
 // Обновление пароля пользователя
 export async function updateUserPasswordApi(params: UpdUserPasswordApi): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        // Иммитация того что запрос не настолько быстрый
-        setTimeout(() => {
-            try {
-                resolve(window.electron.updatePassword(params));
-            } catch (err) {
-                reject(err);
-            }
-        }, TIMEOUT);
+        try {
+            resolve(window.electron.updatePassword(params));
+        } catch (err) {
+            reject(err);
+        }
     });
 }

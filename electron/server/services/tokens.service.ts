@@ -108,6 +108,9 @@ export async function createAccessToken(payload: AccessTokenPayload, expires: Ex
     }
 }
 
+const RefreshTokenQueue: string[] = []
+const refreshTimer: { t: any } = { t: null }
+let RefreshTokenCount  = 0
 // Верификация токена доступа и получение payload
 export async function verifyAccessToken(token: string, config?: { refresh?: boolean }): Promise<{ newToken: string | null, payload: AccessTokenPayload }> {
     try {
@@ -142,25 +145,34 @@ export async function verifyAccessToken(token: string, config?: { refresh?: bool
         // обновление токена
         else {
             if(config?.refresh === true) {
-                const { payload: { userId, username } } = payload
-                store.set(
-                    GlobalNames.USER_PRAGMA_KEY,
-                    store.get(GlobalNames.USER_PRAGMA_KEY),
-                    Vars.USER_PRAGMA_KEY_TTL,
-                    () => logoutIpc(win)
-                );
-                const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL })
-                // Отправить команду на обновление токена на клиент
-                refreshTokenIpc(newBrokenToken, win)
-                return { 
-                    newToken: newBrokenToken, 
-                    payload: { userId, username } 
-                }
+                /**
+                 * Применяется Троттлер для того чтобы разгрузить большое кол-во обновлений на ед. времени.
+                 * Троттлер накапливает идентификаторы запросов в очередь и только по истечению таймера THROTTLER_REFRESH_TOKEN_TTL вызывается команда 
+                 * на обновление токена. Если троттлер не включен, то возможны нарушения проверок ключей, что приводит к непредсказуемому разлогину 
+                 * раньше времени 
+                 */
+                RefreshTokenQueue.push(`R_${RefreshTokenCount}`)
+                clearInterval(refreshTimer.t)
+                refreshTimer.t = setTimeout( async() => {
+                    console.log('INVOKED REFRESH TOKEN', ++RefreshTokenCount);
+                    RefreshTokenQueue.length = 0;
+                    refreshTimer.t = null;
+                    const { payload: { userId, username } } = payload;
+                    store.set(
+                        GlobalNames.USER_PRAGMA_KEY,
+                        store.get(GlobalNames.USER_PRAGMA_KEY),
+                        Vars.USER_PRAGMA_KEY_TTL,
+                        () => logoutIpc(win)
+                    );
+                    const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
+                    // Отправить команду на обновление токена на клиент
+                    refreshTokenIpc(newBrokenToken, win);
+                }, Vars.THROTTLER_REFRESH_TOKEN_TTL);
             }
         }
         return { 
             newToken: null, 
-            payload: payload.payload 
+            payload: payload.payload,
         };
     } catch (err) {
         throw err;

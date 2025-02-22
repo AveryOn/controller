@@ -46,9 +46,11 @@ const router = createRouter({
 // Защита ранжирования маршрутов
 router.beforeEach(async (to, from, next) => {
     const store = useLoginStore();
-    const isValid = await validateAccessTokenApi({ token: localStorage.getItem('token') });
-    store.isAuth = isValid;
-    if (!isValid) {
+    const hasAccess = await checkAccessApi()
+    console.log('HAS ACCESS', hasAccess);
+    
+    store.isAuth = hasAccess;
+    if (!hasAccess) {
         // Приватный маршрут
         if (to.meta.private === true) {
             if (from.name !== 'login') {

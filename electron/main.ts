@@ -145,7 +145,7 @@ app.whenReady().then(async () => {
     // ==========  USERS  ===========
     // Подготовить пользовательское хранилище
     ipcMain.handle("prepare-user-store", async (_, params: PrepareUserStoreParams) => {
-        const { payload: { username } } = await verifyAccessToken(params.token, { refresh: true })
+        const { payload: { username } } = await verifyAccessToken(params.token, { refresh: false })
         return await prepareUserStore(win, username);
     });
 
