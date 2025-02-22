@@ -51,3 +51,8 @@
 ::-webkit-scrollbar-corner {
     background: #ddd;
 }
+
+.ql-code-block-container {
+    /* background-color: rgb(53, 53, 53) !important; */
+    /* color: #f8f8f2 !important; */
+}

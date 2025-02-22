@@ -12,6 +12,7 @@
 import { onMounted, ref, defineProps, defineEmits, watch, type Ref } from 'vue';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
+import hljs from 'highlight.js';
 
 interface EditorStyles {
     width?: string;
@@ -49,7 +50,7 @@ const initializeQuill = () => {
             theme: 'snow', // Тема редактора,
             placeholder: props.placeholder,
             modules: {
-                syntax: true,  
+                syntax: { hljs },
                 toolbar: [
                     { 'header': [1, 2, 3, 4, 5, 6] }, 
                     { 'font': [] }, 
@@ -67,7 +68,7 @@ const initializeQuill = () => {
         });
         // Слушатель события изменения контента
         quillInstance.on('text-change', () => {
-            // Удаление тега select для итогового html контента (тег select накладывается когда происходит форматрование кода)
+            // Удаление тега select для итогового html контента (тег select накладывается когда происходит форматирование кода)
             let content = quillInstance.root.innerHTML;
             const regex = /<select\b[^>]*>[\s\S]*?<\/select>/g;
             const formattedContent = content.split(regex).join('');

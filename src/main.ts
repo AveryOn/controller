@@ -1,3 +1,4 @@
+import 'highlight.js/styles/github-dark.min.css';
 import { createApp } from 'vue';
 import init from './init.vue';
 import { router } from './router';
