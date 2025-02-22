@@ -79,8 +79,6 @@ export async function createChapter(params: ChapterCreate, auth: AuthParams) {
             createdAt: timestamp,
             updatedAt: timestamp,
         });
-        // Вызов синхронизации с меню
-        await syncMaterialsStores(auth);
         return newChapter;
     } catch (err) {
         console.error(err);
@@ -191,7 +189,6 @@ export async function createSubChapter(params: SubChapterCreate, auth: AuthParam
             createdAt: now,
             updatedAt: now,
         });
-        await syncMaterialsStores(auth);
         return res;
     } catch (err) {
         console.error(err);
@@ -361,7 +358,6 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
                         updatedAt: formatDate() 
                     },
                 ) as ChapterRawResponse;
-                await syncMaterialsStores(auth);
                 const resultChapter = { 
                     ...updatedChapter,
                     content: {
@@ -390,7 +386,6 @@ export async function editChapter(input: EditChapterParams, auth: AuthParams): P
                         updatedAt: formatDate(),
                     },
                 ) as SubChapterRawResponse;
-                await syncMaterialsStores(auth);
                 const resultSubChapter = { 
                     ...updatedSubChapter,
                     content: {
