@@ -318,9 +318,10 @@ const GlobalNames = {
   USER_PRAGMA_KEY: "USER_PRAGMA_KEY",
   USER_TOKEN: "USER_TOKEN_001",
   USER_BROKEN_TOKEN: "USER_BROKEN_TOKEN",
-  USER_TOKEN_SALT: "USER_TOKEN_SALT"
+  USER_TOKEN_SALT: "USER_TOKEN_SALT",
+  THROTTLER_TIMER: "THROTTLER_TIMER"
 };
-const SESSION_TTL = 5;
+const SESSION_TTL = 7.5;
 const Vars = {
   APP_KEY: "24ca469e-b258-4e08-a4f2-54fd70c86aeb",
   USER_TOKEN_SALT: "4af29447-8908-413d-83ad-1717df1d429d",
@@ -527,6 +528,10 @@ const _TTLStore = class _TTLStore {
     for (const key of this.store.keys()) {
       this.store.set(key, { value: null, expiresAt: null });
     }
+    for (const key of this.TimersIds.keys()) {
+      clearInterval(this.TimersIds.get(key));
+    }
+    this.TimersIds.clear();
     this.store.clear();
   }
   /**
@@ -4881,11 +4886,13 @@ function formatDate(date, template, utcOffset) {
     throw err;
   }
 }
-function logoutIpc(win2) {
+function logoutIpc(win2, config2) {
   if (!win2) throw new Error("IPC > logoutIpc > win is not defined");
   const store = TTLStore.getInstance();
+  const TimerRef = store.get(GlobalNames.THROTTLER_TIMER);
+  clearTimeout(TimerRef);
   store.cleanup();
-  win2.webContents.send("logout");
+  win2.webContents.send("logout", config2);
 }
 function refreshTokenIpc(token2, win2) {
   if (!win2) throw new Error("IPC > refreshTokenIpc > win is not defined");
@@ -5013,11 +5020,12 @@ async function verifyAccessToken(token2, config2) {
             GlobalNames.USER_PRAGMA_KEY,
             store.get(GlobalNames.USER_PRAGMA_KEY),
             Vars.USER_PRAGMA_KEY_TTL,
-            () => logoutIpc(win)
+            () => logoutIpc(win, { fromServer: true })
           );
           const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
           refreshTokenIpc(newBrokenToken, win);
         }, Vars.THROTTLER_REFRESH_TOKEN_TTL);
+        store.set(GlobalNames.THROTTLER_TIMER, refreshTimer.t, Vars.THROTTLER_REFRESH_TOKEN_TTL);
       }
     }
     return {
@@ -6332,7 +6340,12 @@ async function loginUser(win2, params) {
       Reflect.deleteProperty(readyUser, "hash_salt");
       Reflect.deleteProperty(readyUser, "password");
       const keyDB = await encryptPragmaKey(params.username, params.password);
-      storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win2));
+      storeTTL.set(
+        GlobalNames.USER_PRAGMA_KEY,
+        keyDB,
+        Vars.USER_PRAGMA_KEY_TTL,
+        () => logoutIpc(win2, { fromServer: true })
+      );
       const token2 = await createAccessToken({
         userId: readyUser.id,
         username: readyUser.username

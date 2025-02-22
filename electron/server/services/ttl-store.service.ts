@@ -19,11 +19,17 @@ export class TTLStore<T> {
      * Полная очистка хранилища
      */
     cleanup() {
+        // Очистка хранилища
         for (const key of this.store.keys()) {
             // @ts-ignore
             this.store.set(key, { value: null, expiresAt: null })
         }
-        this.store.clear()
+        // Очистка таймеров
+        for (const key of this.TimersIds.keys()) {
+            clearInterval(this.TimersIds.get(key))
+        }
+        this.TimersIds.clear();
+        this.store.clear();
     }
 
     /**

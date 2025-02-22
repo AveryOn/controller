@@ -40,8 +40,8 @@ contextBridge.exposeInMainWorld('electron', {
 });
 
 
-ipcRenderer.on('logout', (_) => {
-    logout();
+ipcRenderer.on('logout', (_, config) => {
+    logout(config);
 });
 
 ipcRenderer.on('refresh-token', (_, token: string) => {

@@ -1,7 +1,10 @@
 "use strict";
 const electron = require("electron");
-function logout() {
+function logout(config) {
   localStorage.clear();
+  if ((config == null ? void 0 : config.fromServer) === true) {
+    window.location.reload();
+  }
 }
 function refreshToken(token) {
   localStorage.setItem("token", token);
@@ -34,8 +37,8 @@ electron.contextBridge.exposeInMainWorld("electron", {
   editChapterBlock: (params, auth) => electron.ipcRenderer.invoke("edit-chapter-block", params, auth),
   deleteChapterBlock: (params, auth) => electron.ipcRenderer.invoke("delete-chapter-block", params, auth)
 });
-electron.ipcRenderer.on("logout", (_) => {
-  logout();
+electron.ipcRenderer.on("logout", (_, config) => {
+  logout(config);
 });
 electron.ipcRenderer.on("refresh-token", (_, token) => {
   refreshToken(token);

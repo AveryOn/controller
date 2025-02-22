@@ -162,12 +162,13 @@ export async function verifyAccessToken(token: string, config?: { refresh?: bool
                         GlobalNames.USER_PRAGMA_KEY,
                         store.get(GlobalNames.USER_PRAGMA_KEY),
                         Vars.USER_PRAGMA_KEY_TTL,
-                        () => logoutIpc(win)
+                        () => logoutIpc(win, { fromServer: true }),
                     );
                     const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
                     // Отправить команду на обновление токена на клиент
                     refreshTokenIpc(newBrokenToken, win);
                 }, Vars.THROTTLER_REFRESH_TOKEN_TTL);
+                store.set(GlobalNames.THROTTLER_TIMER, refreshTimer.t, Vars.THROTTLER_REFRESH_TOKEN_TTL);
             }
         }
         return { 

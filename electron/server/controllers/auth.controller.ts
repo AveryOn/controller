@@ -52,7 +52,12 @@ export async function loginUser(win: BrowserWindow | null, params: LoginParams):
 
             // Формируется ключ шифрования баз данных уровня пользователь
             const keyDB = await encryptPragmaKey(params.username, params.password);
-            storeTTL.set(GlobalNames.USER_PRAGMA_KEY, keyDB, Vars.USER_PRAGMA_KEY_TTL, () => logoutIpc(win));
+            storeTTL.set(
+                GlobalNames.USER_PRAGMA_KEY, 
+                keyDB, 
+                Vars.USER_PRAGMA_KEY_TTL, 
+                () => logoutIpc(win, { fromServer: true }),
+            );
 
             // Формируем токен доступа
             const token = await createAccessToken({ 

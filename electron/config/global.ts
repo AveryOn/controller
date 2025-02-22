@@ -7,10 +7,10 @@ export const GlobalNames = {
     USER_BROKEN_TOKEN: 'USER_BROKEN_TOKEN',
     USER_TOKEN_SALT: 'USER_TOKEN_SALT',
     USER_TOKEN_SALT_TTL: 'USER_TOKEN_SALT_TLL',
-
+    THROTTLER_TIMER: 'THROTTLER_TIMER',
 } as const
 
-export const SESSION_TTL = 5;
+export const SESSION_TTL = 7.5;
 
 export const Vars = {
     APP_KEY: '24ca469e-b258-4e08-a4f2-54fd70c86aeb',
