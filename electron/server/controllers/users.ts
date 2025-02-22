@@ -9,6 +9,7 @@ import { TTLStore } from '../services/ttl-store.service';
 import { logoutIpc } from '../ipc/users.ipc';
 import { BrowserWindow } from 'electron';
 import { brokeKey } from '../services/tokens.service';
+import { DatabaseManager } from '../database/manager';
 
 
 // инициализация TTL хранилища 
@@ -135,11 +136,11 @@ export async function updatePassword(params: UpdatePasswordParams): Promise<bool
     try {
         if(params.newPassword === params.oldPassword) throw '[updatePassword]>> INVALID_DATA';
         if(!params.username) throw '[updatePassword]>> INVALID_DATA';
-
         // Получение экземпляра сервиса
         const userService = new UserService();
 
         const user = await userService.findByUsername({ username: params.username });
+
         // Поиск пользователя по username
         if (!user) {
             throw '[updatePassword]>> NOT_EXISTS_RECORD';
@@ -148,6 +149,28 @@ export async function updatePassword(params: UpdatePasswordParams): Promise<bool
         if(!await verify(params.oldPassword, user.password)) {
             throw '[updatePassword]>> INVALID_CREDENTIALS';
         }
+
+        let oldPragmaKeyDB = await encryptPragmaKey(params.username, params.oldPassword);
+        let newPragmaKeyDB = await encryptPragmaKey(params.username, params.newPassword);
+        const { salt, value } = await brokeKey(oldPragmaKeyDB);
+        storeTTL.set(
+            GlobalNames.USER_PRAGMA_KEY, 
+            value, 
+            Vars.USER_PRAGMA_KEY_TTL, 
+            () => logoutIpc(win),
+        );
+        storeTTL.set(
+            GlobalNames.USER_PRAGMA_SALT, 
+            salt, 
+            Vars.USER_PRAGMA_KEY_TTL, 
+        );
+
+        await DatabaseManager
+            .instance()
+            .rekeyAllUserDataBases(params.username, newPragmaKeyDB);
+        oldPragmaKeyDB = '';
+        newPragmaKeyDB = '';
+        storeTTL.cleanup();
         // Хеширование нового пароля
         const hash = await encrypt(params.newPassword);
         // Обновление записи пользователя в БД
@@ -155,6 +178,7 @@ export async function updatePassword(params: UpdatePasswordParams): Promise<bool
             username: params.username, 
             password: hash 
         });
+
         return true;
     } catch (err) {
         console.error(err);

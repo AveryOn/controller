@@ -69,7 +69,6 @@ export default class UserService {
         await this.instanceDb!.run(`
             UPDATE users SET password = ? 
             WHERE username = ?;
-
         `,[dto.password, dto.username], true);
         return null;
     }

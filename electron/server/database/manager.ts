@@ -1,18 +1,20 @@
 import { ChildProcess, fork } from 'child_process';
 import { app } from 'electron';
-import path from 'path'
 import { getDistProjectDir } from '../services/fs.service';
 import { DbNamesType, InitDbItem, InstanceDatabaseDoc, IpcContractReq, IpcContractRes, UsernameType } from '../types/database/index.types';
 import { GlobalNames, Vars } from '../../config/global';
 import { TTLStore } from '../services/ttl-store.service';
 import { repairKey } from '../services/tokens.service';
+import path from 'path';
+import fs from 'fs';
+import { formatDate } from '../services/date.service';
 
 
 // Экземпляр базы данных
 export class InstanceDatabase implements InstanceDatabaseDoc {
+    dbpath: string | null                       = null;
     static instanceDB: InstanceDatabase | null  = null;
     private dbname: DbNamesType | null          = null;
-    private dbpath: string | null               = null;
     private processPath: string | null          = null;
     private process: ChildProcess | null        = null;
     private storeTTL: TTLStore<string> | null   = null;
@@ -199,6 +201,38 @@ export class DatabaseManager {
         } catch (err) {
             console.error('[executeAllInitDB]>> ', err);
             throw err;
+        }
+    }
+
+    /**
+     * Проводит rekey ключа шифрования для всех БД пользователя
+     * @param username 
+     * @param newPragmaKey новый ключ шифрования
+     */
+    async rekeyAllUserDataBases(username: string, newPragmaKey: string) {
+        if(!username) throw TypeError('[rekeyAllUserDataBases]>> invalid username');   
+        if(!newPragmaKey) throw TypeError('[rekeyAllUserDataBases]>> invalid newPragmaKey');
+
+        const databases: DbNamesType[] = ['materials'];
+        for (const dbname of databases) {
+            try {
+                const db = new InstanceDatabase(dbname, username);
+                const appDataPath = path.join(db.dbpath as string, '..', `backup-${dbname}-${formatDate(Date.now(), 'DD-MM-YY_HH-mm-ss')}.db`);
+                console.debug('BACKUP WAS CREATED', appDataPath);
+                // Создается бэкап текущей базы данных. 
+                // Это нужно чтобы не потерять данные в случае если при изменении ключа произойдет ошибка
+                await db.run(`
+                    VACUUM INTO ?;
+                `, [appDataPath]);
+                await db.run(`
+                    PRAGMA rekey = '${newPragmaKey}';
+                `);
+                // В случае если rekey прошел успешно, бэкап удаляется, если выстрелит ошибка, то он остается
+                fs.unlinkSync(appDataPath);
+            } catch (err) {
+                console.log('ERROR DURING REKEY');
+                throw err;
+            }
         }
     }
     

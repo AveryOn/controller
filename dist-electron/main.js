@@ -743,312 +743,6 @@ async function verifyAccessToken(token2, config2) {
     throw err;
   }
 }
-const _InstanceDatabase = class _InstanceDatabase {
-  constructor(dbname, username, state) {
-    __publicField(this, "dbname", null);
-    __publicField(this, "dbpath", null);
-    __publicField(this, "processPath", null);
-    __publicField(this, "process", null);
-    __publicField(this, "storeTTL", null);
-    if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
-    if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
-    this.init(dbname, username, (isReliable) => {
-      state && state(isReliable);
-    });
-    if (!this.storeTTL) {
-      this.storeTTL = TTLStore.getInstance();
-    }
-    if (!_InstanceDatabase.instanceDB) {
-      _InstanceDatabase.instanceDB = this;
-    }
-  }
-  // Инициализация базы данных
-  init(dbname, username, state) {
-    this.dbname = dbname;
-    if (username !== "--") {
-      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
-    } else {
-      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
-    }
-    this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
-    this.process = fork(this.processPath);
-    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }, true).then(({ status }) => state && state(status === "ok")).catch(() => {
-      state && state(false);
-    });
-  }
-  // Извлечь ключ шифрования базы данных
-  async fetchPragmaKey(onApp) {
-    try {
-      if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
-      if (onApp === true) {
-        const key = Vars.APP_KEY;
-        return key;
-      } else {
-        if (!this.storeTTL) throw new Error("fetchPragmaKey > storeTTL is not defined");
-        const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY);
-        const salt = this.storeTTL.get(GlobalNames.USER_PRAGMA_SALT);
-        if (!key || !salt) {
-          throw new Error("fetchPragmaKey > ");
-        }
-        return await repairKey(key, salt);
-      }
-    } catch (err) {
-      console.debug("requestIPC>>", err);
-      throw err;
-    }
-  }
-  // сделать запрос к дочернему процессу и получить ответ
-  async requestIPC(data, onApp) {
-    try {
-      if (this.process) {
-        const pragmaKey = await this.fetchPragmaKey(onApp);
-        const action = `${data.action}-${Date.now()}`;
-        let returnData;
-        const promise = new Promise((resolve, reject) => {
-          returnData = (res) => {
-            if (res.status === "error") reject(res.payload);
-            if (res.action === action) {
-              resolve(res);
-            }
-          };
-          this.process.on("message", returnData);
-        });
-        this.process.send({
-          action,
-          payload: { ...data.payload, pragmaKey }
-        });
-        const response = await promise;
-        this.process.removeListener("message", returnData);
-        return response;
-      } else throw new Error("requestIPC => process is not defined");
-    } catch (err) {
-      console.debug("requestIPC>>", err);
-      throw err;
-    }
-  }
-  /* Запросы к sqlite */
-  // Выполняет запрос и возвращает все строки результата
-  async all(sql, args, onApp = false) {
-    if (this.process) {
-      return await this.requestIPC({ action: "all", payload: {
-        sql,
-        arguments: args
-      } }, onApp);
-    } else throw new Error("all => process is not defined");
-  }
-  // Выполняет запрос и возвращает одну строку результата
-  async get(sql, args, onApp = false) {
-    if (this.process) {
-      return await this.requestIPC({ action: "get", payload: {
-        sql,
-        arguments: args
-      } }, onApp);
-    } else throw new Error("get => process is not defined");
-  }
-  // Выполняет запрос без возврата результата 
-  async run(sql, args, onApp = false) {
-    if (this.process) {
-      return await this.requestIPC({ action: "run", payload: {
-        sql,
-        arguments: args
-      } }, onApp);
-    } else throw new Error("run => process is not defined");
-  }
-  // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
-  async exec(sql, args, onApp = false) {
-    if (this.process) {
-      return await this.requestIPC({ action: "exec", payload: {
-        sql,
-        arguments: args
-      } }, onApp);
-    } else throw new Error("exec => process is not defined");
-  }
-  // Запуск миграций для текущей базы данных
-  async migrate(config2) {
-    if (!config2) throw new Error("[migrate]>> config is not defined");
-    if (this.process) {
-      return await this.requestIPC({
-        action: `migrate:${this.dbname}`,
-        payload: { ...config2 }
-      }, config2.isGeneral);
-    } else throw new Error("exec => process is not defined");
-  }
-};
-__publicField(_InstanceDatabase, "instanceDB", null);
-let InstanceDatabase = _InstanceDatabase;
-const _DatabaseManager = class _DatabaseManager {
-  constructor() {
-    __publicField(this, "instanceDatabaseList", /* @__PURE__ */ Object.create(null));
-    __publicField(this, "username", null);
-    __publicField(this, "stateConnectManager", true);
-  }
-  // получение экземпляра менеджера
-  static instance() {
-    if (!_DatabaseManager.instanceManager) {
-      console.debug("DatabaseManager > created a new DB manager instance");
-      const instance = new _DatabaseManager();
-      _DatabaseManager.instanceManager = instance;
-    }
-    return _DatabaseManager.instanceManager;
-  }
-  // Подключение всех баз данных
-  async executeAllInitDB(username, items) {
-    if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
-    try {
-      for (const item of items) {
-        const isReliable = await new Promise((resolve) => {
-          const dbname = item.dbname;
-          this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
-            resolve(enabled);
-          });
-        });
-        this.stateConnectManager = isReliable;
-      }
-      return this.stateConnectManager;
-    } catch (err) {
-      console.error("[executeAllInitDB]>> ", err);
-      throw err;
-    }
-  }
-  // Залутать инстанс БД
-  getDatabase(dbname) {
-    const ins = this.instanceDatabaseList[dbname];
-    if (!ins || !(ins instanceof InstanceDatabase)) {
-      throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
-    }
-    return ins;
-  }
-  // Инициализация Баз Данных уровня приложения
-  async initOnApp(config2) {
-    try {
-      const promise = this.executeAllInitDB("--", [
-        { dbname: "users", isGeneral: true }
-      ]);
-      if ((config2 == null ? void 0 : config2.migrate) === true) {
-        await this.executeMigrations({ pragmaKey: process.env.APP_KEY, isGeneral: true });
-        console.debug("initOnApp>> migrations were applied");
-      }
-      return await promise;
-    } catch (err) {
-      console.error("[DatabaseManager.initOnApp]>> ", err);
-      throw err;
-    }
-  }
-  // Инициализация Баз Данных уровня пользователя
-  async initOnUser(username, config2) {
-    try {
-      this.username = username;
-      const promise = this.executeAllInitDB(username, [
-        { dbname: "materials", isGeneral: false }
-      ]);
-      if ((config2 == null ? void 0 : config2.migrate) === true) {
-        const keyDB = "abc123";
-        await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
-        console.debug("initOnUser>> migrations were applied");
-      }
-      return await promise;
-    } catch (err) {
-      console.error("[DatabaseManager.initOnUser]>> ", err);
-      throw err;
-    }
-  }
-  // применить миграции для всех баз данных
-  async executeMigrations(config2) {
-    try {
-      for (let key in this.instanceDatabaseList) {
-        if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
-          const db = this.instanceDatabaseList[key];
-          await db.migrate(config2);
-        }
-      }
-    } catch (err) {
-      console.error("executeMigrations>>", err);
-      throw err;
-    }
-  }
-};
-__publicField(_DatabaseManager, "instanceManager", null);
-let DatabaseManager = _DatabaseManager;
-class UserService {
-  constructor() {
-    __publicField(this, "instanceDb", null);
-    __publicField(this, "allFields", {
-      id: "id",
-      username: "username",
-      password: "password",
-      avatar: "avatar",
-      createdAt: "created_at AS createdAt",
-      updatedAt: "updated_at AS updatedAt"
-    });
-    this.instanceDb = DatabaseManager.instance().getDatabase("users");
-    if (!this.instanceDb) throw new Error("DB users is not initialized");
-  }
-  // Получить массив пользователей
-  async getAll() {
-    const rows = await this.instanceDb.all(`
-            SELECT * FROM users;
-        `, [], true);
-    return rows;
-  }
-  // Создать одного пользователя
-  async create({ username, password, avatar, createdAt, updatedAt }) {
-    await this.instanceDb.run(`
-            INSERT INTO users (username, password, avatar, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?);
-        `, [username, password, avatar, createdAt, updatedAt], true);
-    const newUser = await this.findByUsername({ username }, { excludes: ["password"] });
-    if (!newUser) throw new Error("[UserService.create]>> newUser was not created");
-    return newUser;
-  }
-  // Найти пользователя по username
-  async findByUsername(dto, config2) {
-    var _a;
-    try {
-      let correctFieldsSql;
-      if (((_a = config2 == null ? void 0 : config2.excludes) == null ? void 0 : _a.length) > 0) {
-        correctFieldsSql = Object.entries(this.allFields).filter(([key, value]) => {
-          if (!(config2 == null ? void 0 : config2.excludes.includes(key))) return true;
-          else return false;
-        }).map(([_, value]) => value).join(",");
-      } else correctFieldsSql = Object.values(this.allFields).join(",");
-      const res = await this.instanceDb.get(`
-                SELECT ${correctFieldsSql}
-                FROM users
-                WHERE username = ?;
-            `, [dto.username], true);
-      if (!res || !(res == null ? void 0 : res.payload)) return null;
-      return res.payload;
-    } catch (err) {
-      console.error(err);
-      return null;
-    }
-  }
-  // Обновление пароля
-  async updatePassword(dto) {
-    await this.instanceDb.run(`
-            UPDATE users SET password = ? 
-            WHERE username = ?;
-
-        `, [dto.password, dto.username], true);
-    return null;
-  }
-}
-function trimPath(fullpath, config2) {
-  const symbols = ` !"#$%&'()*+,-./:;<=>?@[\\]^_\`{|}~	
-\r\v\f`;
-  const separator = (config2 == null ? void 0 : config2.separator) || "/";
-  let pathChunks = fullpath.split(separator);
-  let correctFullPath;
-  if (pathChunks.at(-1) === "") fullpath = fullpath.slice(0, -1);
-  if (symbols.includes(pathChunks[0])) correctFullPath = fullpath.slice(2);
-  else if (pathChunks[0] === "") correctFullPath = fullpath.slice(1);
-  else correctFullPath = fullpath;
-  pathChunks = void 0;
-  if ((config2 == null ? void 0 : config2.split) === true) {
-    return correctFullPath.split(separator);
-  }
-  return correctFullPath;
-}
 //! moment.js
 //! version : 2.30.1
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
@@ -5043,6 +4737,338 @@ function formatDate(date, template, utcOffset) {
     throw err;
   }
 }
+const _InstanceDatabase = class _InstanceDatabase {
+  constructor(dbname, username, state) {
+    __publicField(this, "dbpath", null);
+    __publicField(this, "dbname", null);
+    __publicField(this, "processPath", null);
+    __publicField(this, "process", null);
+    __publicField(this, "storeTTL", null);
+    if (!dbname) throw new Error("InstanceDatabase > constructor: dbname is a required");
+    if (!username || typeof username !== "string") throw new Error("InstanceDatabase > constructor: username is a required");
+    this.init(dbname, username, (isReliable) => {
+      state && state(isReliable);
+    });
+    if (!this.storeTTL) {
+      this.storeTTL = TTLStore.getInstance();
+    }
+    if (!_InstanceDatabase.instanceDB) {
+      _InstanceDatabase.instanceDB = this;
+    }
+  }
+  // Инициализация базы данных
+  init(dbname, username, state) {
+    this.dbname = dbname;
+    if (username !== "--") {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
+    } else {
+      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
+    }
+    this.processPath = path$1.join(getDistProjectDir(), "database/init.js");
+    this.process = fork(this.processPath);
+    this.requestIPC({ action: "init", payload: { dbpath: this.dbpath } }, true).then(({ status }) => state && state(status === "ok")).catch(() => {
+      state && state(false);
+    });
+  }
+  // Извлечь ключ шифрования базы данных
+  async fetchPragmaKey(onApp) {
+    try {
+      if (!onApp && typeof onApp !== "boolean") throw new Error("[fetchPragmaKey]>> onApp is not defined");
+      if (onApp === true) {
+        const key = Vars.APP_KEY;
+        return key;
+      } else {
+        if (!this.storeTTL) throw new Error("fetchPragmaKey > storeTTL is not defined");
+        const key = this.storeTTL.get(GlobalNames.USER_PRAGMA_KEY);
+        const salt = this.storeTTL.get(GlobalNames.USER_PRAGMA_SALT);
+        if (!key || !salt) {
+          throw new Error("fetchPragmaKey > ");
+        }
+        return await repairKey(key, salt);
+      }
+    } catch (err) {
+      console.debug("requestIPC>>", err);
+      throw err;
+    }
+  }
+  // сделать запрос к дочернему процессу и получить ответ
+  async requestIPC(data, onApp) {
+    try {
+      if (this.process) {
+        const pragmaKey = await this.fetchPragmaKey(onApp);
+        const action = `${data.action}-${Date.now()}`;
+        let returnData;
+        const promise = new Promise((resolve, reject) => {
+          returnData = (res) => {
+            if (res.status === "error") reject(res.payload);
+            if (res.action === action) {
+              resolve(res);
+            }
+          };
+          this.process.on("message", returnData);
+        });
+        this.process.send({
+          action,
+          payload: { ...data.payload, pragmaKey }
+        });
+        const response = await promise;
+        this.process.removeListener("message", returnData);
+        return response;
+      } else throw new Error("requestIPC => process is not defined");
+    } catch (err) {
+      console.debug("requestIPC>>", err);
+      throw err;
+    }
+  }
+  /* Запросы к sqlite */
+  // Выполняет запрос и возвращает все строки результата
+  async all(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "all", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("all => process is not defined");
+  }
+  // Выполняет запрос и возвращает одну строку результата
+  async get(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "get", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("get => process is not defined");
+  }
+  // Выполняет запрос без возврата результата 
+  async run(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "run", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("run => process is not defined");
+  }
+  // Выполняет один или несколько запросов SQL без параметров. Не возвращает результаты, используется для выполнения скриптов.
+  async exec(sql, args, onApp = false) {
+    if (this.process) {
+      return await this.requestIPC({ action: "exec", payload: {
+        sql,
+        arguments: args
+      } }, onApp);
+    } else throw new Error("exec => process is not defined");
+  }
+  // Запуск миграций для текущей базы данных
+  async migrate(config2) {
+    if (!config2) throw new Error("[migrate]>> config is not defined");
+    if (this.process) {
+      return await this.requestIPC({
+        action: `migrate:${this.dbname}`,
+        payload: { ...config2 }
+      }, config2.isGeneral);
+    } else throw new Error("exec => process is not defined");
+  }
+};
+__publicField(_InstanceDatabase, "instanceDB", null);
+let InstanceDatabase = _InstanceDatabase;
+const _DatabaseManager = class _DatabaseManager {
+  constructor() {
+    __publicField(this, "instanceDatabaseList", /* @__PURE__ */ Object.create(null));
+    __publicField(this, "username", null);
+    __publicField(this, "stateConnectManager", true);
+  }
+  // получение экземпляра менеджера
+  static instance() {
+    if (!_DatabaseManager.instanceManager) {
+      console.debug("DatabaseManager > created a new DB manager instance");
+      const instance = new _DatabaseManager();
+      _DatabaseManager.instanceManager = instance;
+    }
+    return _DatabaseManager.instanceManager;
+  }
+  // Подключение всех баз данных
+  async executeAllInitDB(username, items) {
+    if (!items || !Array.isArray(items)) throw TypeError("[executeAllInitDB]>> invalid items");
+    try {
+      for (const item of items) {
+        const isReliable = await new Promise((resolve) => {
+          const dbname = item.dbname;
+          this.instanceDatabaseList[dbname] = new InstanceDatabase(dbname, username, (enabled) => {
+            resolve(enabled);
+          });
+        });
+        this.stateConnectManager = isReliable;
+      }
+      return this.stateConnectManager;
+    } catch (err) {
+      console.error("[executeAllInitDB]>> ", err);
+      throw err;
+    }
+  }
+  /**
+   * Проводит rekey ключа шифрования для всех БД пользователя
+   * @param username 
+   * @param newPragmaKey новый ключ шифрования
+   */
+  async rekeyAllUserDataBases(username, newPragmaKey) {
+    if (!username) throw TypeError("[rekeyAllUserDataBases]>> invalid username");
+    if (!newPragmaKey) throw TypeError("[rekeyAllUserDataBases]>> invalid newPragmaKey");
+    const databases = ["materials"];
+    for (const dbname of databases) {
+      try {
+        const db = new InstanceDatabase(dbname, username);
+        const appDataPath = path$1.join(db.dbpath, "..", `backup-${dbname}-${formatDate(Date.now(), "DD-MM-YY_HH-mm-ss")}.db`);
+        console.debug("BACKUP WAS CREATED", appDataPath);
+        await db.run(`
+                    VACUUM INTO ?;
+                `, [appDataPath]);
+        await db.run(`
+                    PRAGMA rekey = '${newPragmaKey}';
+                `);
+        require$$0.unlinkSync(appDataPath);
+      } catch (err) {
+        console.log("ERROR DURING REKEY");
+        throw err;
+      }
+    }
+  }
+  // Залутать инстанс БД
+  getDatabase(dbname) {
+    const ins = this.instanceDatabaseList[dbname];
+    if (!ins || !(ins instanceof InstanceDatabase)) {
+      throw new Error(`getDatabase > the instance "${dbname}" was not initialized`);
+    }
+    return ins;
+  }
+  // Инициализация Баз Данных уровня приложения
+  async initOnApp(config2) {
+    try {
+      const promise = this.executeAllInitDB("--", [
+        { dbname: "users", isGeneral: true }
+      ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        await this.executeMigrations({ pragmaKey: process.env.APP_KEY, isGeneral: true });
+        console.debug("initOnApp>> migrations were applied");
+      }
+      return await promise;
+    } catch (err) {
+      console.error("[DatabaseManager.initOnApp]>> ", err);
+      throw err;
+    }
+  }
+  // Инициализация Баз Данных уровня пользователя
+  async initOnUser(username, config2) {
+    try {
+      this.username = username;
+      const promise = this.executeAllInitDB(username, [
+        { dbname: "materials", isGeneral: false }
+      ]);
+      if ((config2 == null ? void 0 : config2.migrate) === true) {
+        const keyDB = "abc123";
+        await this.executeMigrations({ pragmaKey: keyDB, isGeneral: false });
+        console.debug("initOnUser>> migrations were applied");
+      }
+      return await promise;
+    } catch (err) {
+      console.error("[DatabaseManager.initOnUser]>> ", err);
+      throw err;
+    }
+  }
+  // применить миграции для всех баз данных
+  async executeMigrations(config2) {
+    try {
+      for (let key in this.instanceDatabaseList) {
+        if (Object.prototype.hasOwnProperty.apply(this.instanceDatabaseList, [key])) {
+          const db = this.instanceDatabaseList[key];
+          await db.migrate(config2);
+        }
+      }
+    } catch (err) {
+      console.error("executeMigrations>>", err);
+      throw err;
+    }
+  }
+};
+__publicField(_DatabaseManager, "instanceManager", null);
+let DatabaseManager = _DatabaseManager;
+class UserService {
+  constructor() {
+    __publicField(this, "instanceDb", null);
+    __publicField(this, "allFields", {
+      id: "id",
+      username: "username",
+      password: "password",
+      avatar: "avatar",
+      createdAt: "created_at AS createdAt",
+      updatedAt: "updated_at AS updatedAt"
+    });
+    this.instanceDb = DatabaseManager.instance().getDatabase("users");
+    if (!this.instanceDb) throw new Error("DB users is not initialized");
+  }
+  // Получить массив пользователей
+  async getAll() {
+    const rows = await this.instanceDb.all(`
+            SELECT * FROM users;
+        `, [], true);
+    return rows;
+  }
+  // Создать одного пользователя
+  async create({ username, password, avatar, createdAt, updatedAt }) {
+    await this.instanceDb.run(`
+            INSERT INTO users (username, password, avatar, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?);
+        `, [username, password, avatar, createdAt, updatedAt], true);
+    const newUser = await this.findByUsername({ username }, { excludes: ["password"] });
+    if (!newUser) throw new Error("[UserService.create]>> newUser was not created");
+    return newUser;
+  }
+  // Найти пользователя по username
+  async findByUsername(dto, config2) {
+    var _a;
+    try {
+      let correctFieldsSql;
+      if (((_a = config2 == null ? void 0 : config2.excludes) == null ? void 0 : _a.length) > 0) {
+        correctFieldsSql = Object.entries(this.allFields).filter(([key, value]) => {
+          if (!(config2 == null ? void 0 : config2.excludes.includes(key))) return true;
+          else return false;
+        }).map(([_, value]) => value).join(",");
+      } else correctFieldsSql = Object.values(this.allFields).join(",");
+      const res = await this.instanceDb.get(`
+                SELECT ${correctFieldsSql}
+                FROM users
+                WHERE username = ?;
+            `, [dto.username], true);
+      if (!res || !(res == null ? void 0 : res.payload)) return null;
+      return res.payload;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+  // Обновление пароля
+  async updatePassword(dto) {
+    await this.instanceDb.run(`
+            UPDATE users SET password = ? 
+            WHERE username = ?;
+        `, [dto.password, dto.username], true);
+    return null;
+  }
+}
+function trimPath(fullpath, config2) {
+  const symbols = ` !"#$%&'()*+,-./:;<=>?@[\\]^_\`{|}~	
+\r\v\f`;
+  const separator = (config2 == null ? void 0 : config2.separator) || "/";
+  let pathChunks = fullpath.split(separator);
+  let correctFullPath;
+  if (pathChunks.at(-1) === "") fullpath = fullpath.slice(0, -1);
+  if (symbols.includes(pathChunks[0])) correctFullPath = fullpath.slice(2);
+  else if (pathChunks[0] === "") correctFullPath = fullpath.slice(1);
+  else correctFullPath = fullpath;
+  pathChunks = void 0;
+  if ((config2 == null ? void 0 : config2.split) === true) {
+    return correctFullPath.split(separator);
+  }
+  return correctFullPath;
+}
 class ChapterService {
   constructor() {
     __publicField(this, "instanceDb", null);
@@ -6314,6 +6340,22 @@ async function updatePassword(params) {
     if (!await verify(params.oldPassword, user.password)) {
       throw "[updatePassword]>> INVALID_CREDENTIALS";
     }
+    const oldPragmaKeyDB = await encryptPragmaKey(params.username, params.oldPassword);
+    const newPragmaKeyDB = await encryptPragmaKey(params.username, params.newPassword);
+    const { salt, value } = await brokeKey(oldPragmaKeyDB);
+    storeTTL$1.set(
+      GlobalNames.USER_PRAGMA_KEY,
+      value,
+      Vars.USER_PRAGMA_KEY_TTL,
+      () => logoutIpc(win)
+    );
+    storeTTL$1.set(
+      GlobalNames.USER_PRAGMA_SALT,
+      salt,
+      Vars.USER_PRAGMA_KEY_TTL
+    );
+    await DatabaseManager.instance().rekeyAllUserDataBases(params.username, newPragmaKeyDB);
+    storeTTL$1.cleanup();
     const hash = await encrypt(params.newPassword);
     await userService.updatePassword({
       username: params.username,
