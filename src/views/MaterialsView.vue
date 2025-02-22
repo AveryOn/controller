@@ -58,6 +58,7 @@ async function requestForChapterCreate(newChapter: ChapterCreate) {
     try {
         materialStore.loadingCreateChapter = true;
         await createChapter(newChapter);
+        await syncMaterials();
     } catch (err) {
         console.error(err);
         throw err;

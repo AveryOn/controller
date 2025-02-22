@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { NavigationGuardNext, onBeforeRouteUpdate } from 'vue-router';
-import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter } from '../../api/materials.api';
+import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, type ComputedRef, onBeforeMount, onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import { Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
 //@ts-expect-error
@@ -175,6 +175,7 @@ async function requestForCreateSubChapter(newSubChapter: ChapterCreate) {
         }
         await createSubChapter(correctSubChapter);
         isShowCreateSubChapter.value = false;
+        await syncMaterials();
     } catch (err) {
         console.error(err);
         throw err;
@@ -205,7 +206,8 @@ async function requestDeleteChapter() {
             // Запрос к серверной стороне на удаление раздела
             await deleteChapterApi({ pathName: opennedChapter.value?.pathName });
             isShowDeleteChapter.value = false;
-            emit('deleteCurrentLabel', opennedChapter.value?.label)
+            emit('deleteCurrentLabel', opennedChapter.value?.label);
+            await syncMaterials();
         } catch (err) {
             console.error(err);
             throw err;
@@ -224,6 +226,7 @@ async function requestDeleteSubChapter() {
             await deleteSubChapterApi({ fullpath: opennedChapter.value?.fullpath });
             isShowDeleteChapter.value = false;
             emit('deleteCurrentLabel', opennedChapter.value?.label)
+            await syncMaterials();
         }
         else throw new Error('[requestDeleteSubChapter]> параметр fullpath не существует');
     } catch (err) {
@@ -299,6 +302,7 @@ async function requestForEdit(data: ChapterCreate) {
                 // В случае если изменялся label
                 if(editData.label) {
                     emit('updateFullLabel', result.label);
+                    await syncMaterials();
                 }
                 opennedChapter.value = result;
                 isShowEditChapter.value = false;

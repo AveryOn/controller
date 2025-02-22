@@ -5793,7 +5793,6 @@ async function createChapter(params, auth) {
       createdAt: timestamp,
       updatedAt: timestamp
     });
-    await syncMaterialsStores(auth);
     return newChapter;
   } catch (err) {
     console.error(err);
@@ -5890,7 +5889,6 @@ async function createSubChapter(params, auth) {
       createdAt: now2,
       updatedAt: now2
     });
-    await syncMaterialsStores(auth);
     return res;
   } catch (err) {
     console.error(err);
@@ -6028,7 +6026,6 @@ async function editChapter(input, auth) {
             updatedAt: formatDate()
           }
         );
-        await syncMaterialsStores(auth);
         const resultChapter = {
           ...updatedChapter,
           content: {
@@ -6053,7 +6050,6 @@ async function editChapter(input, auth) {
             updatedAt: formatDate()
           }
         );
-        await syncMaterialsStores(auth);
         const resultSubChapter = {
           ...updatedSubChapter,
           content: {
