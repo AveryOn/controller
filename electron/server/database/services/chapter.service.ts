@@ -274,17 +274,28 @@ export default class ChapterService {
     // Удаление раздела по pathName
     async deleteOneByPathName(pathName: string): Promise<void> {
         if(!pathName) throw new Error('[ChapterService.deleteOneByPathName]>> pathName is not defined');
-        // удалить все подразделы текущего раздела
-        await this.instanceDb!.run(`
-            DELETE FROM sub_chapters 
-            WHERE path_name = ?;
-        `, [pathName]);
-        // удалить текущий раздел
-        await this.instanceDb!.run(`
-            DELETE FROM chapters
-            WHERE path_name = ?;
-        `, [pathName]);
-        return void 0;
+        const chapter = await this.findByPathName<{ id: number }>(pathName, { select: ['id'] });
+        if(chapter) {
+            // удалить все блоки текущего раздела
+            await this.instanceDb!.run(`
+                DELETE FROM blocks 
+                WHERE chapter_id = ?;
+            `, [chapter.id]);
+            // удалить все подразделы текущего раздела
+            await this.instanceDb!.run(`
+                DELETE FROM sub_chapters 
+                WHERE path_name = ?;
+            `, [pathName]);
+            // удалить текущий раздел
+            await this.instanceDb!.run(`
+                DELETE FROM chapters
+                WHERE path_name = ?;
+            `, [pathName]);
+            return void 0;
+        }
+        else {
+            throw new Error('ROW_NOT_EXISTS');
+        }
     }
     // end region
 } 

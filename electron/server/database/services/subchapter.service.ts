@@ -277,11 +277,21 @@ export default class SubChapterService {
     // region DELETE
     async deleteOneByFullpath(fullpath: string): Promise<void> {
         if(!fullpath) throw new Error('[SubChapterService.deleteOneByFullpath]>> fullpath is not defined');
-        await this.instanceDb!.run(`
-            DELETE FROM sub_chapters 
-            WHERE fullpath LIKE ? || '%';
-        `, [fullpath]);
-        return void 0;
+        const subChapter = await this.findByFullpath<{ id: number }>(fullpath, { select: ['id'] });
+        if(subChapter) {
+            await this.instanceDb!.run(`
+                DELETE FROM blocks 
+                WHERE sub_chapter_id = ?;
+            `, [subChapter.id]);
+            await this.instanceDb!.run(`
+                DELETE FROM sub_chapters 
+                WHERE fullpath LIKE ? || '%';
+            `, [fullpath]);
+            return void 0;
+        }
+        else {
+            throw new Error('ROW_NOT_EXISTS');
+        }
     }
     // end region
 } 
