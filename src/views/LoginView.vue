@@ -31,7 +31,7 @@
 import RegisterForm from '../components/login.view/registerForm.vue';
 import LoginForm from '../components/login.view/loginForm.vue';
 import UpdateForm from '../components/login.view/updateForm.vue';
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const selectMode = ref('Login');

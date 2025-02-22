@@ -31,7 +31,7 @@ function createSignatureToken() {
 /**
  *  Перебить токен
  */
-export async function brokeAccessToken(value: string): Promise<{ value: string, salt: string }> {
+export async function brokeKey(value: string): Promise<{ value: string, salt: string }> {
     try {
         if(!value || typeof value !== 'string') 
             throw new Error('invalid value');
@@ -60,7 +60,7 @@ export async function brokeAccessToken(value: string): Promise<{ value: string, 
 /**
  * Восстановить токен
  */
-export async function repairToken(brokenToken: string, salt: string): Promise<string> {
+export async function repairKey(brokenToken: string, salt: string): Promise<string> {
     try {
         if(!brokenToken || typeof brokenToken !== 'string') throw new Error('invalid brokenToken');
         if(!salt || typeof salt !== 'string') throw new Error('invalid salt');
@@ -95,7 +95,7 @@ export async function createAccessToken(payload: AccessTokenPayload, expires: Ex
         }
         let token = await encryptJsonData(tokenData, Vars.TOKEN_SIGNATURE);
         const hashedToken = await encryptJsonData(token, Vars.USER_TOKEN_SALT)
-        const { value: brokenToken, salt } = await brokeAccessToken(token)
+        const { value: brokenToken, salt } = await brokeKey(token)
         token = ''
 
         const store = TTLStore.getInstance();
@@ -130,7 +130,7 @@ export async function verifyAccessToken(token: string, config?: { refresh?: bool
             throw new Error('[verifyAccessToken]>> ACCESS_FORBIDDEN [2]');
         }
         const decryptedRealToken = await decryptJsonData(hashedToken, Vars.USER_TOKEN_SALT);
-        const repairedToken = await repairToken(brokenToken, tokenSalt);
+        const repairedToken = await repairKey(brokenToken, tokenSalt);
 
         if(repairedToken !== decryptedRealToken) {
             logoutIpc(win)
@@ -163,6 +163,11 @@ export async function verifyAccessToken(token: string, config?: { refresh?: bool
                         store.get(GlobalNames.USER_PRAGMA_KEY),
                         Vars.USER_PRAGMA_KEY_TTL,
                         () => logoutIpc(win, { fromServer: true }),
+                    );
+                    store.set(
+                        GlobalNames.USER_PRAGMA_SALT,
+                        store.get(GlobalNames.USER_PRAGMA_SALT),
+                        Vars.USER_PRAGMA_KEY_TTL,
                     );
                     const newBrokenToken = await createAccessToken({ userId, username }, { m: SESSION_TTL });
                     // Отправить команду на обновление токена на клиент

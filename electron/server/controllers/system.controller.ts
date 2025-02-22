@@ -26,9 +26,9 @@ export async function prepareUserStore(win: BrowserWindow | null, username: stri
  */
 export function checkAccess(): boolean {
     const store = TTLStore.getInstance()
-    const { USER_PRAGMA_KEY, USER_TOKEN } = GlobalNames
+    const { USER_PRAGMA_KEY, USER_PRAGMA_SALT, USER_TOKEN } = GlobalNames
     // В случае если пользовательского ключа для БД нет
-    if(!store.get(USER_PRAGMA_KEY) || !store.get(USER_TOKEN)) {
+    if(!store.get(USER_PRAGMA_KEY) || !store.get(USER_TOKEN) || !store.get(USER_PRAGMA_SALT)) {
         return false
     }
     return true
