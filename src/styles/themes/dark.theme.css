@@ -1,0 +1,5 @@
+
+.theme-dark {
+    --bg-color: rgb(44, 44, 44) !important;
+    --fg-color: rgb(255, 255, 255) !important;
+}

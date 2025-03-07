@@ -5,6 +5,8 @@ var LocalVars = /* @__PURE__ */ ((LocalVars2) => {
   LocalVars2["token"] = "token";
   LocalVars2["currentRoute"] = "current_route";
   LocalVars2["materialsFullLabel"] = "materials-full-label";
+  LocalVars2["palette"] = "palette";
+  LocalVars2["theme"] = "theme";
   return LocalVars2;
 })(LocalVars || {});
 function clearSensitiveData() {

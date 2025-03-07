@@ -1,0 +1,9 @@
+
+.p-panelmenu-panel {
+    background-color: var(--bg-color) !important;
+    color: var(--fg-color) !important;
+}
+
+:root {
+    --p-panelmenu-item-focus-background: var(--select-bg-color) !important;
+}

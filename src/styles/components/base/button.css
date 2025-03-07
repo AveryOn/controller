@@ -6,3 +6,19 @@
     --p-button-secondary-hover-border-color: rgb(176, 175, 175) !important;
     --p-button-secondary-color: rgb(88, 88, 88) !important;
 }
+
+.p-button-help {
+    border-color: var(--cf-primary-2) !important;
+    color: var(--cf-primary-2) !important;
+    transition: all 0.6s ease;
+}
+
+.p-button-help:active {
+    background-color: var(--cf-primary-1) !important;
+    transition: all 0.6s ease;
+}
+
+.p-button-help:hover {
+    background-color: var(--cf-primary-0) !important;
+    transition: all 0.6s ease;
+}

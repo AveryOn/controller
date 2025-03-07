@@ -11,15 +11,24 @@ export const GlobalNames = {
     THROTTLER_TIMER: 'THROTTLER_TIMER',
 } as const
 
-export const SESSION_TTL = 7.5;
+// PROD
+/** Время жизни сессии в минутах */
+// export const SESSION_TTL = 7.5;
+
+// DEV
+/** Время жизни сессии в минутах */
+export const SESSION_TTL = 999;
+
 
 export const Vars = {
     APP_KEY: '24ca469e-b258-4e08-a4f2-54fd70c86aeb',
     USER_TOKEN_SALT: '4af29447-8908-413d-83ad-1717df1d429d',
     TOKEN_SIGNATURE: 'a6dc6870c9087fa5ce31cda27d5db3595bcccf1087624c73cdd2ab0efb398478bf706754400fb058e',
+
     USER_PRAGMA_KEY_TTL: 1000 * 60 * SESSION_TTL, // 5 min
     USER_BROKEN_TOKEN_TTL: 1000 * 60 * SESSION_TTL,
     USER_TOKEN_TTL: 1000 * 60 * SESSION_TTL, // 5 min
     USER_TOKEN_SALT_TTL: 1000 * 60 * SESSION_TTL, // 5 min,
     THROTTLER_REFRESH_TOKEN_TTL: 10000
+
 } as const

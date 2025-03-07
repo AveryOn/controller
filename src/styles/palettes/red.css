@@ -1,0 +1,10 @@
+
+.palette-red {
+    --cf-primary-0: rgba(202, 143, 143, 0.3);
+    --cf-primary-1: rgb(202, 143, 143);
+    --cf-primary-2: rgb(209, 119, 119);
+
+    /* COMPONENTS */
+    --select-bg-color: rgba(238, 137, 137, 0.5);
+
+}

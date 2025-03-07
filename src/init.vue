@@ -18,6 +18,8 @@ import cToast from './components/base/cToast.vue';
 import { useMainStore } from './stores/main.store';
 import { useRouter } from 'vue-router';
 import { LocalVars } from './@types/main.types';
+import { setPalette, setTheme } from './utils/web-api.utils';
+import { PalettesKey, ThemesKey } from './@types/ui.types';
 
 const router = useRouter();
 const mainStore = useMainStore();
@@ -36,6 +38,12 @@ onBeforeMount(() => {
     }
 });
 onMounted(() => {
+    // Установка темы
+    const theme: ThemesKey = localStorage.getItem(LocalVars.theme) as ThemesKey ?? 'light'
+    const palette: PalettesKey = localStorage.getItem(LocalVars.palette) as PalettesKey ?? 'purple'
+    setTheme(theme)
+    setPalette(palette)
+
     setTimeout(() => {
         isGlobalLoading.value = false;
         let readyTitle = '> ';
