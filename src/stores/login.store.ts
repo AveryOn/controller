@@ -1,10 +1,11 @@
 import { defineStore } from "pinia";
 import { type Ref, ref } from "vue";
 import { User } from "../@types/entities/user.types";
-import { useRouter } from "vue-router";
+// import { useRouter } from "vue-router";
+import { LocalVars } from "../@types/main.types";
 
 export const useLoginStore = defineStore('loginStore', () => {
-    const router = useRouter();
+    // const router = useRouter();
     const isAuth = ref(false);
     const token: Ref<string | null> = ref(null);
     const widget = 'register';
@@ -14,8 +15,8 @@ export const useLoginStore = defineStore('loginStore', () => {
     function setCredentials(accessToken: string, userData: User) {
         token.value = accessToken;
         isAuth.value = true;
-        localStorage.setItem('token', accessToken);
-        localStorage.setItem('user-data', JSON.stringify(userData));
+        localStorage.setItem(LocalVars.token, accessToken);
+        localStorage.setItem(LocalVars.userData, JSON.stringify(userData));
     }
 
     return {

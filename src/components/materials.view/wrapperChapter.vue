@@ -39,6 +39,7 @@ import editChapterDialog from './dialogs/editChapterDialog.vue';
 import workSpace from './workspace/workSpace.vue';
 import { trimPath } from '../../utils/strings.utils';
 import { useMaterialsStore } from '../../stores/materials.store';
+import { LocalVars } from '../../@types/main.types';
 
 const materialStore = useMaterialsStore();
 
@@ -408,7 +409,7 @@ onBeforeRouteUpdate(async (to, from, next) => {
 });
 
 onBeforeMount(async () => {
-    const currentRoute: any = JSON.parse(localStorage.getItem('current_route')!);
+    const currentRoute: any = JSON.parse(localStorage.getItem(LocalVars.currentRoute)!);
     await initPageData(currentRoute.params['chapter'], undefined, currentRoute.query['subChapter'], undefined, undefined);
 });
 

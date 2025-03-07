@@ -15,13 +15,14 @@ import type {
     GetOneSubChapterParams, 
     SubChapterCreate,
 } from "../@types/entities/materials.types";
+import { LocalVars } from "../@types/main.types";
 import { useMaterialsStore } from "../stores/materials.store";
 
 // Получить материалы с БД
 export async function getChapters(params?: GetChaptersParams): Promise<ChapterForMenu[]> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.getChapters(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.getChapters(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -32,7 +33,7 @@ export async function getChapters(params?: GetChaptersParams): Promise<ChapterFo
 export async function getOneChapter(params: GetOneChapterParams): Promise<Chapter> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.getChapter(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.getChapter(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -43,7 +44,7 @@ export async function getOneChapter(params: GetOneChapterParams): Promise<Chapte
 export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<Chapter> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.getOneSubChapter(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.getOneSubChapter(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -54,7 +55,7 @@ export async function getOneSubChapter(params: GetOneSubChapterParams): Promise<
 export async function createChapter(params: ChapterCreate) {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.createChapter(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.createChapter(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -65,7 +66,7 @@ export async function createChapter(params: ChapterCreate) {
 export async function createSubChapter(params: SubChapterCreate) {
     return new Promise((resolve, reject) => {
         try {
-            const result = window.electron.createSubChapter(params, { token: localStorage.getItem('token') });
+            const result = window.electron.createSubChapter(params, { token: localStorage.getItem(LocalVars.token) });
             resolve(result);
         } catch (err) {
             reject(err);
@@ -78,7 +79,7 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
     const materialStore = useMaterialsStore();
     return new Promise(async (resolve, reject) => {
         try {
-            const items: ChapterForMenu[] = await window.electron.syncMaterials({ token: localStorage.getItem('token') });
+            const items: ChapterForMenu[] = await window.electron.syncMaterials({ token: localStorage.getItem(LocalVars.token) });
             materialStore.updateMenuItems(items); // Обновить состояние меню панели
             resolve(items);
         } catch (err) {
@@ -91,7 +92,7 @@ export async function syncMaterials(): Promise<ChapterForMenu[]> {
 export async function editChapterApi(params: ChapterEditRequest): Promise<Chapter> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.editChapter(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.editChapter(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -102,7 +103,7 @@ export async function editChapterApi(params: ChapterEditRequest): Promise<Chapte
 export async function deleteChapterApi(params: DeleteChapterParams): Promise<void> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.deleteChapter(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.deleteChapter(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -113,7 +114,7 @@ export async function deleteChapterApi(params: DeleteChapterParams): Promise<voi
 export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promise<void> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.deleteSubChapter(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.deleteSubChapter(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -124,7 +125,7 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
 export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.getChapterBlocks(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.getChapterBlocks(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -135,7 +136,7 @@ export async function getChapterBlocksApi(params: GetChapterBlocks): Promise<Arr
 export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<Array<ChapterBlock>> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.getSubChapterBlocks(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.getSubChapterBlocks(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -146,7 +147,7 @@ export async function getSubChapterBlocksApi(params: GetChapterBlocks): Promise<
 export async function createChapterBlockApi(params: CreateChapterBlock) {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.createChapterBlock(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.createChapterBlock(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -157,7 +158,7 @@ export async function createChapterBlockApi(params: CreateChapterBlock) {
 export async function editChapterBlockApi(params: EditChapterBlock): Promise<Chapter[]> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.editChapterBlock(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.editChapterBlock(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }
@@ -168,7 +169,7 @@ export async function editChapterBlockApi(params: EditChapterBlock): Promise<Cha
 export async function deleteChapterBlockApi(params: DeleteChapterBlock): Promise<Chapter> {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.deleteChapterBlock(params, { token: localStorage.getItem('token') }));
+            resolve(window.electron.deleteChapterBlock(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }

@@ -3,13 +3,14 @@ import {
     UpdUserPasswordApi, 
     UserCreateResponseApi 
 } from "../@types/entities/user.types";
+import { LocalVars } from "../@types/main.types";
 
 
 // Подготовить пользовательское хранилище
 export async function prepareUserStore() {
     return new Promise((resolve, reject) => {
         try {
-            resolve(window.electron.prepareUserStore({ token: localStorage.getItem('token') }));
+            resolve(window.electron.prepareUserStore({ token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }

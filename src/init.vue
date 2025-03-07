@@ -17,6 +17,7 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 import cToast from './components/base/cToast.vue';
 import { useMainStore } from './stores/main.store';
 import { useRouter } from 'vue-router';
+import { LocalVars } from './@types/main.types';
 
 const router = useRouter();
 const mainStore = useMainStore();
@@ -29,7 +30,7 @@ interface CurrentRoute {
 }
 
 onBeforeMount(() => {
-    const currentRoute: CurrentRoute = JSON.parse(localStorage.getItem('current_route')!);
+    const currentRoute: CurrentRoute = JSON.parse(localStorage.getItem(LocalVars.currentRoute)!);
     if(currentRoute) {
         router.push({name: currentRoute.name, query: currentRoute.query, params: currentRoute.params});
     }

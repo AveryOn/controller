@@ -1,13 +1,26 @@
 "use strict";
 const electron = require("electron");
+var LocalVars = /* @__PURE__ */ ((LocalVars2) => {
+  LocalVars2["userData"] = "user-data";
+  LocalVars2["token"] = "token";
+  LocalVars2["currentRoute"] = "current_route";
+  LocalVars2["materialsFullLabel"] = "materials-full-label";
+  return LocalVars2;
+})(LocalVars || {});
+function clearSensitiveData() {
+  localStorage.removeItem(LocalVars.userData);
+  localStorage.removeItem(LocalVars.token);
+  localStorage.removeItem(LocalVars.materialsFullLabel);
+  localStorage.removeItem(LocalVars.currentRoute);
+}
 function logout(config) {
-  localStorage.clear();
+  clearSensitiveData();
   if ((config == null ? void 0 : config.fromServer) === true) {
     window.location.reload();
   }
 }
 function refreshToken(token) {
-  localStorage.setItem("token", token);
+  localStorage.setItem(LocalVars.token, token);
 }
 electron.contextBridge.exposeInMainWorld("electron", {
   // ================= SYSTEM  ==================

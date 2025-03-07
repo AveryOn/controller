@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { computed, type Ref, ref } from "vue";
 import { Chapter, ChapterForMenu } from "../@types/entities/materials.types";
 import { getChapters } from "../api/materials.api";
+import { LocalVars } from "../@types/main.types";
 
 export const useMaterialsStore = defineStore('materialsStored', () => {
     const addChapterItem = {
@@ -42,7 +43,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         try {
             loadingGetMenuChapters.value = true;
             if (materialChaptersMenu.value[0].type === 'loading') {
-                const token = localStorage.getItem('token') ?? '';
+                const token = localStorage.getItem(LocalVars.token) ?? '';
                 const items = await getChapters({ forMenu: true, token: token });
                 updateMenuItems(items);
             }
@@ -57,7 +58,7 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     // Обновить полный лэйбл для материалов
     function updateMaterialsFullLabels(labels: string[]): void {
         materialsLabel.value = labels;
-        localStorage.setItem('materials-full-label', JSON.stringify(labels))
+        localStorage.setItem(LocalVars.materialsFullLabel, JSON.stringify(labels))
     }
 
     // Получить полный лэйбл материалов
@@ -65,11 +66,11 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         if (materialsLabel.value.length > 0) {
             return materialsLabel.value;
         }
-        return JSON.parse(localStorage.getItem('materials-full-label')!) ?? [];
+        return JSON.parse(localStorage.getItem(LocalVars.materialsFullLabel)!) ?? [];
     }
     function removeMaterialsFullLabels() {
         materialsLabel.value.length = 0;
-        localStorage.removeItem('materials-full-label');
+        localStorage.removeItem(LocalVars.materialsFullLabel);
     }
 
     /**

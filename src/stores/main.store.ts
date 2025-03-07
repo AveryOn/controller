@@ -49,6 +49,7 @@ export const useMainStore = defineStore('mainStore', () => {
             }
         ] as MenuItem[];
     })
+
     return {
         appTitle,
         menuPanelItems,

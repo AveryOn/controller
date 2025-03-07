@@ -7,6 +7,7 @@ import { validateAccessTokenApi } from "../api/auth.api";
 import { prepareUserStore } from "../api/users.api";
 import { checkAccessApi } from "../api/system.api";
 import { logout } from "../utils/auth";
+import { LocalVars } from "../@types/main.types";
 
 const router = createRouter({
     history: createMemoryHistory(),
@@ -86,7 +87,7 @@ router.beforeEach(async (to, from, next) => {
                 await prepareUserStore();
             }
         }
-        localStorage.setItem('current_route', JSON.stringify({ 
+        localStorage.setItem(LocalVars.currentRoute, JSON.stringify({ 
             name: to.name, 
             params: to.params, 
             query: to.query 
