@@ -39,12 +39,13 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
     // Инициализация базы данных
     private init(dbname: DbNamesType, username: UsernameType, state?: (enabled: boolean) => void) {
         this.dbname = dbname as DbNamesType;
+        const PROJECT_NAME_ENV = (import.meta.env.MODE === 'development') ? 'controller-dev' : 'controller'
         // если нужно создать БД для общих целей а не для целевого пользователя 
         if(username !== '--') {
-            this.dbpath = path.join(app.getPath('appData'), 'controller', `user_${username}`, `${dbname}.db`);
+            this.dbpath = path.join(app.getPath('appData'), PROJECT_NAME_ENV, `user_${username}`, `${dbname}.db`);
         }
         else {
-            this.dbpath = path.join(app.getPath('appData'), 'controller', `${dbname}.db`);
+            this.dbpath = path.join(app.getPath('appData'), PROJECT_NAME_ENV, `${dbname}.db`);
         }
         this.processPath = path.join(getDistProjectDir(), 'database/init.mjs');
 

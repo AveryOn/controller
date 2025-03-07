@@ -447,10 +447,12 @@ async function decryptJsonData(data, signature) {
 }
 const __dirname$1 = path$1.dirname(fileURLToPath(import.meta.url));
 function getAppDirname() {
-  return path$1.join(app.getPath("appData"), "controller");
+  const PROJECT_NAME_ENV = "controller-dev";
+  return path$1.join(app.getPath("appData"), PROJECT_NAME_ENV);
 }
 function getAppUserDirname(username) {
-  return path$1.join(app.getPath("appData"), "controller", `user_${username}`);
+  const PROJECT_NAME_ENV = "controller-dev";
+  return path$1.join(app.getPath("appData"), PROJECT_NAME_ENV, `user_${username}`);
 }
 function getDistProjectDir() {
   return app.isPackaged ? path$1.join(process.resourcesPath, "app.asar.unpacked", "dist-electron") : __dirname$1;
@@ -4762,10 +4764,11 @@ const _InstanceDatabase = class _InstanceDatabase {
   // Инициализация базы данных
   init(dbname, username, state) {
     this.dbname = dbname;
+    const PROJECT_NAME_ENV = "controller-dev";
     if (username !== "--") {
-      this.dbpath = path$1.join(app.getPath("appData"), "controller", `user_${username}`, `${dbname}.db`);
+      this.dbpath = path$1.join(app.getPath("appData"), PROJECT_NAME_ENV, `user_${username}`, `${dbname}.db`);
     } else {
-      this.dbpath = path$1.join(app.getPath("appData"), "controller", `${dbname}.db`);
+      this.dbpath = path$1.join(app.getPath("appData"), PROJECT_NAME_ENV, `${dbname}.db`);
     }
     this.processPath = path$1.join(getDistProjectDir(), "database/init.mjs");
     this.process = fork(this.processPath);

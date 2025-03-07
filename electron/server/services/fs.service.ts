@@ -17,12 +17,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Получает корневую директорию приложения (для хранения данных приложения)
 export function getAppDirname() {
-    return path.join(app.getPath('appData'), 'controller');
+    const PROJECT_NAME_ENV = (import.meta.env.MODE === 'development') ? 'controller-dev' : 'controller'
+    return path.join(app.getPath('appData'), PROJECT_NAME_ENV);
 }
 
 // Получает корневую директорию пользовательского хранилища
 export function getAppUserDirname(username: string) {
-    return path.join(app.getPath('appData'), 'controller', `user_${username}`);
+    const PROJECT_NAME_ENV = (import.meta.env.MODE === 'development') ? 'controller-dev' : 'controller'
+    return path.join(app.getPath('appData'), PROJECT_NAME_ENV, `user_${username}`);
 }
 
 // Получает корневую директорию работы приложения
