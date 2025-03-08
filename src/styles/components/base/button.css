@@ -9,20 +9,25 @@
 
 .p-button {
     font-size: var(--ui-text-size) !important;
+    background-color: var(--cf-primary-2) !important;
+    border-color: var(--cf-primary-2) !important;
+    outline-color: var(--cf-primary-2) !important;
 }
 
 .p-button-help {
     border-color: var(--cf-primary-2) !important;
-    color: var(--cf-primary-2) !important;
-    transition: all 0.6s ease;
+    color: var(--bg-color) !important;
+    transition: all var(--ui-transition-time) ease !important;
 }
 
 .p-button-help:active {
     background-color: var(--cf-primary-1) !important;
-    transition: all 0.6s ease;
+    color: var(--cf-primary-2) !important;
+    transition: all var(--ui-transition-time) ease !important;
 }
 
 .p-button-help:hover {
     background-color: var(--cf-primary-0) !important;
-    transition: all 0.6s ease;
+    color: var(--cf-primary-2) !important;
+    transition: all var(--ui-transition-time) ease !important;
 }

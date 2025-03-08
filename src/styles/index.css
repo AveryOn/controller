@@ -3,13 +3,17 @@
 @import url(./components/index.css);
 
 /* PALETTES */
-@import url(./palettes/red.css);
+@import url(./palettes/index.css);
+
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: var(--font);
+    transition: 
+        color var(--ui-transition-time) ease, 
+        background-color var(--ui-transition-time) ease;
 }
 
 /* Стили для всего скроллбара */

@@ -12,13 +12,13 @@
     overflow: hidden;
 }
 .titlebar-region-drag {
-    width: 90%;
+    width: calc(100vw - 75px);
     height: 100%;
     app-region: drag;
 }
 
 .app-title-btns {
-    width: 10%;
+    width: 75px;
     display: flex;
     justify-content: flex-end;
 }

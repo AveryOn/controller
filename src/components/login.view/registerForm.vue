@@ -27,7 +27,7 @@
         </Fluid>
         <Button 
             class="w-10 mt-5" 
-            fluid 
+            fluid
             label="Confirm" 
             size="small" 
             :loading="isLoading" 
