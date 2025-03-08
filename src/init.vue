@@ -72,19 +72,6 @@ onBeforeMount(() => {
     }
 });
 onMounted(() => {
-    // btnMin.addEventListener('click', () => {
-    //     console.log('CLICK MIN');
-    //     window.electron.windowMin()
-    // })
-    // btnMax.addEventListener('click', () => {
-    //     console.log('CLICK MAX');
-    //     window.electron.windowMax()
-    // })
-    // btnClose.addEventListener('click', () => {
-    //     console.log('CLICK CLOSE');
-    //     window.electron.windowClose()
-    // })
-
     // Установка темы
     const theme: ThemesKey = localStorage.getItem(LocalVars.theme) as ThemesKey ?? 'light'
     const palette: PalettesKey = localStorage.getItem(LocalVars.palette) as PalettesKey ?? 'purple'

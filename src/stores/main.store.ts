@@ -2,9 +2,11 @@ import { defineStore } from "pinia";
 import { computed, type Ref, ref } from "vue";
 import { useMaterialsStore } from "./materials.store";
 import { MenuItem } from "primevue/menuitem";
+import { useRouter } from "vue-router";
 
 export const useMainStore = defineStore('mainStore', () => {
     const materialStore = useMaterialsStore();
+    const router = useRouter();
     const appTitle: Ref<string> = ref('controller'); 
 
     // Элементы панели меню
@@ -39,6 +41,7 @@ export const useMainStore = defineStore('mainStore', () => {
                 items: [
                     {
                         label: 'Appearance',
+                        command: () => router.push({ name: 'appearance' }),
                         icon: 'pi pi-image',
                     },
                     {

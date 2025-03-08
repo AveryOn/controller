@@ -8,6 +8,7 @@ import { prepareUserStore } from "../api/users.api";
 import { checkAccessApi } from "../api/system.api";
 import { logout } from "../utils/auth";
 import { LocalVars } from "../@types/main.types";
+import AppearanceView from "../views/AppearanceView.vue";
 
 const router = createRouter({
     history: createMemoryHistory(),
@@ -35,11 +36,18 @@ const router = createRouter({
                             name: 'materials',
                             meta: { private: true },
                             component: MaterialsView,
-                        }
+                        },
+                        {
+                            path: "/appearance",
+                            name: "appearance",
+                            component: AppearanceView,
+                            meta: { private: true },
+                        },
                     ]
                 },
             ],
         },
+
     ],
 });
 
@@ -74,12 +82,6 @@ router.beforeEach(async (to, from, next) => {
             /**
              * Доп проверка на то есть ли у пользователя доступ к приложению. Если нет, то происходит разлогин
              */
-            // const isValid = await validateAccessTokenApi()
-            // if(isValid !== true) {
-            //     return void logout();
-            // }
-            console.log('ЭТОТ БЛОК');
-            
             if(!await checkAccessApi()) {
                 return void logout();
             }

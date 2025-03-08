@@ -1,6 +1,12 @@
 
 .theme-dark {
-    --bg-color: rgb(44, 44, 44) !important;
+    --bg-color: #2C2C2C !important;
     --fg-color: rgb(255, 255, 255) !important;
     --bg-color-1: rgb(20, 20, 20) !important;
+
+    --light-text-1: rgb(196, 196, 196);
+    --light-text-3: rgb(147, 145, 145);
+    --light-text-4: rgb(105, 105, 105);
+
+    --border-color-1: rgba(147, 145, 145, 0.52);
 }

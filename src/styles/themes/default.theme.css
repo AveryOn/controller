@@ -7,5 +7,7 @@
     --light-text-3: rgb(147, 145, 145);
     --light-text-4: rgb(105, 105, 105);
 
+    --border-color-1: rgba(167, 167, 167, 0.487);
+
     --materials-chapter-block-bg: rgba(128, 128, 128, 0.08);
 }
