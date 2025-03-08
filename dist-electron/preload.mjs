@@ -26,8 +26,11 @@ function refreshToken(token) {
 }
 electron.contextBridge.exposeInMainWorld("electron", {
   // ================= SYSTEM  ==================
-  checkAccess: () => electron.ipcRenderer.invoke("check-access"),
+  windowMin: () => electron.ipcRenderer.send("win:minimize"),
+  windowMax: () => electron.ipcRenderer.send("win:maximize"),
+  windowClose: () => electron.ipcRenderer.send("win:close"),
   // ============= AUTH =============
+  checkAccess: () => electron.ipcRenderer.invoke("check-access"),
   validateAccessToken: (params) => electron.ipcRenderer.invoke("validate-access-token", params),
   // ============= USERS =============
   prepareUserStore: (params) => electron.ipcRenderer.invoke("prepare-user-store", params),

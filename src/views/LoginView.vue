@@ -9,17 +9,14 @@
         />
         <div class="forms-wrapper">
             <UpdateForm 
-            class="form" 
             v-show="selectMode === 'Update'" 
             @confirm:update="handlerUpdate"
             />
             <RegisterForm 
-            class="form" 
             v-show="selectMode === 'Sign Up'" 
             @confirm:register="handlerSignUp"
             />
             <LoginForm 
-            class="form" 
             v-show="selectMode === 'Login'" 
             @confirm:login="handlerLogin"
             />
@@ -68,13 +65,23 @@ function handlerUpdate(state: boolean) {
     font-family: var(--font);
     background-color: var(--bg-color);
 }
+.forms-wrapper {
+    height: 300px;
+}
 .form {
+    width: 400px;
+    height: max-content;
+    min-height: 200px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    color: var(--fg-color);
+    background-color: var(--bg-color-1);
+    border-radius: 3px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    font-size: large;
     gap: 0.2rem;
     padding: 0.3rem;
-    color: var(--fg-color);
     user-select: none;
 }
 </style>

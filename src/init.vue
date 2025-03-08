@@ -1,4 +1,23 @@
 <template>
+    <div id="titlebar">
+        <p id="app-title">{{ appTitleContent }}</p>
+        <div class="titlebar-region-drag">
+        </div>
+        <div class="app-title-btns flex align-items-center">
+            <button 
+                class="app-title-btn"
+                @click="windowMin" 
+            >🗕</button>
+            <button 
+                class="app-title-btn"
+                @click="windowMax" 
+            >🗖</button>
+            <button 
+                class="app-title-btn"
+                @click="windowClose" 
+            >🗙</button>
+        </div>
+    </div>
     <span v-show="isGlobalLoading" class="global-loading-overlay">
         <ProgressSpinner 
         style="width: 50px; height: 50px" 
@@ -9,7 +28,10 @@
         />
     </span>
     <cToast />
-    <router-view></router-view>
+    <div class="router-overlay">
+
+        <router-view></router-view>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -23,12 +45,24 @@ import { PalettesKey, ThemesKey } from './@types/ui.types';
 
 const router = useRouter();
 const mainStore = useMainStore();
-const appTitle = document.getElementById('app-title') as HTMLTitleElement;
+const appTitleContent = ref('$>_ ')
 const isGlobalLoading = ref(true);
 interface CurrentRoute {
     name: string;
     query: any;
     params: any;
+}
+
+function windowMin() {
+    window.electron.windowMin()
+}
+
+function windowMax() {
+    window.electron.windowMax()
+}
+
+function windowClose() {
+    window.electron.windowClose()
 }
 
 onBeforeMount(() => {
@@ -38,6 +72,19 @@ onBeforeMount(() => {
     }
 });
 onMounted(() => {
+    // btnMin.addEventListener('click', () => {
+    //     console.log('CLICK MIN');
+    //     window.electron.windowMin()
+    // })
+    // btnMax.addEventListener('click', () => {
+    //     console.log('CLICK MAX');
+    //     window.electron.windowMax()
+    // })
+    // btnClose.addEventListener('click', () => {
+    //     console.log('CLICK CLOSE');
+    //     window.electron.windowClose()
+    // })
+
     // Установка темы
     const theme: ThemesKey = localStorage.getItem(LocalVars.theme) as ThemesKey ?? 'light'
     const palette: PalettesKey = localStorage.getItem(LocalVars.palette) as PalettesKey ?? 'purple'
@@ -46,14 +93,12 @@ onMounted(() => {
 
     setTimeout(() => {
         isGlobalLoading.value = false;
-        let readyTitle = '> ';
+        let readyTitle = '$> ';
         for (let i = 0; i < mainStore.appTitle.length; i++) {
             setTimeout(() => {
                 const char = mainStore.appTitle[i];
                 readyTitle += char;
-                if(appTitle.textContent) {
-                    appTitle.textContent = readyTitle + '_';
-                }
+                appTitleContent.value = readyTitle + '_';
             }, i*80);
         }
     }, 1000);
@@ -72,5 +117,9 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
     z-index: 999999 !important;
-} 
+}
+
+.router-overlay {
+    height: calc(100vh - 20px) !important;
+}
 </style>

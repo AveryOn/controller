@@ -1,26 +1,38 @@
 <template>
-    <form @submit.prevent class="login-form">
-        <h2 class="mb-auto">Login</h2>
+    <form @submit.prevent class="form pt-3 pb-5">
+        <h2 class="mb-4">Login</h2>
         <Fluid class="w-10">
-            <div class="flex flex-column gap-1">
-                <InputText size="small" type="text" v-model="form.username" placeholder="Username" />
-                <Password size="small" v-model="form.password" placeholder="Password" :feedback="false" toggleMask/>
+            <div class="flex flex-column gap-3">
+                <InputText 
+                    size="small" 
+                    type="text" 
+                    v-model="form.username" 
+                    placeholder="Username" 
+                />
+                <Password 
+                    size="small" 
+                    v-model="form.password" 
+                    placeholder="Password" 
+                    :feedback="false" 
+                    toggleMask
+                />
             </div>
         </Fluid>
         <Button 
-        class="w-10 mt-auto mb-2" 
-        fluid 
-        label="Confirm" 
-        size="small"
-        :loading="isLoading"
-        @click="submit"
+            class="w-10 mt-auto" 
+            fluid 
+            label="Confirm" 
+            size="small"
+            :loading="isLoading"
+            :disabled="!isFilledForm"
+            @click="submit"
         />
     </form>
 </template>
 
 <script setup lang="ts">
 import Fluid from 'primevue/fluid';
-import { ref, defineEmits } from 'vue';
+import { ref, defineEmits, computed } from 'vue';
 import useNotices from '../../composables/notices';
 import { useLoginStore } from '../../stores/login.store';
 import { LoginResponseApi } from '../../@types/entities/user.types';
@@ -38,6 +50,15 @@ const form = ref({
     password: '',
 });
 
+/**
+ * Определяет все ли поля формы заполнены
+ */
+ const isFilledForm = computed(() => {
+    return (
+        !!form.value.username &&
+        !!form.value.password
+    ) 
+})
 
 async function submit() {
     if(!form.value.username || !form.value.password) {
@@ -61,13 +82,3 @@ async function submit() {
     }
 }
 </script>
-
-<style scoped>
-.login-form {
-    width: 400px;
-    height: 200px;
-    background-color: rgb(222, 222, 222);
-    border-radius: 3px;
-    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-}
-</style>

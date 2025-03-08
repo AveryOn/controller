@@ -8,9 +8,12 @@ import { logout, refreshToken } from '../src/utils/auth';
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('electron', {
     // ================= SYSTEM  ==================
-    checkAccess: () => ipcRenderer.invoke('check-access'),
-
+    windowMin: () => ipcRenderer.send('win:minimize'),
+    windowMax: () => ipcRenderer.send('win:maximize'),
+    windowClose: () => ipcRenderer.send('win:close'),
+    
     // ============= AUTH =============
+    checkAccess: () => ipcRenderer.invoke('check-access'),
     validateAccessToken: (params: ValidateAccessTokenParams) => ipcRenderer.invoke('validate-access-token', params),
 
     // ============= USERS =============

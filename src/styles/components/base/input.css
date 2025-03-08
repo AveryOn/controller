@@ -9,3 +9,7 @@
     --p-inputtext-color: var(--fg-color) !important;
     
 }
+
+.p-inputtext {
+    font-size: var(--input-text-size) !important;
+}

@@ -6459,16 +6459,20 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$2.join(process.env.APP_ROOT
 let win$1;
 function createWindow() {
   win$1 = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    frame: false,
+    // Убираем стандартный заголовок
     icon: path$2.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path$2.join(__dirname, "preload.mjs")
     },
-    titleBarStyle: "hidden",
-    titleBarOverlay: {
-      color: "#2f3241",
-      symbolColor: "#74b1be",
-      height: 20
-    }
+    titleBarStyle: "hidden"
+    // titleBarOverlay: {
+    //     color: '#2f3241',
+    //     symbolColor: '#74b1be',
+    //     height: 10
+    // },
     // expose window controls in Windows/Linux
     // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
   });
@@ -6498,6 +6502,22 @@ app.whenReady().then(async () => {
   console.debug("APPLICATION DATABASES ARE READY");
   createWindow();
   globalThis.win = win$1;
+  setTimeout(() => win$1 == null ? void 0 : win$1.unmaximize(), 2e3);
+  ipcMain.on("win:minimize", () => {
+    if (win$1) win$1.minimize();
+  });
+  ipcMain.on("win:maximize", () => {
+    if (win$1) {
+      if (win$1.isMaximized()) {
+        win$1.unmaximize();
+      } else {
+        win$1.maximize();
+      }
+    }
+  });
+  ipcMain.on("win:close", () => {
+    if (win$1) win$1.close();
+  });
   ipcMain.handle("check-access", async (_) => {
     return checkAccess();
   });

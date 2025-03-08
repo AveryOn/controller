@@ -67,19 +67,24 @@ let win: BrowserWindow | null
 
 function createWindow() {
     win = new BrowserWindow({
+        width: 1200,
+        height: 800,
+        frame: false, // Убираем стандартный заголовок
         icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.mjs'),
         },
         titleBarStyle: 'hidden',
-        titleBarOverlay: {
-            color: '#2f3241',
-            symbolColor: '#74b1be',
-            height: 20
-        },
+        // titleBarOverlay: {
+        //     color: '#2f3241',
+        //     symbolColor: '#74b1be',
+        //     height: 10
+        // },
         // expose window controls in Windows/Linux
         // ...(process.platform !== 'darwin' ? { titleBarOverlay: true } : {})
     });
+
+
 
     // Test active push message to Renderer-process.
     win.webContents.on('did-finish-load', async () => {
@@ -127,12 +132,31 @@ app.whenReady().then(async () => {
     createWindow();
     globalThis.win = win
 
+    setTimeout(() => win?.unmaximize(), 2000)
+
     // await DatabaseManager
     // .instance().initOnUser('root')
     // syncMaterialsStores('root')
 
     // Обработчики IPC
     // ==========  SYSTEM  ==========
+    ipcMain.on('win:minimize', () => {
+        if (win) win.minimize();
+    });
+    
+    ipcMain.on('win:maximize', () => {
+        if (win) {
+            if (win.isMaximized()) {
+                win.unmaximize();
+            } else {
+                win.maximize();
+            }
+        }
+    });
+    ipcMain.on('win:close', () => {
+        if (win) win.close();
+    });
+
     ipcMain.handle("check-access", async (_) => {
         return checkAccess()
     })

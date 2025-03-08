@@ -7,6 +7,10 @@
     --p-button-secondary-color: rgb(88, 88, 88) !important;
 }
 
+.p-button {
+    font-size: var(--ui-text-size) !important;
+}
+
 .p-button-help {
     border-color: var(--cf-primary-2) !important;
     color: var(--cf-primary-2) !important;

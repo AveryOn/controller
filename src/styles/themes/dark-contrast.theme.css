@@ -2,6 +2,7 @@
 .theme-dark-contrast {
     --bg-color: rgb(0, 0, 0) !important;
     --fg-color: rgb(255, 255, 255) !important;
+    --bg-color-1: rgb(32, 32, 32) !important;
 
     /* COMPONENTS */
 }
