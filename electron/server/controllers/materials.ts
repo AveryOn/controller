@@ -462,7 +462,9 @@ export async function getChapterBlocks(params: GetChapterBlocks, auth: AuthParam
         await verifyAccessToken(auth.token, { refresh: true });
 
         const blockService = new BlocksService();
-        const blocks = await blockService.getAllForChapter(params.chapterId);
+        const blocks = await blockService.getAllForChapter(params.chapterId, { 
+            excludes: ['content', 'subChapterId', 'chapterId', 'createdAt'], 
+        });
         return blocks;
     } catch (err) {
         console.error(err);
@@ -477,7 +479,9 @@ export async function getSubChapterBlocks(params: GetChapterBlocks, auth: AuthPa
         await verifyAccessToken(auth.token, { refresh: true });
 
         const blockService = new BlocksService();
-        const blocks = await blockService.getAllForSubChapter(params.chapterId);
+        const blocks = await blockService.getAllForSubChapter(params.chapterId, { 
+            excludes: ['content', 'subChapterId', 'chapterId', 'createdAt'], 
+        });
         return blocks;
     } catch (err) {
         console.error(err);

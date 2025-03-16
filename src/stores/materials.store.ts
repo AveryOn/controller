@@ -1,8 +1,20 @@
+import type { Chapter, ChapterForMenu, MaterialsRouterState, MaterialType } from "../@types/entities/materials.types";
 import { defineStore } from "pinia";
 import { computed, type Ref, ref } from "vue";
-import { Chapter, ChapterForMenu } from "../@types/entities/materials.types";
 import { getChapters } from "../api/materials.api";
 import { LocalVars } from "../@types/main.types";
+import { StateManager } from "node-state-manager";
+
+/**
+ * Объект состояния для маршрутизации по странице материалов.
+ * Нужен для хранения реактивных значений, которые определяют какие данные и UI необходимо отображать
+*/
+export const materialsRouter = new StateManager<MaterialsRouterState>('m-r-1', {
+    chapter: null,
+    subChapter: null,
+    materialUid: null,
+    materialType: null,
+})
 
 export const useMaterialsStore = defineStore('materialsStored', () => {
     const addChapterItem = {
@@ -55,7 +67,11 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         }
     }
 
-    // Обновить полный лэйбл для материалов
+    /**
+     * Обновить полный лэйбл для материалов
+     * @param labels массив лэйблов для текущего раздела/подраздела
+     * @param config ключи, необходимые для того чтобы определять на их основе, какой тип материала был открыт: `chapter` || `subChapter`
+     */
     function updateMaterialsFullLabels(labels: string[]): void {
         materialsLabel.value = labels;
         localStorage.setItem(LocalVars.materialsFullLabel, JSON.stringify(labels))
@@ -71,6 +87,24 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     function removeMaterialsFullLabels() {
         materialsLabel.value.length = 0;
         localStorage.removeItem(LocalVars.materialsFullLabel);
+    }
+
+    /**
+     * Определить тип материала
+     * @param {ChapterForMenu} item элемент меню материалов 
+     * @returns {MaterialType} тип материала. Если не удалось определить, вернет `null` 
+     */
+    function determineMaterialType(item: ChapterForMenu): MaterialType {
+        if(!item) {
+            return null
+        }
+        if(item.pathName && !item.fullpath) {
+            return 'chapter'
+        }
+        else if(item.pathName && item.fullpath) {
+            return 'sub-chapter'
+        }
+        return null
     }
 
     /**
@@ -107,5 +141,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         getMaterialsFullLabels,
         removeMaterialsFullLabels,
         createMaterialElementId,
+        determineMaterialType,
     }
 });

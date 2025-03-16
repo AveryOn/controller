@@ -20,8 +20,12 @@
                 </a>
             </template>
         </Menubar>
-        <workSpace :chapter="opennedChapter" :is-show-create-block="isShowCreateBlock"
-            @update:is-show-create-block="(state) => isShowCreateBlock = state" />
+        <workSpace 
+            :chapter="opennedChapter"
+            :material-type="materialType"
+            :is-show-create-block="isShowCreateBlock"
+            @update:is-show-create-block="(state) => isShowCreateBlock = state" 
+        />
     </div>
 </template>
 
@@ -59,6 +63,7 @@ const isShowCreateBlock = ref(false);
 const isShowCreateSubChapter = ref(false);
 const isShowDeleteChapter = ref(false);
 const isShowEditChapter = ref(false);
+const materialType = ref<'chapter' | 'subChapter' | null>(null)
 const opennedChapter: Ref<Chapter | null> = ref(null);
 
 const items = ref([
@@ -324,6 +329,7 @@ async function requestGetOneChapter(pathName: string) {
     try {
         materialStore.loadingGetChapter = true;
         opennedChapter.value = await getOneChapter({ pathName });
+        materialType.value = 'chapter';
         emit('openChapter', opennedChapter.value.label);
         emit('updateRootChapterId', opennedChapter.value.id);
     } catch (err) {
@@ -340,6 +346,7 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
         // Обработка сырого query-параметра вида to>path>name в вид to/path/name
         const correctFullpath = rawQuery.split('>').join('/');
         const chapter = await getOneSubChapter({ pathName, fullpath: correctFullpath });
+        materialType.value = 'subChapter';
         opennedChapter.value = chapter;
         emit('openChapter', chapter.label);
     } catch (err) {
@@ -354,12 +361,13 @@ async function initPageData(
     prevChapter?: string,
     nextSubChapter?: string,
     prevSubChapter?: string,
-    next?: NavigationGuardNext
+    next?: NavigationGuardNext,
 ) {
     try {
         // Запрос на получение данных раздела в случае его выбора
         if (nextChapter !== 'add-chapter') {
             if (nextChapter && nextChapter !== prevChapter) {
+                console.log('ВЫЗВАЛСЯ РАЗДЕЛ');
                 await requestGetOneChapter(nextChapter);
             }
             // Если происходит выход из просмотра разделов и подразделов
@@ -367,12 +375,14 @@ async function initPageData(
             // В случае смены подраздела при активном разделе
 
             if (nextSubChapter && nextChapter && nextSubChapter !== prevSubChapter) {
+                console.log('ВЫЗВАЛСЯ ПОДРАЗДЕЛ');
                 await requestGetOneSubChapter(nextChapter, nextSubChapter);
             }
             else {
                 // Если маршрут перешел с подраздела на раздел
                 if (nextChapter && prevChapter === nextChapter && !nextSubChapter) {
                     await requestGetOneChapter(nextChapter)
+                    if(next) return void next()
                 }
             }
             if (next) return void next();
@@ -398,19 +408,31 @@ onBeforeUnmount(() => {
     window.removeEventListener('keydown', controlKey);
 })
 
-
-onBeforeRouteUpdate(async (to, from, next) => {
-    resetState();
-    const prevChapter = from.params['chapter'] as string;
-    const nextChapter = to.params['chapter'] as string;
-    const nextSubChapter = to.query['subChapter'] as string | undefined;
-    const prevSubChapter = from.query['subChapter'] as string | undefined;
-    await initPageData(nextChapter, prevChapter, nextSubChapter, prevSubChapter, next);
-});
+// onBeforeRouteUpdate(async (to, from, next) => {
+//     resetState();
+//     const prevChapter = from.params['chapter'] as string;
+//     const nextChapter = to.params['chapter'] as string;
+//     const nextSubChapter = to.query['subChapter'] as string | undefined;
+//     const prevSubChapter = from.query['subChapter'] as string | undefined;
+//     await initPageData(
+//         nextChapter, 
+//         prevChapter, 
+//         nextSubChapter, 
+//         prevSubChapter, 
+//         next
+//     );
+// });
 
 onBeforeMount(async () => {
     const currentRoute: any = JSON.parse(localStorage.getItem(LocalVars.currentRoute)!);
-    await initPageData(currentRoute.params['chapter'], undefined, currentRoute.query['subChapter'], undefined, undefined);
+    console.log('currentRoute', currentRoute)
+    // await initPageData(
+    //     currentRoute.params['chapter'], 
+    //     undefined, 
+    //     currentRoute.query['subChapter'], 
+    //     undefined, 
+    //     undefined
+    // );
 });
 
 

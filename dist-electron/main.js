@@ -6164,7 +6164,9 @@ async function getChapterBlocks(params, auth) {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getChapterBlocks]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
-    const blocks = await blockService.getAllForChapter(params.chapterId);
+    const blocks = await blockService.getAllForChapter(params.chapterId, {
+      excludes: ["content", "subChapterId", "chapterId", "createdAt"]
+    });
     return blocks;
   } catch (err) {
     console.error(err);
@@ -6176,7 +6178,9 @@ async function getSubChapterBlocks(params, auth) {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getSubChapterBlocks]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
-    const blocks = await blockService.getAllForSubChapter(params.chapterId);
+    const blocks = await blockService.getAllForSubChapter(params.chapterId, {
+      excludes: ["content", "subChapterId", "chapterId", "createdAt"]
+    });
     return blocks;
   } catch (err) {
     console.error(err);

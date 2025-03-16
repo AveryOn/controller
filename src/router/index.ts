@@ -57,7 +57,6 @@ router.beforeEach(async (to, from, next) => {
     const store = useLoginStore();
     await validateAccessTokenApi()
     const hasAccess = await checkAccessApi()
-    console.log('HAS ACCESS', hasAccess);
     
     store.isAuth = hasAccess;
     if (!hasAccess) {

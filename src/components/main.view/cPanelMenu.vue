@@ -40,6 +40,7 @@ import { replacePathForMaterials } from '../../utils/strings.utils';
 import { useMainStore } from '../../stores/main.store';
 import { computed } from 'vue';
 import { useMaterialsStore } from '../../stores/materials.store';
+import { materialsRouter } from '../../stores/materials.store';
 
 const router = useRouter();
 const mainStore = useMainStore();
@@ -66,6 +67,13 @@ function selectItem(item: any) {
         let querySubChapter: string | undefined = undefined; 
         if(item.pathName || item.fullLabels) {
             materialsStore.updateMaterialsFullLabels(item.fullLabels ?? [item.label]);
+            
+            materialsRouter.setState({
+                chapter: item?.pathName ?? null,
+                subChapter: item?.fullpath ?? null,
+                materialUid: `${item?.pathName ?? 'void'}---${item?.fullpath ?? 'void'}`,
+                materialType: materialsStore.determineMaterialType(item),
+            })
         }
         
         if(item.fullpath) {

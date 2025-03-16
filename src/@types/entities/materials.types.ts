@@ -1,4 +1,20 @@
 
+export type MaterialType = 'chapter' | 'sub-chapter' | null;
+
+export interface MaterialsRouterState {
+    /** строковое имя раздела */
+    chapter: null | string;
+
+    /** строковое имя подраздела */
+    subChapter: null | string;
+
+    /** тип текущего материала `chapter` | `sub-chapter` */
+    materialType: MaterialType;
+
+    /** Уникальный ID текущего материала */
+    materialUid: null | string;
+}
+
 // Объект раздела при его создании на клиенте
 export interface ChapterCreate {
     label: string;

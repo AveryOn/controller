@@ -244,7 +244,7 @@ app.whenReady().then(async () => {
         return await getChapterBlocks(params, auth);
     });
 
-    // получение блоков раздела
+    // получение блоков подраздела
     ipcMain.handle("get-sub-chapter-blocks", async (_, params: GetChapterBlocks, auth: AuthParams) => {
         return await getSubChapterBlocks(params, auth);
     });

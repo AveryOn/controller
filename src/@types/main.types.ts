@@ -8,7 +8,6 @@ export enum LocalVars {
     token = 'token',
     currentRoute = 'current_route',
     materialsFullLabel = 'materials-full-label',
-
     // Appearance
     palette = 'palette',
     theme = 'theme',

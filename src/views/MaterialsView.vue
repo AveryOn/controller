@@ -38,12 +38,13 @@ import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiRefresh, mdiCloseBoxOutline } from '@mdi/js';
 import { ChapterCreate } from '../@types/entities/materials.types';
 import { createChapter, syncMaterials } from '../api/materials.api';
-import { useMaterialsStore } from '../stores/materials.store';
+import { materialsRouter, useMaterialsStore } from '../stores/materials.store';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const labelChapter: Ref<string> = ref('');
 const materialStore = useMaterialsStore();
+
+const labelChapter: Ref<string> = ref('');
 const rootChapterId: Ref<number | null> = ref(null);
 
 const correctLabelChapter = computed(() => {
@@ -116,7 +117,13 @@ async function calledSyncMaterialsMenu() {
 
 }
 
+materialsRouter.subscribe(['materialUid', 'materialType'], (value) => {
+    console.log('Material Uid has changed', value);
+})
+
 onMounted(() => {
+
+    console.log('ПЕРЕКЛЮЧЕН РАЗДЕЛ', router.currentRoute.value.params);
     labelChapter.value = ' > ' + materialStore.getMaterialsFullLabels().join(' > ');
 })
 

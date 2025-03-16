@@ -22,6 +22,7 @@
                     />
                 </div>
             </div>
+            
             <span class="splitter"></span>
 
             <!-- Блок выбора цветовой палитры -->
@@ -92,8 +93,6 @@ function selectTheme(code: ThemesKey) {
 onMounted(() => {
     currentTheme.value = localStorage.getItem(LocalVars.theme) as ThemesKey
     currentPalette.value = localStorage.getItem(LocalVars.palette) as PalettesKey
-    console.log('currentTheme', currentTheme.value);
-    console.log('currentPalette', currentPalette.value);
 })
 
 </script>
