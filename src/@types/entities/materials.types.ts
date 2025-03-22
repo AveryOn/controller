@@ -16,6 +16,9 @@ export interface MaterialsRouterState {
 
     /** Уникальный ID текущего Раздела */
     chapterId: null | number;
+
+    /** Уникальный ID текущего Блока информации */
+    blockId: null | number;
 }
 
 // Объект раздела при его создании на клиенте

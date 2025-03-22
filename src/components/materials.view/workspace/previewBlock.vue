@@ -13,22 +13,24 @@
         </template>
         <template #default>
             <div class="block-body">
+                
                 <div class="block-body__content">
-                    <!-- 
-                    v-if="isShowTextEditor(block)"
-                    @update:content="(content) => editorContent = content" 
-                    @save:content="saveContentBlock"
-                    @close="closeTextEditor" :closable="true"
-                    :editor-styles="{ height: '100%', width: '100%' }" 
-                    :initial-value="initEditorContent"
-                    :loading="isLoadingSaveContent"  
-                    -->
+                    <ProgressBar 
+                        v-if="isLoadingBlock" 
+                        mode="indeterminate" 
+                        style="height: 3px"
+                    ></ProgressBar>
+
                     <editorInBlock 
                         v-if="props.isActiveEditor"
-                        :editor-styles="{ height: '95%', width: '100%' }" 
+                        :editor-styles="{ height: '100%', width: '100%' }" 
                         :initial-value="initEditorContent"
                         :closable="false"
+                        @update:content="(content) => console.log('update:content', content)" 
+                        @save:content="() => console.log('save:content')"
+                        @close="() => console.log('close')" 
                     />
+                    <div v-else v-html="content"></div>
                 </div>
 
                 <div class="body-actions">
@@ -49,9 +51,11 @@
 
 <script setup lang="ts">
 import { BlockMeta } from '../../../@types/entities/materials.types';
-import { defineEmits, defineProps, onMounted, type Ref, ref } from 'vue';
+import { defineEmits, defineProps, onBeforeMount, onMounted, type Ref, ref } from 'vue';
 import dialogComp from '../../base/dialogComp.vue';
 import editorInBlock from './editorInBlock.vue';
+import { materialsRouter } from '../../../stores/materials.store';
+import { getOneBlockApi } from '../../../api/materials.api';
 
 
 interface Props {
@@ -70,11 +74,30 @@ const emit = defineEmits<{
     (e: 'close'): void;
 }>();
 
+const isLoadingBlock = ref(false)
 const content = ref('') 
 const initEditorContent: Ref<string | null> = ref<string | null>(null);
 
-onMounted(() => {
-    // 
+onBeforeMount(async () => {
+    materialsRouter.subscribe('blockId', async ({ blockId }) => {
+        if (blockId.value) {
+            try {
+                isLoadingBlock.value = true
+                const block = await getOneBlockApi({ id: blockId.value })
+                if (block) {
+                    content.value = block.content ?? ''
+                }
+            }
+            finally {
+                isLoadingBlock.value = false
+            }
+
+        }
+        else {
+            content.value = ''
+            initEditorContent.value = ''
+        }
+    })
 })
 
 </script>
@@ -108,6 +131,7 @@ onMounted(() => {
     height: 90vh !important;
 }
 .block-body__content {
+    position: relative;
     width: 100%;
     height: 100%;
     overflow: auto;

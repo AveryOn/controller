@@ -120,7 +120,7 @@ import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
 import { MenuItem } from 'primevue/menuitem';
-import { useMaterialsStore } from '../../../stores/materials.store';
+import { materialsRouter, useMaterialsStore } from '../../../stores/materials.store';
 import { sortedMerge } from '../../../utils/structures';
 import { createChapterBlockApi, deleteChapterBlockApi, editChapterBlockApi } from '../../../api/materials.api';
 import PreviewBlock from './previewBlock.vue';
@@ -234,6 +234,7 @@ function openTextEditor() {
  */
 function openPreviewBlock(data: BlockMeta) {
     selectedBlock.value = data
+    materialsRouter.setState({ blockId: selectedBlock.value.id })
     isActivePreviewBlock.value = true
 }
 
@@ -243,6 +244,7 @@ function openPreviewBlock(data: BlockMeta) {
 function closePreviewBlock() {
     console.log('Обозреватель закрыт');
     isActivePreviewBlock.value = false
+    materialsRouter.setState({ blockId: null })
     selectedBlock.value = null
 }
 

@@ -11,6 +11,7 @@ import { Chapter,
     DeleteSubChapterParams, 
     EditChapterBlock, 
     EditChapterParams, 
+    GetBlockByIdParams, 
     GetChapterBlocks, 
     GetChapterOneParams, 
     GetChaptersConfig, 
@@ -483,6 +484,31 @@ export async function getSubChapterBlocks(params: GetChapterBlocks, auth: AuthPa
             excludes: ['content', 'subChapterId', 'chapterId', 'createdAt'], 
         });
         return blocks;
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
+/**
+ * Получить блок информации по ID
+ */
+export async function getOneBlock(params: GetBlockByIdParams, auth: AuthParams) {
+    try {
+        if(!params || !params.id) {
+            throw new Error('[getOneBlock]>> INVALID_INPUT');
+        }
+        if(!auth?.token) {
+            throw new Error("[getOneBlock]>> 401 UNAUTHORIZE");
+        }
+        await verifyAccessToken(auth.token, { refresh: true });
+
+        const blockService = new BlocksService();
+        const block = await blockService.getById(params.id)
+        if(!block) {
+            throw new Error("[getOneBlock]>> 404 NOT_FOUND");
+        }
+        return block;
     } catch (err) {
         console.error(err);
         throw err;

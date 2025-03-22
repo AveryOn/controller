@@ -49,6 +49,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
   deleteChapter: (params, auth) => electron.ipcRenderer.invoke("delete-chapter", params, auth),
   deleteSubChapter: (params, auth) => electron.ipcRenderer.invoke("delete-sub-chapter", params, auth),
   // ======= MATERIALS > BLOCKS ========
+  getOneBlock: (params, auth) => electron.ipcRenderer.invoke("get-one-block", params, auth),
   getChapterBlocks: (params, auth) => electron.ipcRenderer.invoke("get-chapter-blocks", params, auth),
   getSubChapterBlocks: (params, auth) => electron.ipcRenderer.invoke("get-sub-chapter-blocks", params, auth),
   createChapterBlock: (params, auth) => electron.ipcRenderer.invoke("create-chapter-block", params, auth),

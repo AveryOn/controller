@@ -112,7 +112,19 @@ onMounted(() => {
     border: 1px solid var(--border-color-1);
     height: calc(100% - 42px) !important;
 }
+.ql-container {
+    background: #1e1e1e !important;
+    color: #ffffff !important;
+}
+.ql-toolbar {
+    background: #2a2a2a !important;
+    border: none !important;
+}
 
+.ql-editor {
+    background: #1e1e1e !important;
+    color: #ffffff !important;
+}
 .ql-editor {
     padding: 1rem 2rem !important;
 }
@@ -120,10 +132,25 @@ onMounted(() => {
 .ql-toolbar {
     left: 50% !important;
     transform: translateX(-50%) !important;
-    width: 1100px !important;
+    width: 1000px !important;
     height: 40px !important;
     position: fixed !important;
-    background-color: white !important;
+    background-color: var(--bg-color) !important;
+    color: white !important;
     z-index: 10 !important;
 }
+
+.ql-toolbar {
+    background: #2a2a2a;
+    border: none;
+}
+
+.ql-toolbar button,
+.ql-toolbar .ql-picker,
+.ql-toolbar .ql-picker-options,
+.ql-toolbar .ql-picker-label {
+    color: var(--fg-color) !important;
+    fill: var(--fg-color) !important;
+}
+
 </style>

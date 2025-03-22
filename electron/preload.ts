@@ -1,6 +1,6 @@
 import { ipcRenderer, contextBridge } from 'electron'
 import type { CreateUserParams, GetUsersConfig, LoginParams, PrepareUserStoreParams, UpdatePasswordParams } from './server/types/controllers/users.types';
-import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterParams, GetChapterBlocks, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types';
+import type { ChapterCreate, CreateChapterBlock, DeleteChapterBlock, DeleteChapterParams, DeleteSubChapterParams, EditChapterBlock, EditChapterParams, GetBlockByIdParams, GetChapterBlocks, GetChapterOneParams, GetChaptersConfig, GetSubChapterOneParams, SubChapterCreate } from './server/types/controllers/materials.types';
 import { ValidateAccessTokenParams } from './server/types/controllers/auth.types';
 import { AuthParams } from './server/types/controllers/index.types';
 import { logout, refreshToken } from '../src/utils/auth';
@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electron', {
     deleteSubChapter: (params: DeleteSubChapterParams, auth: AuthParams) => ipcRenderer.invoke('delete-sub-chapter', params, auth),
 
     // ======= MATERIALS > BLOCKS ========
+    getOneBlock: (params: GetBlockByIdParams, auth: AuthParams) => ipcRenderer.invoke('get-one-block', params, auth),
     getChapterBlocks: (params: GetChapterBlocks, auth: AuthParams) => ipcRenderer.invoke('get-chapter-blocks', params, auth),
     getSubChapterBlocks: (params: GetChapterBlocks, auth: AuthParams) => ipcRenderer.invoke('get-sub-chapter-blocks', params, auth),
     createChapterBlock: (params: CreateChapterBlock, auth: AuthParams) => ipcRenderer.invoke('create-chapter-block', params, auth),

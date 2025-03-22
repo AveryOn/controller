@@ -154,3 +154,12 @@ export interface ChapterForMenu {
     route: string;
     items?: SubChapterForMenu[] | null;
 }
+
+
+// region BLOCKS
+
+export interface GetBlockByIdParams {
+    id: number
+}
+ 
+// end region

@@ -19,6 +19,7 @@ import type {
     DeleteSubChapterParams,
     EditChapterBlock,
     EditChapterParams,
+    GetBlockByIdParams,
     GetChapterBlocks,
     GetChapterOneParams,
     GetChaptersConfig,
@@ -35,6 +36,7 @@ import { createChapter,
     editChapterBlock, 
     getChapterBlocks, 
     getChapters, 
+    getOneBlock, 
     getOneChapter, 
     getOneSubChapter,
     getSubChapterBlocks,
@@ -247,6 +249,11 @@ app.whenReady().then(async () => {
     // получение блоков подраздела
     ipcMain.handle("get-sub-chapter-blocks", async (_, params: GetChapterBlocks, auth: AuthParams) => {
         return await getSubChapterBlocks(params, auth);
+    });
+
+    // получение блоков подраздела
+    ipcMain.handle("get-one-block", async (_, params: GetBlockByIdParams, auth: AuthParams) => {
+        return await getOneBlock(params, auth);
     });
 
     // Создание блока для раздела

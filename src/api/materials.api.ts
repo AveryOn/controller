@@ -1,4 +1,6 @@
+import { GetBlockByIdParams } from "../../electron/server/types/controllers/materials.types";
 import type { 
+    Block,
     Chapter, 
     ChapterBlock, 
     ChapterCreate, 
@@ -115,6 +117,17 @@ export async function deleteSubChapterApi(params: DeleteSubChapterParams): Promi
     return new Promise((resolve, reject) => {
         try {
             resolve(window.electron.deleteSubChapter(params, { token: localStorage.getItem(LocalVars.token) }));
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
+// Получение блоков для раздела
+export async function getOneBlockApi(params: GetBlockByIdParams): Promise<Block> {
+    return new Promise((resolve, reject) => {
+        try {
+            resolve(window.electron.getOneBlock(params, { token: localStorage.getItem(LocalVars.token) }));
         } catch (err) {
             reject(err);
         }

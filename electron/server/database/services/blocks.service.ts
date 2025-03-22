@@ -153,6 +153,7 @@ export default class BlocksService {
             select?: Array<keyof BlockRaw>,
             excludes?: Array<keyof BlockRaw> 
         }): Promise<BlockForGet | null> {
+            
         if(!blockId) throw new Error('[BlocksService.getById]>> blockId is not defined');
         if(typeof blockId !== 'number') throw new Error('[BlocksService.getById]>> invalid blockId');
 

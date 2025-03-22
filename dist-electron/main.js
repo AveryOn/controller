@@ -6194,6 +6194,26 @@ async function getSubChapterBlocks(params, auth) {
     throw err;
   }
 }
+async function getOneBlock(params, auth) {
+  try {
+    if (!params || !params.id) {
+      throw new Error("[getOneBlock]>> INVALID_INPUT");
+    }
+    if (!(auth == null ? void 0 : auth.token)) {
+      throw new Error("[getOneBlock]>> 401 UNAUTHORIZE");
+    }
+    await verifyAccessToken(auth.token, { refresh: true });
+    const blockService = new BlocksService();
+    const block = await blockService.getById(params.id);
+    if (!block) {
+      throw new Error("[getOneBlock]>> 404 NOT_FOUND");
+    }
+    return block;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
 async function createChapterBlock(params, auth) {
   try {
     if (!params || !params.pathName || !params.title)
@@ -6583,6 +6603,9 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("get-sub-chapter-blocks", async (_, params, auth) => {
     return await getSubChapterBlocks(params, auth);
+  });
+  ipcMain.handle("get-one-block", async (_, params, auth) => {
+    return await getOneBlock(params, auth);
   });
   ipcMain.handle("create-chapter-block", async (_, params, auth) => {
     return await createChapterBlock(params, auth);
