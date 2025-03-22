@@ -13,9 +13,12 @@
         <div class="materials-main">
             <addChapter class="m-auto" v-show="$route.params['chapter'] === 'add-chapter'"
                 :loading="materialStore.loadingCreateChapter" @submit-form="requestForChapterCreate" />
-            <wrapperChapter :blocks="blocks" :full-label="labelChapter" :root-chapter-id="rootChapterId"
-                :fullpath="fullpath"
-                :path-name="pathName"
+            <wrapperChapter 
+                :blocks="materialStore.blocks" 
+                :full-label="labelChapter" 
+                :root-chapter-id="rootChapterId"
+                :fullpath="materialStore.fullpath"
+                :path-name="materialStore.pathName"
                 v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']"
                 @open-chapter="(label: any) => { label }" @update-root-chapter-id="(id: number) => rootChapterId = id"
                 @update-full-label="(label: string) => updateFullLabel(label)"
@@ -28,14 +31,14 @@
 </template>
 
 <script setup lang=ts>
-import { computed, onBeforeMount, ref, type Ref } from 'vue';
+import { computed, onMounted, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 //@ts-expect-error
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiRefresh, mdiCloseBoxOutline } from '@mdi/js';
-import { Block, ChapterCreate, GetChapterBlocks } from '../@types/entities/materials.types';
-import { createChapter, getChapterBlocksApi, getSubChapterBlocksApi, syncMaterials } from '../api/materials.api';
+import { Block, ChapterCreate } from '../@types/entities/materials.types';
+import { createChapter, syncMaterials } from '../api/materials.api';
 import { materialsRouter, useMaterialsStore } from '../stores/materials.store';
 import { useRouter } from 'vue-router';
 import { LocalVars } from '../@types/main.types';
@@ -46,8 +49,6 @@ const materialStore = useMaterialsStore();
 const labelChapter: Ref<string> = ref('');
 const rootChapterId: Ref<number | null> = ref(null);
 
-const pathName: Ref<string | null> = ref(null)
-const fullpath: Ref<string | null> = ref(null)
 const blocks: Ref<Array<Block>> = ref([]);
 
 const correctLabelChapter = computed(() => {
@@ -119,71 +120,11 @@ async function calledSyncMaterialsMenu() {
     }
 }
 
-let timerId: NodeJS.Timeout | undefined = undefined
-/**
- * Выполнить запрос на получение блоков в зависимости от типа материала: `chapter` | `subChapter`
- * @param type `'chapter'` | `'subChapter'`
- */
-
-async function getBlocks(type: 'chapter' | 'sub-chapter', params: GetChapterBlocks) {
-    materialStore.loadingGetChapter = true
-
-    let duration: number = 0
-
-    if (timerId) {
-        clearTimeout(timerId)
-        timerId = undefined
-    }
-    else duration = 0
-
-    timerId = setTimeout(async () => {
-        try {
-            // Получить блоки раздела
-            if (type === 'chapter') {
-                console.log('ОТРАБОТАЛ GET CHAPTER');
-
-                blocks.value = await getChapterBlocksApi({
-                    chapterId: params.chapterId,
-                }) as Block[];
-            }
-            // Получить блоки ПОДраздела
-            else if (type === 'sub-chapter') {
-                console.log('ОТРАБОТАЛ GET SUB CHAPTER');
-                blocks.value = await getSubChapterBlocksApi({
-                    chapterId: params.chapterId,
-                }) as Block[];
-            }
-        }
-        finally {
-            materialStore.loadingGetChapter = false
-        }
-
-    }, duration)
-}
-
 async function deleteBlock(blockId: number) {
     blocks.value = blocks.value.filter((block) => block.id !== blockId)
 }
 
-
-onBeforeMount(() => {
-    materialsRouter.subscribe(['materialUid'], async (state) => {
-        console.log('WORK SPACE >>>> SUBSCRIBE', state.chapterId.value);
-
-        pathName.value = state.chapter.value
-        fullpath.value = state.subChapter.value
-        
-        blocks.value.length = 0
-        if (state.materialType.value) {
-            await getBlocks(state.materialType.value!, {
-                chapterId: state.chapterId.value!,
-            })
-        } else {
-            throw new Error('WorkSpace >>> !materialType is not defined')
-        }
-    }, { fetch: '*' })
-
-
+onMounted(async () => {
     const currentRoute: any = JSON.parse(localStorage.getItem(LocalVars.currentRoute)!);
     const chapter = currentRoute.params['chapter'] ?? null
     const subChapter = currentRoute.query['subChapter'] ?? null
@@ -196,8 +137,6 @@ onBeforeMount(() => {
         materialUid: `${chapter ?? 'void'}---${subChapter ?? 'void'}`,
         chapterId: +chapterId ? +chapterId : null,
     })
-
-    labelChapter.value = ' > ' + materialStore.getMaterialsFullLabels().join(' > ');
 })
 
 </script>

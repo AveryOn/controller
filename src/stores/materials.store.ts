@@ -1,7 +1,7 @@
-import type { Chapter, ChapterForMenu, MaterialsRouterState, MaterialType } from "../@types/entities/materials.types";
+import type { Block, Chapter, ChapterForMenu, GetChapterBlocks, MaterialsRouterState, MaterialType } from "../@types/entities/materials.types";
 import { defineStore } from "pinia";
 import { computed, type Ref, ref } from "vue";
-import { getChapters } from "../api/materials.api";
+import { getChapterBlocksApi, getChapters, getSubChapterBlocksApi } from "../api/materials.api";
 import { LocalVars } from "../@types/main.types";
 import { StateManager } from "node-state-manager";
 
@@ -34,6 +34,9 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     const loadingEditChapter = ref(false);
     const loadingDeleteChapter = ref(false);
     const materialsLabel: Ref<Array<string>> = ref([]);
+    const pathName: Ref<string | null> = ref(null)
+    const fullpath: Ref<string | null> = ref(null)
+    const blocks: Ref<Array<Block>> = ref([]);
 
     // Состояние определяет какую либо асинхронную операцию для отображение прогресс бара в заголовке стр materials
     const globalLoadingMaterials = computed(() => {
@@ -126,6 +129,64 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         }
     }
 
+    let timerId: NodeJS.Timeout | undefined = undefined
+    /**
+     * Выполнить запрос на получение блоков в зависимости от типа материала: `chapter` | `subChapter`
+     * @param type `'chapter'` | `'subChapter'`
+     */
+
+    async function getBlocks(type: 'chapter' | 'sub-chapter', params: GetChapterBlocks) {
+        loadingGetChapter.value = true
+
+        let duration: number = 0
+
+        if (timerId) {
+            clearTimeout(timerId)
+            timerId = undefined
+        }
+        else duration = 0
+
+        timerId = setTimeout(async () => {
+            try {
+                // Получить блоки раздела
+                if (type === 'chapter') {
+                    console.log('ОТРАБОТАЛ GET CHAPTER');
+
+                    blocks.value = await getChapterBlocksApi({
+                        chapterId: params.chapterId,
+                    }) as Block[];
+                }
+                // Получить блоки ПОДраздела
+                else if (type === 'sub-chapter') {
+                    console.log('ОТРАБОТАЛ GET SUB CHAPTER');
+                    blocks.value = await getSubChapterBlocksApi({
+                        chapterId: params.chapterId,
+                    }) as Block[];
+                }
+            }
+            finally {
+                loadingGetChapter.value = false
+            }
+
+        }, duration)
+    }
+
+    materialsRouter.subscribe(['chapterId', 'materialUid'], async (state) => {
+        console.log('STORE >>>> SUBSCRIBE', state?.chapterId?.value);
+    
+        pathName.value = state.chapter.value
+        fullpath.value = state.subChapter.value
+        
+        blocks.value.length = 0
+        if (state.materialType.value) {
+            await getBlocks(state.materialType.value!, {
+                chapterId: state.chapterId.value!,
+            })
+        } else {
+            throw new Error('WorkSpace >>> !materialType is not defined')
+        }
+    }, { fetch: '*' })
+
     return {
         materialsLabel,
         materialChaptersMenu,
@@ -136,6 +197,9 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
         loadingCreateChapter,
         loadingEditChapter,
         loadingDeleteChapter,
+        pathName,
+        fullpath,
+        blocks,
         getMaterialsMenu,
         updateMenuItems,
         updateMaterialsFullLabels,

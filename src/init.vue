@@ -1,6 +1,9 @@
 <template>
     <div id="titlebar">
-        <p id="app-title">{{ appTitleContent }}</p>
+        <p id="app-title">
+            <span id="prompt">$></span>
+            {{ appTitleContent }}
+        </p>
         <div class="titlebar-region-drag">
         </div>
         <div class="app-title-btns flex align-items-center">
@@ -45,7 +48,7 @@ import { PalettesKey, ThemesKey } from './@types/ui.types';
 
 const router = useRouter();
 const mainStore = useMainStore();
-const appTitleContent = ref('$>_ ')
+const appTitleContent = ref('_ ')
 const isGlobalLoading = ref(true);
 interface CurrentRoute {
     name: string;
@@ -80,7 +83,7 @@ onMounted(() => {
 
     setTimeout(() => {
         isGlobalLoading.value = false;
-        let readyTitle = '$> ';
+        let readyTitle = ' ';
         for (let i = 0; i < mainStore.appTitle.length; i++) {
             setTimeout(() => {
                 const char = mainStore.appTitle[i];
