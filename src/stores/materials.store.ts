@@ -1,6 +1,7 @@
 import type { Block, Chapter, ChapterForMenu, GetChapterBlocks, MaterialsRouterState, MaterialType } from "../@types/entities/materials.types";
+import type { Ref } from "vue";
 import { defineStore } from "pinia";
-import { computed, type Ref, ref } from "vue";
+import { computed, ref } from "vue";
 import { getChapterBlocksApi, getChapters, getSubChapterBlocksApi } from "../api/materials.api";
 import { LocalVars } from "../@types/main.types";
 import { StateManager } from "node-state-manager";
@@ -150,15 +151,12 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
             try {
                 // Получить блоки раздела
                 if (type === 'chapter') {
-                    console.log('ОТРАБОТАЛ GET CHAPTER');
-
                     blocks.value = await getChapterBlocksApi({
                         chapterId: params.chapterId,
                     }) as Block[];
                 }
                 // Получить блоки ПОДраздела
                 else if (type === 'sub-chapter') {
-                    console.log('ОТРАБОТАЛ GET SUB CHAPTER');
                     blocks.value = await getSubChapterBlocksApi({
                         chapterId: params.chapterId,
                     }) as Block[];
@@ -172,7 +170,6 @@ export const useMaterialsStore = defineStore('materialsStored', () => {
     }
 
     materialsRouter.subscribe(['chapterId', 'materialUid'], async (state) => {
-        console.log('STORE >>>> SUBSCRIBE', state?.chapterId?.value);
     
         pathName.value = state.chapter.value
         fullpath.value = state.subChapter.value

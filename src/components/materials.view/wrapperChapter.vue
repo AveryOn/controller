@@ -36,7 +36,6 @@
 
 <script setup lang="ts">
 import type { ComputedRef, Ref } from 'vue';
-// import { NavigationGuardNext } from 'vue-router';
 import { createSubChapter, deleteChapterApi, deleteSubChapterApi, editChapterApi, getOneChapter, getOneSubChapter, syncMaterials } from '../../api/materials.api';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Block, Chapter, ChapterCreate, ChapterEdit, ChapterEditRequest, CreateChapterForm, SubChapterCreate } from '../../@types/entities/materials.types';
@@ -208,12 +207,6 @@ function closeAllWins() {
     isShowCreateBlock.value = false;
 }
 
-// // Сброс локального состояния компонента (e.g для перехода на другой маршрут)
-// function resetState() {
-//     closeAllWins();
-//     opennedChapter.value = null;
-// }
-
 // Запрос на удаление Раздела
 async function requestDeleteChapter() {
     // Убеждаемся, что выбран раздела а не ПОДраздел
@@ -367,44 +360,6 @@ async function requestGetOneSubChapter(pathName: string, rawQuery: string) {
         materialStore.loadingGetChapter = false;
     }
 }
-
-// async function initPageData(
-//     nextChapter?: string,
-//     prevChapter?: string,
-//     nextSubChapter?: string,
-//     prevSubChapter?: string,
-//     next?: NavigationGuardNext,
-// ) {
-//     try {
-//         // Запрос на получение данных раздела в случае его выбора
-//         if (nextChapter !== 'add-chapter') {
-//             if (nextChapter && nextChapter !== prevChapter) {
-//                 await requestGetOneChapter(nextChapter);
-//             }
-//             // Если происходит выход из просмотра разделов и подразделов
-//             else if (!nextChapter) emit('quit');
-//             // В случае смены подраздела при активном разделе
-
-//             if (nextSubChapter && nextChapter && nextSubChapter !== prevSubChapter) {
-//                 await requestGetOneSubChapter(nextChapter, nextSubChapter);
-//             }
-//             else {
-//                 // Если маршрут перешел с подраздела на раздел
-//                 if (nextChapter && prevChapter === nextChapter && !nextSubChapter) {
-//                     await requestGetOneChapter(nextChapter)
-//                     if(next) return void next()
-//                 }
-//             }
-//             if (next) return void next();
-//         } else {
-//             emit('openChapter', 'Add New Chapter');
-//         }
-//         if (next) next();
-//     } catch (err) {
-//         console.error('initPageData', err);
-//         throw err;
-//     }
-// }
 
 function controlKey(e: KeyboardEvent) {
     if (e.key === 'Escape') {
