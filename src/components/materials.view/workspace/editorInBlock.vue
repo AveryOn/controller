@@ -1,5 +1,8 @@
 <template>
-    <div class="editor-wrapper gap-2">
+    <div 
+        class="editor-wrapper gap-2"
+        id="editor-wrapper"
+    >
         <Button 
         v-if="props.closable"
         class="editor-close-btn" 
@@ -14,13 +17,13 @@
         :editor-styles="props.editorStyles"
         :show-save="false"
         />
-        <Button
+        <!-- <Button
         class="save-btn px-1" 
         icon="pi pi-check"
         size="small"
         @click="emit('save:content')" 
         :loading="props.loading"
-        />
+        /> -->
     </div>
 </template>
 

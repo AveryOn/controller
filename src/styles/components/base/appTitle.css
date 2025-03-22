@@ -26,6 +26,7 @@
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    z-index: 999999 !important;
 }
 .titlebar-region-drag {
     width: calc(100vw - 75px);
@@ -37,6 +38,7 @@
     width: 75px;
     display: flex;
     justify-content: flex-end;
+    z-index: 99999 !important;
 }
 
 .app-title-btn {

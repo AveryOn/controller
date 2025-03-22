@@ -1,10 +1,15 @@
 <template>
-    <Dialog 
+    <Dialog
     :visible="props.modelValue" 
-    @update:visible="(e) => emit('update:modelValue', e)" 
+    @update:visible="(e) => updateModelValue(e)" 
+    @hide="() => close()"
     :modal="props.isModal" 
     :closable="false"
-    :style="{ minWidth: '25rem', width: 'max-content' }"
+    :style="{ 
+        minWidth: '25rem', 
+        width: 'max-content',
+        zIndex: '99999', 
+    }"
     >
         <template #header>
             <div class="dialog-header w-full flex align-items-center">
@@ -35,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+// @ts-expect-error
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiCloseBoxOutline } from '@mdi/js';
 interface Props {
@@ -50,10 +56,15 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: 'update:modelValue', visible: boolean): void;
+    (e: 'close'): void;
 }>();
 
+function updateModelValue(active: boolean){
+    emit('update:modelValue', active);
+}
+
 function close() {
-    emit('update:modelValue', false);
+    emit('close')
 }
 
 </script>
@@ -84,7 +95,6 @@ function close() {
 .dialog-content {
     width: 100%;
     height: max-content;
-    max-height: 70vh;
     overflow: hidden;
 }
 .dialog-footer {

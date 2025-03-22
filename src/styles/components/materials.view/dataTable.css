@@ -1,0 +1,37 @@
+
+:root {
+    --data-table-fg: black;
+    --data-table-bg: white;
+    --data-table-hover-bg: rgba(231, 229, 229, 0.82);
+    --data-table-header-color: white;
+    --data-table-hover-color: rgb(41, 41, 41);
+    --data-table-header-padding: 5px 5px;
+    --data-table-cell-padding: 5px 5px;
+    
+    
+    --data-table-border-color: rgba(123, 123, 123, 0.311);
+    --data-table-border-width: 1px;
+    --data-table-border-style: solid;
+
+    --p-datatable-header-cell-selected-background: var(--data-table-fg) !important;
+    --p-datatable-header-cell-hover-background: var(--data-table-fg) !important;
+    
+    /* HEADER */
+    --p-datatable-header-background: var(--cf-primary-2) !important;
+    --p-datatable-header-cell-background: var(--cf-primary-2) !important;
+    --p-datatable-header-cell-color: var(--data-table-header-color) !important;
+    --p-datatable-header-cell-border-color: var(--data-table-border-color) !important;
+
+    /* BODY */
+    --p-datatable-row-focus-ring-color: var(--cf-primary-2) !important;
+    --p-datatable-row-selected-background: var(--cf-primary-2) !important;
+    --p-datatable-row-hover-background: var(--data-table-hover-bg) !important; 
+    --p-datatable-row-background: var(--data-table-bg) !important;
+    --p-datatable-row-color: var(--data-table-fg) !important;
+    --p-datatable-row-hover-color: var(--data-table-hover-color) !important;
+    --p-datatable-body-cell-selected-border-color: var(--cf-primary-2) !important;
+    --p-datatable-row-striped-background: var() !important;
+
+    --p-datatable-border-color: var(--data-table-border-color) !important;
+}
+

@@ -64,7 +64,7 @@ const initializeQuill = () => {
                     { 'direction': 'rtl' }, 'link', 'image', 'video', 'clean',
                     
                 ],
-            }
+            },
         });
         // Слушатель события изменения контента
         quillInstance.on('text-change', () => {
@@ -107,6 +107,23 @@ onMounted(() => {
 
 <style>
 #editor-container {
-    position: relative;
+    height: 50% !important;
+    margin-top: 42px !important;
+    border: 1px solid var(--border-color-1);
+    height: calc(100% - 42px) !important;
+}
+
+.ql-editor {
+    padding: 1rem 2rem !important;
+}
+
+.ql-toolbar {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 1100px !important;
+    height: 40px !important;
+    position: fixed !important;
+    background-color: white !important;
+    z-index: 10 !important;
 }
 </style>

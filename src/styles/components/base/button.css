@@ -9,9 +9,9 @@
 
 .p-button {
     font-size: var(--ui-text-size) !important;
-    background-color: var(--cf-primary-2) !important;
     border-color: var(--cf-primary-2) !important;
     outline-color: var(--cf-primary-2) !important;
+    color: var(--cf-primary-2) !important;
 }
 
 .p-button-help {

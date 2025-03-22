@@ -9,3 +9,7 @@
     --p-dialog-content-padding: 0rem !important;
     --p-dialog-footer-padding: 0rem !important;
 }
+
+.p-dialog {
+    max-height: max-content !important;
+}

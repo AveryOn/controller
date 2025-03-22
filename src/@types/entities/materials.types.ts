@@ -81,6 +81,12 @@ export interface Block {
     updatedAt: string;
 }
 
+export interface BlockMeta {
+    id: number;
+    title: string;
+    updatedAt: string;
+}
+
 export interface ChapterBlock {
     id: number;
     title: string;

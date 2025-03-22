@@ -5,11 +5,21 @@
             @update:model-value="(state) => emit('update:isShowCreateBlock', state)"
             @submit-form="reqCreateBlockMaterial" />
         <!-- Форма удаления блока -->
-        <deleteBlockForm :loading="isLoadingDeleteBlock" v-model="isActivateDeleteForm"
-            @delete="reqDeleteBlockMaterial" />
+        <deleteBlockForm 
+            :loading="isLoadingDeleteBlock" 
+            v-model="isActivateDeleteForm"
+            @delete="reqDeleteBlockMaterial" 
+        />
 
-        <PreviewBlock :loading="isLoadingDeleteBlock" v-model="isActivePreviewBlock"
-            @save="() => console.log('SAVE')" />
+        <!-- Обозреватель блока с информацией (с редактором) -->
+        <PreviewBlock 
+            :block="selectedBlock"
+            :loading="isLoadingDeleteBlock"
+            :is-active-editor="opennedStateEditor.isActive"
+            v-model="isActivePreviewBlock"
+            @save="() => console.log('SAVE')" 
+            @close="() => closePreviewBlock()"
+        />
 
         <!-- Если блоков нет -->
         <div v-if="props.blocks.length <= 0 && materialStore.loadingGetChapter === false" class="if-not-blocks gap-3">
@@ -22,7 +32,7 @@
             <div class="wrapper-block__header w-6 mx-auto flex align-items-center justify-content-center">
                 <h2>{{ props.chapter?.label }}</h2>
             </div>
-            <Accordion :value="currentBlockId" @tab-open="({ index }) => currentBlockId = index">
+            <!-- <Accordion :value="currentBlockId" @tab-open="({ index }) => currentBlockId = index">
                 <AccordionPanel v-for="block in sortedBlocks" :key="block.id" :value="block.id">
                     <AccordionHeader>
                         <div class="block-header__title flex align-items-center gap-3">
@@ -40,7 +50,6 @@
                     </AccordionHeader>
                     <AccordionContent>
                         <div class="block-content-wrapper">
-                            <!-- Menu -->
                             <Menubar class="w-full flex justify-content-end px-4 py-0 sticky top-0 z-5"
                                 :model="blockHeaderItems">
                                 <template #item="{ item, props }">
@@ -57,22 +66,56 @@
                                 @close="closeTextEditor" :closable="true"
                                 :editor-styles="{ height: '100%', width: '100%' }" :initial-value="initEditorContent"
                                 :loading="isLoadingSaveContent" />
-                            <!-- CONTENT -->
                             <div class="ql-editor px-5 py-3" v-else v-html="blockContent(block.content)">
                             </div>
                         </div>
                     </AccordionContent>
                 </AccordionPanel>
-            </Accordion>
+            </Accordion> -->
+        
+            <!-- v-model:selection="selectedProduct" -->
+            <DataTable 
+                tableStyle="min-width: 50rem"
+                showGridlines
+                selectionMode="single"
+                dataKey="id"
+                :metaKeySelection="true"
+                :value="props.blocks" 
+                :striped-rows="false"
+                :size="'small'"
+                @update:selection="openPreviewBlock"
+            >
+                <Column 
+                    :style="{ width: '30px' }" 
+                    style="padding: 0 1rem;"
+                    header="N"
+                >
+                    <template #body="{ index }">
+                        <p class="font-bold">{{ index + 1 }}</p>
+                    </template>
+                </Column>
+                <Column 
+                    style="padding: 0 1rem;"
+                    field="title" 
+                    header="Title"
+                ></Column>
+                <Column 
+                    :style="{ width: '200px' }" 
+                    field="updatedAt" 
+                    header="Updated at"
+                ></Column>
+            </DataTable>
+
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import type { Ref } from 'vue';
-import { Block, Chapter, ChapterBlock, CreateChapterBlock, DeleteChapterBlock } from '../../../@types/entities/materials.types';
+import { Block, BlockMeta, Chapter, ChapterBlock, CreateChapterBlock, DeleteChapterBlock } from '../../../@types/entities/materials.types';
 import { ref, computed, defineProps, nextTick, onBeforeUnmount, onMounted, watch, onBeforeMount } from 'vue';
-import editorInBlock from './editorInBlock.vue';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import useNotices from '../../../composables/notices';
 import CreateBlockForm from './createBlockForm.vue';
 import deleteBlockForm from './deleteBlockForm.vue';
@@ -100,6 +143,7 @@ const emit = defineEmits<{
     (e: 'update:delete-block', blockId: number): void;
 }>()
 
+const selectedBlock: Ref<BlockMeta | null> = ref(null)
 const notice = useNotices();
 const materialStore = useMaterialsStore();
 
@@ -152,11 +196,6 @@ const sortedBlocks = computed(() => {
     return sortedMerge(props.blocks, 'updatedAt', 'least');
 });
 
-// // Видимость инпута для label блока
-// const isShowInputBlockTitle = computed(() => {
-//     return opennedStateEditor.value.isActive === true;
-// });
-
 const isShowTextEditor = computed(() => {
     return (block: any) => {
         return opennedStateEditor.value.isActive === true && opennedStateEditor.value.blockId === block.id;
@@ -165,16 +204,9 @@ const isShowTextEditor = computed(() => {
 
 // Вычисление pathName для операций с сервером
 const pathName = computed(() => {
-    // if (props.chapter && props.chapter.fullpath) {
-    //     return (trimPath(props.chapter.fullpath, { split: true }) as string[])[0];
-    // }
-    // else if (props.chapter && props.chapter.pathName) {
-    //     return props.chapter.pathName;
-    // }
     if(props.pathName) {
         return props.pathName
     }
-    // else throw new Error('pathName не существует');
 });
 
 // Объект текущего отрытого блока
@@ -189,50 +221,29 @@ watch(() => props.isShowCreateBlock, (newVal) => {
     isActiveCreateForm.value = newVal;
 });
 
-
-
-// let timeoutId = undefined
-// watch(() => props.materialType, async(newType) => {
-//     if(newType) {
-//         clearTimeout(timeoutId!)
-//         timeoutId = setTimeout( async () => {
-//             console.log('INVOKE TIMER!!!');
-
-
-//         }, 100)
-//     }
-// })
-
-
-
-
-
-// // Отслеживать что раздел/подраздел был переключен на другой
-// watch(
-//     () => [props.chapter?.fullpath, props.chapter?.pathName], 
-//     async (newVals, oldVals) => {
-//         const [newFullpath, newPathName] = newVals;
-//         const [oldFullpath, oldPathName] = oldVals;
-
-//         if((newFullpath ?? '' + newPathName) !== (oldFullpath ?? '' + oldPathName)) {
-//             // выполнить запрос на получение блоков раздела
-//             if(!newFullpath && newPathName && props.chapter?.id) {
-//                 blocks.value = await getChapterBlocksApi({ chapterId: props.chapter.id });
-//             }
-//             // выполнить запрос на получение блоков ПОДраздела
-//             else if(newFullpath && newPathName &&  props.chapter?.id) {
-//                 blocks.value = await getSubChapterBlocksApi({ chapterId: props.chapter.id });
-//             }
-//             else 
-//                 console.error('watch>> [props.chapter?.fullpath, props.chapter?.pathName]');
-//         }
-// })
-
 // Активировать текстовый редактор
 function openTextEditor() {
-    opennedStateEditor.value.blockId = currentBlockId.value;
+    // opennedStateEditor.value.blockId = currentBlockId.value;
     opennedStateEditor.value.isActive = true;
-    initEditorContent.value = currentBlock.value?.content;
+    // initEditorContent.value = currentBlock.value?.content;
+}
+
+/**
+ * Открыть обозреватель блока с информацией
+ * @param {BlockMeta} data объект с частичной информацией о блоке
+ */
+function openPreviewBlock(data: BlockMeta) {
+    selectedBlock.value = data
+    isActivePreviewBlock.value = true
+}
+
+/**
+ * Закрыть обозреватель блока с информацией
+ */
+function closePreviewBlock() {
+    console.log('Обозреватель закрыт');
+    isActivePreviewBlock.value = false
+    selectedBlock.value = null
 }
 
 // Открыть инпут редактирования block title
@@ -408,6 +419,10 @@ function controllerKeys(e: KeyboardEvent) {
     // Закрыть что-либо
     if (e.key === 'Escape') {
         e.preventDefault();
+        if(opennedStateEditor.value.isActive === true) {
+            opennedStateEditor.value.isActive = false
+            return
+        }
         if (isActiveCreateForm.value) {
             return void (isActiveCreateForm.value = false);
         }
