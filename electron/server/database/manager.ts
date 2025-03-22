@@ -84,6 +84,10 @@ export class InstanceDatabase implements InstanceDatabaseDoc {
         try {
             if(this.process) {
                 const pragmaKey = await this.fetchPragmaKey(onApp);
+
+                /** TODO убрать */
+                console.debug({ USER_PRAGMA_KEY: pragmaKey })
+
                 const action = `${data.action}-${Date.now()}`;
                 let returnData: (data: IpcContractRes) => any;
                 const promise: Promise<IpcContractRes> = new Promise((resolve, reject) => {

@@ -4802,6 +4802,7 @@ const _InstanceDatabase = class _InstanceDatabase {
     try {
       if (this.process) {
         const pragmaKey = await this.fetchPragmaKey(onApp);
+        console.debug({ USER_PRAGMA_KEY: pragmaKey });
         const action = `${data.action}-${Date.now()}`;
         let returnData;
         const promise = new Promise((resolve, reject) => {
@@ -5673,25 +5674,31 @@ class BlocksService {
   }
   // region READ
   // Получить массив блоков для раздела
-  async getAllForChapter(chapterId, config2) {
-    if (!chapterId) throw new Error("[BlocksService.getAllForChapter]>> chapterId is not defined");
-    if (typeof chapterId !== "number" || Object.is(+chapterId, NaN)) throw new Error("[BlocksService.getAllForChapter]>> invalid chapterId");
+  async getAllForChapter(params, config2) {
+    if (!params) throw new Error("[BlocksService.getAllForChapter]>> params is not defined");
+    if (typeof params.chapterId !== "undefined" && (typeof params.chapterId !== "number" || Object.is(+params.chapterId, NaN))) {
+      throw new Error("[BlocksService.getAllForChapter]>> invalid chapterId");
+    }
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
     const rows = await this.instanceDb.all(`
             SELECT ${correctFieldsSql} FROM blocks 
-            WHERE chapter_id = ${chapterId};
+            WHERE chapter_id = ${params.chapterId};
             `, []);
+    console.debug("[DEBUG]::[GET BLOCKS] >>> Finded rows", rows);
     return rows.payload;
   }
   // Получить массив блоков для подраздела
-  async getAllForSubChapter(chapterId, config2) {
-    if (!chapterId) throw new Error("[BlocksService.getAllForSubChapter]>> chapterId is not defined");
-    if (typeof chapterId !== "number" || Object.is(+chapterId, NaN)) throw new Error("[BlocksService.getAllForSubChapter]>> invalid chapterId");
+  async getAllForSubChapter(params, config2) {
+    if (!params) throw new Error("[BlocksService.getAllForChapter]>> params is not defined");
+    if (typeof params.chapterId !== "undefined" && (typeof params.chapterId !== "number" || Object.is(+params.chapterId, NaN))) {
+      throw new Error("[BlocksService.getAllForChapter]>> invalid chapterId");
+    }
     let correctFieldsSql = this.correctFieldsSqlForExclude(config2 == null ? void 0 : config2.excludes);
     const rows = await this.instanceDb.all(`
             SELECT ${correctFieldsSql} FROM blocks
-            WHERE sub_chapter_id = ${chapterId};
+            WHERE sub_chapter_id = ${params.chapterId};
         `, []);
+    console.debug("[DEBUG]::[GET BLOCKS] >>> Finded rows", rows);
     return rows.payload;
   }
   // Получить раздел по title 
@@ -6164,7 +6171,7 @@ async function getChapterBlocks(params, auth) {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getChapterBlocks]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
-    const blocks = await blockService.getAllForChapter(params.chapterId, {
+    const blocks = await blockService.getAllForChapter(params, {
       excludes: ["content", "subChapterId", "chapterId", "createdAt"]
     });
     return blocks;
@@ -6178,7 +6185,7 @@ async function getSubChapterBlocks(params, auth) {
     if (!(auth == null ? void 0 : auth.token)) throw new Error("[getSubChapterBlocks]>> 401 UNAUTHORIZE");
     await verifyAccessToken(auth.token, { refresh: true });
     const blockService = new BlocksService();
-    const blocks = await blockService.getAllForSubChapter(params.chapterId, {
+    const blocks = await blockService.getAllForSubChapter(params, {
       excludes: ["content", "subChapterId", "chapterId", "createdAt"]
     });
     return blocks;

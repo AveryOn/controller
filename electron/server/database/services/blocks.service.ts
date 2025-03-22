@@ -1,5 +1,5 @@
 import { formatDate } from "../../services/date.service";
-import { ChapterBlock } from "../../types/controllers/materials.types";
+import { ChapterBlock, GetChapterBlocks } from "../../types/controllers/materials.types";
 import { InstanceDatabaseDoc } from "../../types/database/index.types";
 import { BlockRaw, BlockForGet, CreateBlockDto, GetBlockByTitle, UpdateBlockByTitle } from "../../types/services/blocks.service";
 import { DatabaseManager } from "../manager";
@@ -63,30 +63,47 @@ export default class BlocksService {
     }
 
     // region READ
+
     // Получить массив блоков для раздела
-    async getAllForChapter(chapterId: number, config?: { excludes?: Array<keyof BlockRaw> }): Promise<Array<BlockForGet>> {
-        if(!chapterId) throw new Error('[BlocksService.getAllForChapter]>> chapterId is not defined');
-        if(typeof chapterId !== 'number' || Object.is(+chapterId, NaN)) throw new Error('[BlocksService.getAllForChapter]>> invalid chapterId');
-        
+    async getAllForChapter(params: GetChapterBlocks, config?: { excludes?: Array<keyof BlockRaw> }): Promise<Array<BlockForGet>> {
+        if(!params) throw new Error('[BlocksService.getAllForChapter]>> params is not defined');
+        // Check ChapterId
+        if(
+            typeof params.chapterId !== 'undefined' && 
+            (typeof params.chapterId !== 'number' || Object.is(+params.chapterId, NaN))
+        ) {
+            throw new Error('[BlocksService.getAllForChapter]>> invalid chapterId');
+        }
+
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes);
         const rows = await this.instanceDb!.all(`
             SELECT ${correctFieldsSql} FROM blocks 
-            WHERE chapter_id = ${chapterId};
+            WHERE chapter_id = ${params.chapterId};
             `, []);
+
+        console.debug('[DEBUG]::[GET BLOCKS] >>> Finded rows', rows)
         return rows.payload as Array<BlockForGet>;
     }
 
     // Получить массив блоков для подраздела
-    async getAllForSubChapter(chapterId: number, config?: { excludes?: Array<keyof BlockRaw> }): Promise<Array<BlockForGet>> {
-        if(!chapterId) throw new Error('[BlocksService.getAllForSubChapter]>> chapterId is not defined');
-        if(typeof chapterId !== 'number' || Object.is(+chapterId, NaN)) throw new Error('[BlocksService.getAllForSubChapter]>> invalid chapterId');
+    async getAllForSubChapter(params: GetChapterBlocks, config?: { excludes?: Array<keyof BlockRaw> }): Promise<Array<BlockForGet>> {
+        if(!params) throw new Error('[BlocksService.getAllForChapter]>> params is not defined');
+        // Check ChapterId
+        if(
+            typeof params.chapterId !== 'undefined' && 
+            (typeof params.chapterId !== 'number' || Object.is(+params.chapterId, NaN))
+        ) {
+            throw new Error('[BlocksService.getAllForChapter]>> invalid chapterId');
+        }
 
         let correctFieldsSql = this.correctFieldsSqlForExclude(config?.excludes);
 
         const rows = await this.instanceDb!.all(`
             SELECT ${correctFieldsSql} FROM blocks
-            WHERE sub_chapter_id = ${chapterId};
+            WHERE sub_chapter_id = ${params.chapterId};
         `, []);
+
+        console.debug('[DEBUG]::[GET BLOCKS] >>> Finded rows', rows)
         return rows.payload as Array<BlockForGet>;
     }
 

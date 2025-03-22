@@ -14,6 +14,7 @@ export const materialsRouter = new StateManager<MaterialsRouterState>('m-r-1', {
     subChapter: null,
     materialUid: null,
     materialType: null,
+    chapterId: null,
 })
 
 export const useMaterialsStore = defineStore('materialsStored', () => {

@@ -67,12 +67,13 @@ function selectItem(item: any) {
         let querySubChapter: string | undefined = undefined; 
         if(item.pathName || item.fullLabels) {
             materialsStore.updateMaterialsFullLabels(item.fullLabels ?? [item.label]);
-            
+
             materialsRouter.setState({
                 chapter: item?.pathName ?? null,
                 subChapter: item?.fullpath ?? null,
                 materialUid: `${item?.pathName ?? 'void'}---${item?.fullpath ?? 'void'}`,
                 materialType: materialsStore.determineMaterialType(item),
+                chapterId: item?.id
             })
         }
         
@@ -82,7 +83,7 @@ function selectItem(item: any) {
         router.push({ 
             name: item.route, 
             params: { chapter: item.pathName }, 
-            query: { subChapter: querySubChapter },
+            query: { subChapter: querySubChapter, chapterId: item?.id },
         });
     }
 }

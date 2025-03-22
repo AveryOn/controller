@@ -4,42 +4,41 @@
             <span class="refresh-sync-btn" @click="calledSyncMaterialsMenu" title="sync menu">
                 <svg-icon class="refresh-sync-icon" type="mdi" :path="mdiRefresh" :size="18"></svg-icon>
             </span>
-            <span class="flex head-label">Materials {{ correctLabelChapter }}</span> 
-            <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate" style="height: 2px"></ProgressBar>
-            <svg-icon class="close-btn" type="mdi" :path="mdiCloseBoxOutline" :size="18" @click="toDefaultPage"></svg-icon>
+            <span class="flex head-label">Materials {{ correctLabelChapter }}</span>
+            <ProgressBar class="progress-bar" v-if="materialStore.globalLoadingMaterials" mode="indeterminate"
+                style="height: 2px"></ProgressBar>
+            <svg-icon class="close-btn" type="mdi" :path="mdiCloseBoxOutline" :size="18"
+                @click="toDefaultPage"></svg-icon>
         </header>
         <div class="materials-main">
-            <addChapter 
-            class="m-auto"
-            v-show="$route.params['chapter'] === 'add-chapter'"
-            :loading="materialStore.loadingCreateChapter"
-            @submit-form="requestForChapterCreate"
-            />
-            <wrapperChapter 
-            :full-label="labelChapter"
-            :root-chapter-id="rootChapterId"
-            v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']" 
-            @open-chapter="(label) => { label }"
-            @update-root-chapter-id="(id: number) => rootChapterId = id"
-            @update-full-label="(label: string) => updateFullLabel(label)"
-            @delete-current-label="() => excludeLabelOfDeletedChapter()"
-            @quit="handlerQuitChapter"
-            />
+            <addChapter class="m-auto" v-show="$route.params['chapter'] === 'add-chapter'"
+                :loading="materialStore.loadingCreateChapter" @submit-form="requestForChapterCreate" />
+            <wrapperChapter :blocks="blocks" :full-label="labelChapter" :root-chapter-id="rootChapterId"
+                :fullpath="fullpath"
+                :path-name="pathName"
+                v-show="$route.params['chapter'] !== 'add-chapter' && $route.params['chapter']"
+                @open-chapter="(label: any) => { label }" @update-root-chapter-id="(id: number) => rootChapterId = id"
+                @update-full-label="(label: string) => updateFullLabel(label)"
+                @delete-current-label="() => excludeLabelOfDeletedChapter()" @quit="handlerQuitChapter" 
+                @add-new-block="(block) => blocks.push(block)"
+                @delete-block="(blockId) => deleteBlock(blockId)"
+                />
         </div>
     </div>
 </template>
 
 <script setup lang=ts>
-import { computed, onMounted, ref, type Ref } from 'vue';
+import { computed, onBeforeMount, ref, type Ref } from 'vue';
 import addChapter from '../components/materials.view/addChapter.vue';
 import wrapperChapter from '../components/materials.view/wrapperChapter.vue';
 //@ts-expect-error
 import SvgIcon from '@jamescoyle/vue-icon';
 import { mdiRefresh, mdiCloseBoxOutline } from '@mdi/js';
-import { ChapterCreate } from '../@types/entities/materials.types';
-import { createChapter, syncMaterials } from '../api/materials.api';
+import { Block, ChapterCreate, GetChapterBlocks } from '../@types/entities/materials.types';
+import { createChapter, getChapterBlocksApi, getSubChapterBlocksApi, syncMaterials } from '../api/materials.api';
 import { materialsRouter, useMaterialsStore } from '../stores/materials.store';
 import { useRouter } from 'vue-router';
+import { LocalVars } from '../@types/main.types';
 
 const router = useRouter();
 const materialStore = useMaterialsStore();
@@ -47,9 +46,13 @@ const materialStore = useMaterialsStore();
 const labelChapter: Ref<string> = ref('');
 const rootChapterId: Ref<number | null> = ref(null);
 
+const pathName: Ref<string | null> = ref(null)
+const fullpath: Ref<string | null> = ref(null)
+const blocks: Ref<Array<Block>> = ref([]);
+
 const correctLabelChapter = computed(() => {
-    if(materialStore.materialsLabel.length > 0) {
-        return ' > '+ materialStore.materialsLabel.join(' > ');
+    if (materialStore.materialsLabel.length > 0) {
+        return ' > ' + materialStore.materialsLabel.join(' > ');
     }
     return labelChapter.value;
 })
@@ -114,16 +117,86 @@ async function calledSyncMaterialsMenu() {
     finally {
         materialStore.loadingGetMenuChapters = false;
     }
-
 }
 
-materialsRouter.subscribe(['materialUid', 'materialType'], (value) => {
-    console.log('Material Uid has changed', value);
-})
+let timerId: NodeJS.Timeout | undefined = undefined
+/**
+ * Выполнить запрос на получение блоков в зависимости от типа материала: `chapter` | `subChapter`
+ * @param type `'chapter'` | `'subChapter'`
+ */
 
-onMounted(() => {
+async function getBlocks(type: 'chapter' | 'sub-chapter', params: GetChapterBlocks) {
+    materialStore.loadingGetChapter = true
 
-    console.log('ПЕРЕКЛЮЧЕН РАЗДЕЛ', router.currentRoute.value.params);
+    let duration: number = 0
+
+    if (timerId) {
+        clearTimeout(timerId)
+        timerId = undefined
+    }
+    else duration = 0
+
+    timerId = setTimeout(async () => {
+        try {
+            // Получить блоки раздела
+            if (type === 'chapter') {
+                console.log('ОТРАБОТАЛ GET CHAPTER');
+
+                blocks.value = await getChapterBlocksApi({
+                    chapterId: params.chapterId,
+                }) as Block[];
+            }
+            // Получить блоки ПОДраздела
+            else if (type === 'sub-chapter') {
+                console.log('ОТРАБОТАЛ GET SUB CHAPTER');
+                blocks.value = await getSubChapterBlocksApi({
+                    chapterId: params.chapterId,
+                }) as Block[];
+            }
+        }
+        finally {
+            materialStore.loadingGetChapter = false
+        }
+
+    }, duration)
+}
+
+async function deleteBlock(blockId: number) {
+    blocks.value = blocks.value.filter((block) => block.id !== blockId)
+}
+
+
+onBeforeMount(() => {
+    materialsRouter.subscribe(['materialUid'], async (state) => {
+        console.log('WORK SPACE >>>> SUBSCRIBE', state.chapterId.value);
+
+        pathName.value = state.chapter.value
+        fullpath.value = state.subChapter.value
+        
+        blocks.value.length = 0
+        if (state.materialType.value) {
+            await getBlocks(state.materialType.value!, {
+                chapterId: state.chapterId.value!,
+            })
+        } else {
+            throw new Error('WorkSpace >>> !materialType is not defined')
+        }
+    }, { fetch: '*' })
+
+
+    const currentRoute: any = JSON.parse(localStorage.getItem(LocalVars.currentRoute)!);
+    const chapter = currentRoute.params['chapter'] ?? null
+    const subChapter = currentRoute.query['subChapter'] ?? null
+    const chapterId = currentRoute.query['chapterId'] ?? null
+
+    materialsRouter.setState({
+        chapter: chapter,
+        subChapter: subChapter,
+        materialType: !!subChapter ? 'sub-chapter' : 'chapter',
+        materialUid: `${chapter ?? 'void'}---${subChapter ?? 'void'}`,
+        chapterId: +chapterId ? +chapterId : null,
+    })
+
     labelChapter.value = ' > ' + materialStore.getMaterialsFullLabels().join(' > ');
 })
 
@@ -140,6 +213,7 @@ onMounted(() => {
     background-color: var(--bg-color);
     color: var(--fg-color);
 }
+
 .materials-header {
     position: relative;
     width: 100%;
@@ -152,12 +226,13 @@ onMounted(() => {
     color: var(--materials-header-fg);
     font-weight: bolder;
 }
+
 .close-btn {
     position: absolute;
     right: 1rem;
     top: 0;
-    background-color: rgba(0,0,0,0);
-    outline: rgba(0,0,0,0);
+    background-color: rgba(0, 0, 0, 0);
+    outline: rgba(0, 0, 0, 0);
     color: var(--materials-header-fg);
     font-weight: 600;
     padding: 0;
@@ -166,14 +241,17 @@ onMounted(() => {
     cursor: pointer;
     transition: color 0.3s ease;
 }
+
 .close-btn:hover {
     transition: color 0.3s ease;
     color: var(--materials-header-fg);
 }
+
 .progress-bar {
     width: 100%;
     position: absolute;
 }
+
 .refresh-sync-btn {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.1);
@@ -181,22 +259,27 @@ onMounted(() => {
     left: 1rem;
     cursor: pointer;
 }
+
 .refresh-sync-btn:hover {
     background-color: rgba(0, 0, 0, 0.17);
     transition: all 0.3s ease;
 }
+
 .refresh-sync-btn:hover .refresh-sync-icon {
     color: rgb(0, 157, 255);
     transform: rotate(360deg);
     transition: all 0.3s ease;
 }
+
 .refresh-sync-icon {
     color: rgb(131, 195, 235);
-    transition: all 0.3s ease-in; 
+    transition: all 0.3s ease-in;
 }
+
 .head-label {
     user-select: none;
 }
+
 .materials-main {
     height: 100%;
     width: 100%;
@@ -205,5 +288,4 @@ onMounted(() => {
     justify-content: start;
     align-items: center;
 }
-
 </style>

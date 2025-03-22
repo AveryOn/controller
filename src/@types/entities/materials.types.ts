@@ -13,6 +13,9 @@ export interface MaterialsRouterState {
 
     /** Уникальный ID текущего материала */
     materialUid: null | string;
+
+    /** Уникальный ID текущего Раздела */
+    chapterId: null | number;
 }
 
 // Объект раздела при его создании на клиенте
@@ -66,6 +69,16 @@ export interface DeleteChapterParams {
 
 export interface DeleteSubChapterParams {
     fullpath: string;
+}
+
+export interface Block {
+    id: number;
+    chapterId: string | null;
+    subChapterId: string | null;
+    title: string;
+    content: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface ChapterBlock {
